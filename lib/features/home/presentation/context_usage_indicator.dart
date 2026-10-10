@@ -95,9 +95,10 @@ class _ContextUsageIndicatorState extends State<ContextUsageIndicator> {
         tooltip: 'Context usage',
         onPressed: _togglePanel,
         // A plain app-bar button like the ones beside it; the ring is the icon.
+        // 34px like the menu and new-chat buttons so the row sits evenly.
         style: IconButton.styleFrom(
           foregroundColor: ringColor,
-          padding: const EdgeInsets.all(7),
+          padding: const EdgeInsets.all(4),
         ),
         icon: SizedBox(
           width: 26,

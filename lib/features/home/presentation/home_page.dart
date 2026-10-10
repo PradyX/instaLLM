@@ -22,7 +22,6 @@ import 'package:pocket_llm/features/documents/domain/document_scope.dart';
 import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
 import 'package:pocket_llm/features/documents/presentation/knowledge_scope_button.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
-import 'package:pocket_llm/features/home/presentation/context_usage_indicator.dart';
 import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
 import 'package:pocket_llm/features/voice/application/tts_controller.dart';
@@ -598,7 +597,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     final messages = ref.watch(homeControllerProvider);
     final generationStatus = ref.watch(homeGenerationStatusProvider);
-    final contextProjection = ref.watch(homeContextProjectionProvider);
     ref.listen<ToolApprovalRequest?>(toolApprovalControllerProvider, (
       previous,
       next,
@@ -617,29 +615,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           ..sort(_compareModelsByParamSize);
     final hasDownloadedModel = downloadedModels.isNotEmpty;
     final canAttachImage = _isVisionReady(selectedModel);
-    // The pill shows the chat model the next request would use.
-    final pillModel =
-        selectedModel != null &&
-            downloadedModels.any((m) => m.id == selectedModel.id)
-        ? selectedModel
-        : (hasDownloadedModel ? downloadedModels.first : null);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isGenerating = generationStatus.isGenerating;
     final generationText = generationStatus.statusText;
     final ttsState = ref.watch(ttsControllerProvider);
-    // While a request runs the dial reports that run's own budget, documents
-    // included. Idle, it reports what the next request from the conversation on
-    // screen would cost, so clearing or switching a chat can never leave the
-    // last run's numbers behind.
-    final contextUsage = generationStatus.isGenerating
-        ? generationStatus.contextUsage ?? contextProjection?.usage
-        : contextProjection?.usage;
-    final fixedSystemTokens = generationStatus.isGenerating
-        ? null
-        : contextProjection?.fixedTokens;
-    final toolContractIncluded =
-        contextProjection?.toolContractIncluded ?? false;
     // Option C: dock the sidebar on wide screens, keep the drawer narrow.
     final isWide = MediaQuery.of(context).size.width >= 900;
 
@@ -649,92 +629,28 @@ class _HomePageState extends ConsumerState<HomePage> {
       isGenerating: isGenerating,
       child: Scaffold(
         appBar: AppBar(
-          // Option A: menu · centered model pill · context ring · new chat.
-          centerTitle: true,
+          // Cleared: menu and new chat only. The model pill lives in the
+          // composer and the context readout sits below it.
+          toolbarHeight: 56,
+          leadingWidth: 42,
+          actionsPadding: const EdgeInsets.only(right: 8),
           leading: isWide
               ? null
               : Builder(
-                  builder: (drawerContext) => IconButton(
-                    tooltip: 'Menu',
-                    onPressed: () => Scaffold.of(drawerContext).openDrawer(),
-                    icon: const Icon(Icons.menu_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.surfaceContainerHighest,
+                  builder: (drawerContext) => Center(
+                    child: _toolbarIconButton(
+                      context,
+                      tooltip: 'Menu',
+                      icon: Icons.menu_rounded,
+                      onPressed: () => Scaffold.of(drawerContext).openDrawer(),
                     ),
                   ),
-                ),
-          title: hasDownloadedModel && pillModel != null
-              ? PopupMenuButton<String>(
-                  tooltip: 'Switch model',
-                  enabled: !isGenerating,
-                  onSelected: (modelId) {
-                    final selected = downloadedModels.firstWhere(
-                      (model) => model.id == modelId,
-                    );
-                    ref
-                        .read(modelSelectionControllerProvider.notifier)
-                        .selectModel(selected);
-                  },
-                  itemBuilder: (context) => [
-                    for (final model in downloadedModels)
-                      CheckedPopupMenuItem<String>(
-                        value: model.id,
-                        checked: model.id == pillModel.id,
-                        child: Text(
-                          '${model.name} · ${model.parameterSize}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            '${pillModel.name} · ${pillModel.parameterSize}',
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.expand_more_rounded, size: 18),
-                      ],
-                    ),
-                  ),
-                )
-              : TextButton(
-                  onPressed: () => context.push(AppRoutes.modelSelection),
-                  child: const Text('Get a model'),
                 ),
           actions: [
-            // The dial this conversation's token budget lives in: the ring shows
-            // the share of the model's input budget the next request would use,
-            // and every figure behind it is one click away in the panel that
-            // opens under the bar.
-            if (contextUsage != null && hasDownloadedModel)
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: ContextUsageIndicator(
-                  usage: contextUsage,
-                  fixedSystemTokens: fixedSystemTokens,
-                  toolContractIncluded: toolContractIncluded,
-                  isGenerating: isGenerating,
-                ),
-              ),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
+            _toolbarIconButton(
+              context,
               tooltip: 'New chat',
+              icon: Icons.edit_outlined,
               onPressed: isGenerating ? null : _startNewConversation,
             ),
           ],
@@ -794,6 +710,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   hasDownloadedModel,
                   canAttachImage,
                   selectedModel,
+                  downloadedModels,
                 ),
               ],
             ),
@@ -1011,6 +928,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     bool hasDownloadedModel,
     bool canAttachImage,
     LlmModel? selectedModel,
+    List<LlmModel> downloadedModels,
   ) {
     final canCompose = hasDownloadedModel && !isGenerating;
     final progressText = generationText.isEmpty
@@ -1020,8 +938,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.watch(homeControllerProvider),
     );
 
-    // Option A: one floating composer card — attachment/persona chips on top,
-    // the text field in the middle, voice and send at the bottom.
+    // Reference bar: text on top, one action row at the bottom, context and
+    // docs below the card.
     final activeConversation = ref.watch(
       conversationControllerProvider.select(
         (state) => state.activeConversation,
@@ -1053,6 +971,23 @@ class _HomePageState extends ConsumerState<HomePage> {
       }
     }
 
+    // The model pill moved down from the toolbar: the composer owns model
+    // switching now.
+    final pillModel =
+        selectedModel != null &&
+            downloadedModels.any((m) => m.id == selectedModel.id)
+        ? selectedModel
+        : (hasDownloadedModel ? downloadedModels.first : null);
+    // The context readout under the card: the running request's own budget
+    // while generating, otherwise what the next request would cost.
+    final projection = ref.watch(homeContextProjectionProvider);
+    final generationUsage = ref.watch(
+      homeGenerationStatusProvider.select((s) => s.contextUsage),
+    );
+    final meterUsage = isGenerating
+        ? generationUsage ?? projection?.usage
+        : projection?.usage;
+
     return Padding(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -1060,260 +995,379 @@ class _HomePageState extends ConsumerState<HomePage> {
         16,
         MediaQuery.of(context).padding.bottom + 12,
       ),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.shadow.withValues(alpha: 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isGenerating)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: colorScheme.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        progressText,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () {
-                        ref
-                            .read(homeControllerProvider.notifier)
-                            .stopGeneration();
-                      },
-                      icon: const Icon(Icons.stop_circle_outlined, size: 18),
-                      label: const Text('Stop'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: colorScheme.error,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ],
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.6),
               ),
-            if (_draftImages.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _buildDraftImagesPreview(
-                  context,
-                  colorScheme,
-                  textTheme,
-                ),
-              ),
-            if (hasDownloadedModel)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    if (canAttachImage)
-                      _composerChip(
-                        context,
-                        colorScheme,
-                        icon: Icons.add_photo_alternate_outlined,
-                        label: 'Attach',
-                        onTap: canCompose
-                            ? () => _pickImage(selectedModel)
-                            : null,
-                      ),
-                    if (canAttachImage && historyImages.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: _composerChip(
-                          context,
-                          colorScheme,
-                          icon: Icons.collections_rounded,
-                          label: 'From chat',
-                          onTap: canCompose
-                              ? () => _showAttachmentHistory(historyImages)
-                              : null,
-                        ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: KnowledgeScopeButton(
-                        collections: documentLibrary?.collections ?? const [],
-                        activeCollectionId:
-                            documentLibrary?.activeCollectionId ??
-                            KnowledgeCollection.defaultId,
-                        pinnedCollectionId:
-                            activeConversation?.documentCollectionId,
-                        documentsEnabled:
-                            activeConversation?.documentsEnabled ?? true,
-                        isGenerating: isGenerating,
-                        onScopeChanged: (collectionId, enabled) =>
-                            unawaited(_setDocumentScope(collectionId, enabled)),
-                        child: _composerChipContent(
-                          context,
-                          colorScheme,
-                          icon: Icons.folder_open_outlined,
-                          label: docsLabel,
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: _composerChip(
-                        context,
-                        colorScheme,
-                        icon: Icons.face_retouching_natural,
-                        label: composerPersonaName,
-                        onTap: isGenerating ? null : _pickPersona,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  // Desktop: Return sends, Shift+Return adds a line. Mobile
-                  // keyboards keep their own send action and Return as a line
-                  // break, which is what the shortcut wrapper checks.
-                  child: ComposerSendOnEnter(
-                    sendsOnEnter: canCompose && sendsMessageOnEnter,
-                    onSend: _sendMessage,
-                    child: TextField(
-                      controller: _messageController,
-                      enabled: canCompose,
-                      readOnly: !canCompose,
-                      maxLines: 5,
-                      minLines: 1,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: !hasDownloadedModel
-                            ? 'Download a model to start chatting...'
-                            : isGenerating
-                            ? 'Wait for current response...'
-                            : canAttachImage
-                            ? 'Ask about your image or start a chat...'
-                            : 'Message Pocket LLM...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surface,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                      onSubmitted: canCompose ? (_) => _sendMessage() : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: IconButton(
-                    tooltip: 'Voice input',
-                    onPressed: canCompose
-                        ? () => context.push(AppRoutes.voice)
-                        : null,
-                    icon: const Icon(Icons.mic_none_rounded),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 2),
-                  child: IconButton.filled(
-                    onPressed: canCompose ? _sendMessage : null,
-                    icon: const Icon(Icons.arrow_upward_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
-                    ),
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Small pill button for the composer card's top action row.
-  Widget _composerChip(
-    BuildContext context,
-    ColorScheme colorScheme, {
-    required IconData icon,
-    required String label,
-    required VoidCallback? onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: _composerChipContent(
-        context,
-        colorScheme,
-        icon: icon,
-        label: label,
-      ),
-    );
-  }
-
-  /// The pill itself, shared with pickers that open their own menu.
-  Widget _composerChipContent(
-    BuildContext context,
-    ColorScheme colorScheme, {
-    required IconData icon,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: colorScheme.primary),
-          const SizedBox(width: 5),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 140),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isGenerating)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 8,
+                      left: 8,
+                      right: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            progressText,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            ref
+                                .read(homeControllerProvider.notifier)
+                                .stopGeneration();
+                          },
+                          icon: const Icon(
+                            Icons.stop_circle_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('Stop'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: colorScheme.error,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (_draftImages.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildDraftImagesPreview(
+                      context,
+                      colorScheme,
+                      textTheme,
+                    ),
+                  ),
+                // Desktop: Return sends, Shift+Return adds a line. Mobile
+                // keyboards keep their own send action and Return as a line
+                // break, which is what the shortcut wrapper checks. No Expanded
+                // here: this column shrink-wraps, so the field sizes itself.
+                ComposerSendOnEnter(
+                  sendsOnEnter: canCompose && sendsMessageOnEnter,
+                  onSend: _sendMessage,
+                  child: TextField(
+                    controller: _messageController,
+                    enabled: canCompose,
+                    readOnly: !canCompose,
+                    maxLines: 5,
+                    minLines: 1,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: !hasDownloadedModel
+                          ? 'Download a model to start chatting...'
+                          : isGenerating
+                          ? 'Wait for current response...'
+                          : canAttachImage
+                          ? 'Ask about your image or start a chat...'
+                          : 'Message Pocket LLM...',
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
+                      contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+                    ),
+                    onSubmitted: canCompose ? (_) => _sendMessage() : null,
+                  ),
+                ),
+                if (hasDownloadedModel)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Row(
+                      children: [
+                        if (canAttachImage)
+                          PopupMenuButton<String>(
+                            tooltip: 'Attach',
+                            enabled: canCompose,
+                            onSelected: (value) {
+                              if (value == 'pick') {
+                                _pickImage(selectedModel);
+                              } else if (value == 'history') {
+                                _showAttachmentHistory(historyImages);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'pick',
+                                child: Text('Add image'),
+                              ),
+                              if (historyImages.isNotEmpty)
+                                const PopupMenuItem(
+                                  value: 'history',
+                                  child: Text('Images from this chat'),
+                                ),
+                            ],
+                            child: _composerCircleButton(
+                              context,
+                              colorScheme,
+                              icon: Icons.add_rounded,
+                              tooltip: 'Attach',
+                              // The popup menu owns the taps; a non-null
+                              // callback keeps the enabled look.
+                              onTap: canCompose ? () {} : null,
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: _composerCircleButton(
+                            context,
+                            colorScheme,
+                            icon: Icons.face_retouching_natural,
+                            tooltip: 'Persona: $composerPersonaName',
+                            onTap: isGenerating ? null : _pickPersona,
+                          ),
+                        ),
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 190),
+                              child: pillModel == null
+                                  ? TextButton(
+                                      onPressed: () => context.push(
+                                        AppRoutes.modelSelection,
+                                      ),
+                                      child: const Text('Get a model'),
+                                    )
+                                  : PopupMenuButton<String>(
+                                      tooltip: 'Switch model',
+                                      enabled: !isGenerating,
+                                      onSelected: (modelId) {
+                                        final next = downloadedModels
+                                            .firstWhere(
+                                              (model) => model.id == modelId,
+                                            );
+                                        ref
+                                            .read(
+                                              modelSelectionControllerProvider
+                                                  .notifier,
+                                            )
+                                            .selectModel(next);
+                                      },
+                                      itemBuilder: (context) => [
+                                        for (final model in downloadedModels)
+                                          CheckedPopupMenuItem<String>(
+                                            value: model.id,
+                                            checked: model.id == pillModel.id,
+                                            child: Text(
+                                              '${model.name} · ${model.parameterSize}',
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                      ],
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 9,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              colorScheme.surfaceContainerLow,
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
+                                          border: Border.all(
+                                            color: colorScheme.outlineVariant
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.memory_outlined,
+                                              size: 16,
+                                              color: colorScheme.primary,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                '${pillModel.name} · ${pillModel.parameterSize}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: textTheme.labelMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SizedBox.square(
+                          dimension: 40,
+                          child: IconButton(
+                            tooltip: 'Voice input',
+                            onPressed: canCompose
+                                ? () => context.push(AppRoutes.voice)
+                                : null,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.mic_none_rounded, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        SizedBox.square(
+                          dimension: 40,
+                          child: IconButton.filled(
+                            tooltip: 'Send',
+                            onPressed: canCompose ? _sendMessage : null,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(
+                              Icons.arrow_upward_rounded,
+                              size: 20,
+                            ),
+                            style: IconButton.styleFrom(
+                              backgroundColor: colorScheme.primary,
+                              foregroundColor: colorScheme.onPrimary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
           ),
+          if (hasDownloadedModel && meterUsage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    'Context: ${_formatTokens(meterUsage.usedTokens)}',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  KnowledgeScopeButton(
+                    collections: documentLibrary?.collections ?? const [],
+                    activeCollectionId:
+                        documentLibrary?.activeCollectionId ??
+                        KnowledgeCollection.defaultId,
+                    pinnedCollectionId:
+                        activeConversation?.documentCollectionId,
+                    documentsEnabled:
+                        activeConversation?.documentsEnabled ?? true,
+                    isGenerating: isGenerating,
+                    onScopeChanged: (collectionId, enabled) =>
+                        unawaited(_setDocumentScope(collectionId, enabled)),
+                    child: Text(
+                      docsLabel,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  /// One 34px rounded-square toolbar button, shared by menu and new chat so
+  /// the two can never differ in size or shape. The SizedBox pins the size
+  /// instead of trusting button defaults.
+  Widget _toolbarIconButton(
+    BuildContext context, {
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback? onPressed,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox.square(
+      dimension: 34,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 18),
+        style: IconButton.styleFrom(
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Circular action button for the composer's bottom row.
+  Widget _composerCircleButton(
+    BuildContext context,
+    ColorScheme colorScheme, {
+    required IconData icon,
+    String? tooltip,
+    VoidCallback? onTap,
+  }) {
+    return SizedBox.square(
+      dimension: 40,
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onTap,
+        padding: EdgeInsets.zero,
+        icon: Icon(icon, size: 19),
+        style: IconButton.styleFrom(
+          backgroundColor: colorScheme.surfaceContainerLow,
+          foregroundColor: colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
+  /// Compact token count for the context line under the composer (1.5K).
+  String _formatTokens(int tokens) {
+    if (tokens >= 1000000) return '${_trimNumber(tokens / 1000000)}M';
+    if (tokens >= 1000) return '${_trimNumber(tokens / 1000)}K';
+    return '$tokens';
+  }
+
+  String _trimNumber(double value) {
+    final text = value.toStringAsFixed(1);
+    return text.endsWith('.0') ? text.substring(0, text.length - 2) : text;
   }
 
   Widget _buildDraftImagesPreview(

@@ -6,10 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/app.dart';
 import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
+import 'package:pocket_llm/features/conversations/presentation/conversations_page.dart';
 import 'package:pocket_llm/i18n/strings.g.dart';
 
 void main() {
@@ -44,8 +44,8 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('pocketllm_delete_flow');
-    // The chat header resolves the app's own folder through a platform channel,
-    // so the temporary directory keeps this test off the real app folders.
+    // The app resolves its own folder through a platform channel, so the
+    // temporary directory keeps this test off the real app folders.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),
@@ -81,39 +81,41 @@ void main() {
     }
   });
 
-  testWidgets('the chat header can delete a conversation with no messages', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      TranslationProvider(
-        child: ProviderScope(
-          overrides: [conversationStoreProvider.overrideWithValue(store)],
-          child: const MyApp(),
+  testWidgets(
+    'an empty conversation can be deleted from the conversations list',
+    (tester) async {
+      // The homepage no longer carries a delete action (Option A keeps the
+      // toolbar to menu · model pill · context · new chat), so deletion is
+      // verified where it lives now: the conversations list.
+      await tester.pumpWidget(
+        TranslationProvider(
+          child: ProviderScope(
+            overrides: [conversationStoreProvider.overrideWithValue(store)],
+            child: const MaterialApp(home: ConversationsPage()),
+          ),
         ),
-      ),
-    );
+      );
+      await pumpUntil(tester, () => find.text('hey').evaluate().isNotEmpty);
+      expect(find.text('hey'), findsWidgets);
+      expect(storedTitles(), ['hey']);
 
-    // The chat opens the stored conversation, which only has its title. This is
-    // the state the header used to hide the delete action in.
-    await pumpUntil(tester, () => find.text('hey').evaluate().isNotEmpty);
-    expect(find.text('hey'), findsWidgets);
-    expect(storedTitles(), ['hey']);
+      await tester.tap(find.byTooltip('Conversation actions'));
+      await tester.pumpAndSettle(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Delete'));
+      await pumpUntil(
+        tester,
+        () => find.text('Delete conversation?').evaluate().isNotEmpty,
+      );
+      expect(find.text('Delete conversation?'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('Delete conversation'));
-    await pumpUntil(
-      tester,
-      () => find.text('Delete conversation?').evaluate().isNotEmpty,
-    );
-    expect(find.text('Delete conversation?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await pumpUntil(tester, () => find.text('hey').evaluate().isEmpty);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
-    await pumpUntil(tester, () => find.text('hey').evaluate().isEmpty);
-
-    // The conversation is gone from the screen and from what was written to
-    // disk, and with nothing open there is nothing left to remove.
-    expect(find.text('hey'), findsNothing);
-    expect(storedTitles(), isEmpty);
-    expect(File(p.join(tempDir.path, 'c-1.json')).existsSync(), isFalse);
-    expect(find.byTooltip('Delete conversation'), findsNothing);
-  });
+      // The conversation is gone from the screen and from what was written to
+      // disk.
+      expect(find.text('hey'), findsNothing);
+      expect(storedTitles(), isEmpty);
+      expect(File(p.join(tempDir.path, 'c-1.json')).existsSync(), isFalse);
+    },
+  );
 }

@@ -22,6 +22,7 @@ class KnowledgeScopeButton extends StatelessWidget {
     required this.documentsEnabled,
     required this.isGenerating,
     required this.onScopeChanged,
+    this.child,
   });
 
   /// Collections the device has, for the menu.
@@ -42,6 +43,10 @@ class KnowledgeScopeButton extends StatelessWidget {
   /// Receives the pin ([collectionId], null for the app-wide choice) and
   /// whether documents are on for this conversation.
   final void Function(String? collectionId, bool enabled) onScopeChanged;
+
+  /// Pill or label that opens the menu instead of the icon, so the same
+  /// picker can live in the composer chip row.
+  final Widget? child;
 
   static const String _followAppValue = 'app';
   static const String _offValue = 'off';
@@ -97,14 +102,17 @@ class KnowledgeScopeButton extends StatelessWidget {
       // The icon carries the state: a ranging folder means this chat reads a
       // collection of its own, an open one that it follows the app, and a
       // crossed-out one that it reads nothing.
-      icon: Icon(
-        scope.retrieves
-            ? (isRanged
-                  ? Icons.folder_special_outlined
-                  : Icons.folder_open_outlined)
-            : Icons.folder_off_outlined,
-      ),
+      icon: child == null
+          ? Icon(
+              scope.retrieves
+                  ? (isRanged
+                        ? Icons.folder_special_outlined
+                        : Icons.folder_open_outlined)
+                  : Icons.folder_off_outlined,
+            )
+          : null,
       iconColor: scope.retrieves ? colorScheme.onSurface : colorScheme.error,
+      child: child,
     );
   }
 }

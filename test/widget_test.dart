@@ -13,6 +13,8 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('Pocket LLM'), findsOneWidget);
+    // The cleared toolbar carries no model picker; with no downloaded
+    // models the home screen shows the onboarding empty state.
+    expect(find.text('No models ready'), findsOneWidget);
   });
 }

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pocket LLM — Homepage / Composer Mockups (4 options)</title>
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body { font-family: -apple-system, "Inter", "Segoe UI", Roboto, sans-serif; background:#0e1116; color:#e8eaf0; padding:32px 20px 80px; }
+  .page { max-width:1280px; margin:0 auto; }
+  h1 { font-size:26px; font-weight:800; letter-spacing:-.02em; }
+  .sub { color:#9aa3b2; margin-top:6px; font-size:14px; max-width:760px; line-height:1.5; }
+  .legend { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 28px; font-size:12px; color:#9aa3b2; }
+  .legend span { background:#1a2029; border:1px solid #2a3340; padding:6px 10px; border-radius:999px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media (max-width:1000px){ .grid{grid-template-columns:1fr;} }
+  .card { background:#141922; border:1px solid #28303d; border-radius:20px; overflow:hidden; }
+  .card-head { padding:18px 20px 14px; border-bottom:1px solid #232b37; }
+  .card-head h2 { font-size:17px; font-weight:800; }
+  .card-head p { font-size:13px; color:#9aa3b2; margin-top:4px; line-height:1.5; }
+  .tag { display:inline-block; font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:4px 10px; border-radius:999px; margin-bottom:10px; }
+  .t1{background:#1d3a2f;color:#5eeaa8;} .t2{background:#2b2a4a;color:#b7b3ff;} .t3{background:#3a2b1d;color:#ffcf87;} .t4{background:#2b3542;color:#8fd3ff;}
+  .phone { background:#f6f6f8; color:#15181e; min-height:560px; display:flex; flex-direction:column; }
+  /* shared bits */
+  .bar { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#fff; border-bottom:1px solid #e7e7ec; }
+  .pill { border-radius:999px; font-size:12px; font-weight:700; padding:7px 12px; display:inline-flex; align-items:center; gap:6px; }
+  .dot{width:8px;height:8px;border-radius:50%;}
+  .iconbtn{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:#efeff3;font-size:15px;flex:none;}
+  .iconbtn.dark{background:#1c2230;color:#fff;}
+  .body{flex:1;padding:28px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .composer{margin:0 14px 14px;background:#fff;border:1.5px solid #e2e2e9;border-radius:22px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.08);}
+  .composer input, .composer textarea{width:100%;border:0;outline:0;background:transparent;font-size:14px;color:#15181e;resize:none;}
+  .crow{display:flex;align-items:center;gap:8px;}
+  .chip{font-size:12px;background:#efeff3;border-radius:999px;padding:8px 12px;font-weight:600;white-space:nowrap;}
+  .send{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;flex:none;font-size:16px;}
+  .msg{max-width:520px;width:100%;text-align:left;font-size:13.5px;line-height:1.55;}
+  .ububble{background:#ececf1;border-radius:18px 18px 6px 18px;padding:10px 14px;margin:8px 0 8px auto;max-width:75%;}
+  .abubble{background:#fff;border:1px solid #ececf1;border-radius:6px 18px 18px 18px;padding:10px 14px;margin:8px auto 8px 0;max-width:85%;}
+  .vote{font-size:11px;color:#9aa3b2;margin-top:6px;display:flex;gap:10px;}
+  .approve{margin-top:22px;background:#10141b;border:1px solid #2b3442;border-radius:16px;padding:18px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;}
+  .approve b{font-size:14px;} .approve p{font-size:13px;color:#9aa3b2;margin-top:4px;}
+  .btnrow{display:flex;gap:10px;}
+  .btn{border-radius:999px;padding:10px 16px;font-weight:800;font-size:13px;border:1px solid #334052;background:#1c2532;color:#fff;}
+  .btn.primary{background:#fff;color:#111;border-color:#fff;}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Pocket LLM — Homepage / Composer redesign · 4 visual mockups</h1>
+  <p class="sub">Constraints kept in all 4: <b style="color:#fff">model selection stays in the top toolbar</b>, <b style="color:#fff">context usage stays up top</b> (ring / bar, not inside the composer). Only the homepage layout + composer UI changes. No code touched — approve one and I build it in Flutter.</p>
+  <div class="legend"><span>◎ Model = toolbar</span><span>◉ Context = toolbar / above composer</span><span>◈ Composer = redesigned</span><span>Standard chat-app patterns</span></div>
+
+  <div class="grid">
+
+    <!-- OPTION A -->
+    <div class="card">
+      <div class="card-head"><span class="tag t1">Option A · Standard Centered (Recommended)</span>
+        <h2>ChatGPT-style: centered greeting + floating composer card</h2>
+        <p>Top bar slim: ☰ · <b>Qwen 3 4B ▾</b> centered · context ring 32% · new chat. Empty state shows “Good evening” + 4 suggestion cards. Composer is one floating card with attach row on top, big text area, bottom row with persona/docs chips + mic + send.</p>
+      </div>
+      <div class="phone">
+        <div class="bar">
+          <div class="iconbtn">☰</div>
+          <div style="flex:1;text-align:center"><span class="pill" style="background:#eef0f5">Qwen 3 · 4B ▾</span></div>
+          <div class="pill" style="background:#e8f7ee;color:#15803d">◉ 32%</div>
+          <div class="iconbtn">✎</div>
+        </div>
+        <div class="body">
+          <div style="font-size:40px">✦</div>
+          <div style="font-size:22px;font-weight:800;margin-top:8px">Good evening, Prady</div>
+          <div style="font-size:13px;color:#6b7280;margin:6px 0 16px">Running 100% on-device · private to you</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:480px;width:100%;text-align:left">
+            <div style="background:#fff;border:1px solid #e7e7ec;border-radius:14px;padding:12px;font-size:12.5px"><b>✍️ Draft an email</b><br><span style="color:#777">to my landlord…</span></div>
+            <div style="background:#fff;border:1px solid #e7e7ec;border-radius:14px;padding:12px;font-size:12.5px"><b>📄 Summarize docs</b><br><span style="color:#777">from Knowledge…</span></div>
+            <div style="background:#fff;border:1px solid #e7e7ec;border-radius:14px;padding:12px;font-size:12.5px"><b>💡 Brainstorm</b><br><span style="color:#777">app name ideas…</span></div>
+            <div style="background:#fff;border:1px solid #e7e7ec;border-radius:14px;padding:12px;font-size:12.5px"><b>🖼️ Ask about image</b><br><span style="color:#777">vision model ready…</span></div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="crow" style="margin-bottom:8px"><span class="chip">＋ Attach</span><span class="chip">📚 Docs: All ▾</span><span class="chip">🎭 Sam ▾</span></div>
+          <input placeholder="Message Pocket LLM…" />
+          <div class="crow" style="justify-content:space-between;margin-top:10px">
+            <div class="crow"><div class="iconbtn">🎙</div><div class="iconbtn">🖼</div></div>
+            <div class="send" style="background:#111">↑</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTION B -->
+    <div class="card">
+      <div class="card-head"><span class="tag t2">Option B · Compact single-line pill</span>
+        <h2>Claude-style: one-line rounded composer, chips above</h2>
+        <p>Toolbar keeps model dropdown left + context bar + persona. Messages are clean bubbles. Composer is a single tall pill: ＋ menu · text field · mic · send. Horizontal quick-prompt chips scroll above it. Best for small phones / one-handed use.</p>
+      </div>
+      <div class="phone">
+        <div class="bar">
+          <div class="iconbtn">☰</div>
+          <div style="flex:1"><div style="font-weight:800;font-size:13px">Pocket LLM ▾</div><div style="font-size:11px;color:#6b7280">Qwen 3 4B · Sam · <span style="color:#15803d">◉ 32% ctx</span></div></div>
+          <div class="iconbtn">✎</div><div class="iconbtn">🗑</div>
+        </div>
+        <div style="flex:1;padding:16px;background:#f6f6f8">
+          <div class="msg"><div class="ububble">Summarize the lease PDF in 3 bullets</div>
+          <div class="abubble">Here you go:<br>1. Rent due on the 1st…<br>2. Notice period 60 days…<br>3. Pets allowed with deposit.<div class="vote">⧉ Copy &nbsp; ↻ Retry &nbsp; 👍 👎</div></div></div>
+        </div>
+        <div style="background:#f6f6f8;padding:0 14px 6px;display:flex;gap:8px;overflow:hidden"><span class="chip" style="background:#fff;border:1px solid #e5e5ea">Explain simply</span><span class="chip" style="background:#fff;border:1px solid #e5e5ea">Make it shorter</span><span class="chip" style="background:#fff;border:1px solid #e5e5ea">Translate</span></div>
+        <div class="composer" style="border-radius:999px;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 8px">
+          <div class="iconbtn">＋</div>
+          <input placeholder="Type a message…" style="flex:1"/>
+          <div class="iconbtn">🎙</div>
+          <div class="send" style="background:#5b5bd6">↑</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTION C -->
+    <div class="card">
+      <div class="card-head"><span class="tag t3">Option C · Desktop split + context strip</span>
+        <h2>Desktop-first: sidebar + context strip above composer</h2>
+        <p>Left rail lists conversations + models + docs (replaces drawer on wide screens). Top bar has model pill + wide context progress bar. Composer is a bordered card with image-preview strip and two-row toolbar. Best if macOS/Linux/desktop matters most.</p>
+      </div>
+      <div class="phone" style="min-height:600px">
+        <div style="display:flex;flex:1;text-align:left">
+          <div style="width:170px;background:#10141b;color:#cfd6e2;padding:14px;font-size:12px;flex:none">
+            <div style="font-weight:800;color:#fff;margin-bottom:10px">◈ Pocket LLM</div>
+            <div style="background:#1d2532;border-radius:10px;padding:8px 10px;margin-bottom:12px">＋ New chat</div>
+            <div style="color:#8b94a5;font-size:11px;font-weight:800;margin-bottom:6px">TODAY</div>
+            <div style="padding:7px 8px;background:#222c3b;border-radius:8px;margin-bottom:4px">Lease summary</div>
+            <div style="padding:7px 8px;margin-bottom:4px">Trip plan Kochi</div>
+            <div style="padding:7px 8px;margin-bottom:12px">Email draft</div>
+            <div style="color:#8b94a5;font-size:11px;font-weight:800;margin-bottom:6px">MODEL</div>
+            <div style="padding:7px 8px;background:#222c3b;border-radius:8px">● Qwen 3 4B</div>
+            <div style="padding:7px 8px">○ Llama 3.1 8B</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;background:#f6f6f8">
+            <div class="bar"><span class="pill" style="background:#eef0f5">Qwen 3 · 4B ▾</span><div style="flex:1;height:8px;background:#e8e8ee;border-radius:99px;overflow:hidden"><div style="width:32%;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)"></div></div><span style="font-size:11px;font-weight:800;color:#15803d">32%</span></div>
+            <div style="flex:1;padding:16px"><div class="msg"><div class="ububble">Plan a 3-day Kochi trip under ₹15k</div><div class="abubble">Day 1 — Fort Kochi walk, Kathakali…<div class="vote">⧉ Copy &nbsp; ↻ Retry &nbsp; 🔊 Read aloud</div></div></div></div>
+            <div style="margin:0 14px 6px;background:#eef6ef;border:1px solid #d5eadd;border-radius:12px;padding:8px 12px;font-size:11.5px">◉ Context 32% · 2.6k / 8k tokens · Docs: included · <u>Details</u></div>
+            <div class="composer">
+              <div style="display:flex;gap:8px;margin-bottom:8px"><div style="width:52px;height:52px;border-radius:12px;background:#e3e6ee;display:grid;place-items:center">🖼</div><div style="width:52px;height:52px;border-radius:12px;background:#e3e6ee;display:grid;place-items:center">🖼</div></div>
+              <input placeholder="Ask anything… (Enter ↵ to send, Shift+Enter newline)"/>
+              <div class="crow" style="justify-content:space-between;margin-top:8px"><div class="crow"><span class="chip">＋</span><span class="chip">🖼 Image</span><span class="chip">📚 Docs</span><span class="chip">🎭 Persona</span></div><div class="send" style="background:#111">↑</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTION D -->
+    <div class="card">
+      <div class="card-head"><span class="tag t4">Option D · Warm minimal / Gemini-style</span>
+        <h2>Minimal: big greeting, bottom-sheet composer</h2>
+        <p>Ultra-clean toolbar (logo · model · ring · ＋). Huge whitespace, gradient greeting, three pill shortcuts. Composer feels like a bottom sheet with large touch targets and a wide send button. Friendliest empty state, most “consumer app” feel.</p>
+      </div>
+      <div class="phone">
+        <div class="bar"><div style="font-weight:900">◈ Pocket LLM</div><div style="flex:1"></div><span class="pill" style="background:#eef0f5">4B ▾</span><div class="pill" style="background:#e8f7ee;color:#15803d">◉</div><div class="iconbtn">＋</div></div>
+        <div class="body" style="justify-content:flex-start;padding-top:56px">
+          <div style="font-size:28px;font-weight:800;line-height:1.2;background:linear-gradient(90deg,#4f46e5,#0ea5e9,#22c55e);-webkit-background-clip:text;background-clip:text;color:transparent">Hello, Prady.<br>What shall we do?</div>
+          <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;justify-content:center"><span class="chip" style="background:#fff;border:1px solid #e5e5ea">🖼 Ask about image</span><span class="chip" style="background:#fff;border:1px solid #e5e5ea">📚 Summarize docs</span><span class="chip" style="background:#fff;border:1px solid #e5e5ea">✨ Surprise me</span></div>
+        </div>
+        <div class="composer" style="border-radius:28px;padding:14px">
+          <input placeholder="Ask Pocket LLM…" style="font-size:15px"/>
+          <div class="crow" style="justify-content:space-between;margin-top:12px">
+            <div class="crow"><div class="iconbtn" style="width:40px;height:40px">＋</div><div class="iconbtn" style="width:40px;height:40px">🎙</div><div class="pill" style="background:#f0f0f5">Sam ▾</div></div>
+            <div class="send" style="background:#111;width:44px;height:44px">→</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="approve">
+    <div><b>Reply with A / B / C / D (or “A + C sidebar” mix) and I start building in Flutter.</b>
+    <p>All options keep: model picker in toolbar · context indicator up top · offline-first · no new packages. My pick: <b style="color:#fff">A for phones + C’s sidebar on wide screens</b> — the standard combo most chat apps use.</p></div>
+    <div class="btnrow"><div class="btn primary">A · Standard</div><div class="btn">B · Compact</div><div class="btn">C · Desktop</div><div class="btn">D · Minimal</div></div>
+  </div>
+</div>
+</body>
+</html>

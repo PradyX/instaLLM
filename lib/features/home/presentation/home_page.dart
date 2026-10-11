@@ -20,6 +20,7 @@ import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/documents/application/documents_controller.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
+import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
 import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
@@ -567,7 +568,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             _toolbarIconButton(
               context,
               tooltip: 'New chat',
-              icon: Icons.edit_outlined,
+              icon: Icons.edit_square,
               onPressed: isGenerating ? null : _startNewConversation,
             ),
           ],
@@ -962,6 +963,16 @@ class _HomePageState extends ConsumerState<HomePage> {
             downloadedModels.any((m) => m.id == selectedModel.id)
         ? selectedModel
         : (hasDownloadedModel ? downloadedModels.first : null);
+    // Dictation errors surface once, where the mic was tapped.
+    ref.listen<DictationState>(composerDictationProvider, (previous, next) {
+      final error = next.errorMessage;
+      if (error != null && error != previous?.errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+        );
+      }
+    });
+    final dictation = ref.watch(composerDictationProvider);
     // The context readout under the card: the running request's own budget
     // while generating, otherwise what the next request would cost.
     final projection = ref.watch(homeContextProjectionProvider);
@@ -1133,7 +1144,12 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                     ),
             ),
-            onMicPressed: () => context.push(AppRoutes.voice),
+            onMicPressed: () => unawaited(
+              ref
+                  .read(composerDictationProvider.notifier)
+                  .toggle(_messageController),
+            ),
+            isTranscribing: dictation.isBusy,
           ),
           if (_attachNotice != null)
             Padding(
@@ -1388,20 +1404,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             onTap: () {
               Navigator.pop(context);
               context.push(AppRoutes.benchmark);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.mic_none_rounded),
-            title: const Text('Voice'),
-            subtitle: Text(
-              _voiceSubtitle(
-                ref.watch(voiceSettingsProvider),
-                ref.watch(modelSelectionControllerProvider).models,
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.voice);
             },
           ),
           ListTile(
@@ -2344,21 +2346,6 @@ class _MarkdownCodeMessage extends StatelessWidget {
 
     return segments;
   }
-}
-
-/// Subtitle for the Voice drawer entry.
-///
-/// Only already-loaded state is read here, so opening the drawer never starts
-/// inspecting model files.
-String _voiceSubtitle(VoiceSettingsState voice, List<LlmModel> models) {
-  final modelId = voice.sttModelId;
-  if (!voice.hasSttModel || modelId == null) {
-    return 'Choose a local speech model';
-  }
-  for (final model in models) {
-    if (model.id == modelId) return 'Speech: ${model.name}';
-  }
-  return 'The chosen speech model is no longer installed';
 }
 
 class _MarkdownSegment {

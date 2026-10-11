@@ -24,6 +24,8 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Pocket LLM records voice locally so it can be transcribed on this device. Recordings are never uploaded.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Pocket LLM can transcribe speech with the device recognizer when you choose Device recognition. Apple may process that audio on its servers; the local-model option never leaves this device.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>

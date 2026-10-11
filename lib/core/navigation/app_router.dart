@@ -8,7 +8,6 @@ import 'package:pocket_llm/features/model_selection/presentation/model_selection
 import 'package:pocket_llm/features/personas/presentation/personas_page.dart';
 import 'package:pocket_llm/features/settings/presentation/settings_page.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_conversation_page.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_page.dart';
 import 'package:pocket_llm/features/about/presentation/about_page.dart';
 import 'package:pocket_llm/features/bots/presentation/bots_page.dart';
 import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
@@ -36,7 +35,6 @@ abstract class AppRoutes {
   static const inferenceProfiles = '/inference-profiles';
   static const contextBudget = '/context-budget';
   static const personas = '/personas';
-  static const voice = '/voice';
   static const voiceConversation = '/voice/conversation';
   static const workspaces = '/workspaces';
   static const skills = '/skills';
@@ -110,10 +108,6 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.voiceConversation,
         builder: (context, state) => const VoiceConversationPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.voice,
-        builder: (context, state) => const VoicePage(),
       ),
       GoRoute(
         path: AppRoutes.about,

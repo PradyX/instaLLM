@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
+import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
@@ -242,6 +243,15 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(groupChatsProvider);
+    ref.listen<DictationState>(composerDictationProvider, (previous, next) {
+      final error = next.errorMessage;
+      if (error != null && error != previous?.errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+        );
+      }
+    });
+    final dictation = ref.watch(composerDictationProvider);
     ref.listen<ToolApprovalRequest?>(toolApprovalControllerProvider, (
       previous,
       next,
@@ -337,6 +347,12 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
                     ? 'Message ${chat.name}...'
                     : 'Message the room (@name for a bot)...',
                 onSend: () => _send(_inputController.text),
+                onMicPressed: () => unawaited(
+                  ref
+                      .read(composerDictationProvider.notifier)
+                      .toggle(_inputController),
+                ),
+                isTranscribing: dictation.isBusy,
               ),
             ),
           ),

@@ -52,7 +52,7 @@ class VoiceConversationReadiness {
           'iOS, macOS and Windows.';
     }
     if (!hasSpeechModel) {
-      return 'Choose a speech model that can hear audio on the Voice screen '
+      return 'Choose a speech model that can hear audio in Settings › Voice '
           'before starting a voice conversation.';
     }
     if (!hasChatModel) {

@@ -2,6 +2,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
 import 'package:pocket_llm/storage/secure_storage.dart';
 
+/// Which engine turns speech into text in the composer.
+enum SttEngine {
+  /// A local GGUF speech model. Fully offline; needs a model with an
+  /// audio projector.
+  localModel('localModel'),
+
+  /// The operating system's recognizer. Lightweight, but on some setups
+  /// the audio may be processed on the vendor's servers.
+  platform('platform');
+
+  const SttEngine(this.key);
+
+  /// Storage key; unknown values read back as [localModel].
+  final String key;
+
+  static SttEngine fromKey(Object? key) {
+    for (final engine in SttEngine.values) {
+      if (engine.key == key) return engine;
+    }
+    return SttEngine.localModel;
+  }
+}
+
 /// Which GGUF models and voices the user chose for voice work.
 ///
 /// Only the choices live here: model files remain owned by the model
@@ -10,6 +33,7 @@ import 'package:pocket_llm/storage/secure_storage.dart';
 class VoiceSettingsState {
   const VoiceSettingsState({
     this.sttModelId,
+    this.sttEngine = SttEngine.localModel,
     this.ttsVoiceId,
     this.ttsRate,
     this.readRepliesAloud = false,
@@ -17,6 +41,10 @@ class VoiceSettingsState {
 
   /// Model that transcribes local audio, or null when none is chosen.
   final String? sttModelId;
+
+  /// Engine the composer mic uses. Local model is the default because it
+  /// never sends audio anywhere.
+  final SttEngine sttEngine;
 
   /// Voice used for reading text aloud, as `name|locale`, or null for the
   /// device default. Stored as text so a voice that is no longer installed
@@ -36,6 +64,7 @@ class VoiceSettingsState {
       ttsVoiceId != null && ttsVoiceId!.trim().isNotEmpty;
   VoiceSettingsState copyWith({
     Object? sttModelId = _unset,
+    SttEngine? sttEngine,
     Object? ttsVoiceId = _unset,
     Object? ttsRate = _unset,
     bool? readRepliesAloud,
@@ -44,6 +73,7 @@ class VoiceSettingsState {
       sttModelId: sttModelId == _unset
           ? this.sttModelId
           : sttModelId as String?,
+      sttEngine: sttEngine ?? this.sttEngine,
       ttsVoiceId: ttsVoiceId == _unset
           ? this.ttsVoiceId
           : ttsVoiceId as String?,
@@ -73,6 +103,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
       if (data == null) return;
 
       final sttModelId = data['sttModelId'];
+      final sttEngine = SttEngine.fromKey(data['sttEngine']);
       final ttsVoiceId = data['ttsVoiceId'];
       final ttsRate = data['ttsRate'];
       final ttsRateVersion = data['ttsRateVersion'];
@@ -81,6 +112,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
         sttModelId: sttModelId is String && sttModelId.trim().isNotEmpty
             ? sttModelId
             : null,
+        sttEngine: sttEngine,
         // Keys added after speech to text existed simply stay unset in a
         // document written by an older build.
         ttsVoiceId: ttsVoiceId is String && ttsVoiceId.trim().isNotEmpty
@@ -100,6 +132,12 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
     } catch (_) {
       // Keep defaults if storage read fails.
     }
+  }
+
+  /// Chooses which engine the composer mic transcribes with.
+  Future<void> setSttEngine(SttEngine engine) async {
+    state = state.copyWith(sttEngine: engine);
+    await _persist();
   }
 
   /// Chooses the transcription model, or clears the choice with null.
@@ -137,6 +175,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
       key: _settingsKey,
       value: {
         'sttModelId': state.sttModelId,
+        'sttEngine': state.sttEngine.key,
         'ttsVoiceId': state.ttsVoiceId,
         'ttsRate': state.ttsRate,
         'ttsRateVersion': currentSpeechRateVersion,

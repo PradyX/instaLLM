@@ -10,6 +10,7 @@ import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
     show formatTokens;
 import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
+import 'package:pocket_llm/features/voice/presentation/voice_settings_section.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -146,6 +147,16 @@ class SettingsPage extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          Text(
+            'Voice',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const VoiceSettingsSection(),
           const SizedBox(height: 24),
           Text(
             'Data',

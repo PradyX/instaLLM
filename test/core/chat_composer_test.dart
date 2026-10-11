@@ -6,7 +6,7 @@ import 'package:pocket_llm/core/widgets/chat_composer.dart';
 Future<void> pumpComposer(
   WidgetTester tester, {
   VoidCallback? onMicPressed,
-  bool isTranscribing = false,
+  ComposerMicState micState = ComposerMicState.idle,
   bool enabled = true,
   required Future<void> Function() onSend,
 }) async {
@@ -19,7 +19,7 @@ Future<void> pumpComposer(
           hintText: 'Ask anything',
           onSend: onSend,
           onMicPressed: onMicPressed,
-          isTranscribing: isTranscribing,
+          micState: micState,
         ),
       ),
     ),
@@ -39,21 +39,42 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('a running dictation replaces the mic with a spinner', (
+  testWidgets('an open dictation keeps a tappable mic, because the tap is '
+      'what finishes it', (tester) async {
+    var taps = 0;
+    await pumpComposer(
+      tester,
+      onMicPressed: () => taps++,
+      micState: ComposerMicState.active,
+      onSend: () async {},
+    );
+
+    // A spinner here would be a dead end: nothing could end the recording.
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.mic_rounded));
+    await tester.pump();
+
+    expect(taps, 1);
+  });
+
+  testWidgets('a clip being transcribed replaces the mic with a spinner', (
     tester,
   ) async {
     var taps = 0;
     await pumpComposer(
       tester,
       onMicPressed: () => taps++,
-      isTranscribing: true,
+      micState: ComposerMicState.transcribing,
       onSend: () async {},
     );
 
+    expect(find.byIcon(Icons.mic_rounded), findsNothing);
     expect(find.byIcon(Icons.mic_none_rounded), findsNothing);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // There is nothing to press while the clip transcribes.
+    // There is nothing to press while the clip is turned into words.
     await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     expect(taps, 0);
   });

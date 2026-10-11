@@ -352,7 +352,7 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
                       .read(composerDictationProvider.notifier)
                       .toggle(_inputController),
                 ),
-                isTranscribing: dictation.isBusy,
+                micState: dictation.microphone,
               ),
             ),
           ),

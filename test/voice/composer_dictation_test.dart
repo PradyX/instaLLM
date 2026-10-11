@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
+import 'package:pocket_llm/core/widgets/chat_composer.dart'
+    show ComposerMicState;
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/voice/application/recording_controller.dart';
@@ -16,13 +18,22 @@ import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
 
 /// Device recognizer the test drives: it hears [transcript] or nothing.
 class _FakeListener implements PlatformSpeechListener {
-  _FakeListener({this.available = true, this.transcript = ''});
+  _FakeListener({
+    this.outcome = PlatformSpeechStatus.ready,
+    this.transcript = '',
+    this.gate,
+  });
 
-  /// False stands for a platform with no usable speech service.
-  final bool available;
+  /// What the device answers when asked to open.
+  final PlatformSpeechStatus outcome;
 
   /// What the recognizer returns when it is stopped.
   final String transcript;
+
+  /// When set, the recognizer only answers once the test releases it, which
+  /// is what opening the microphone for the first time looks like while the
+  /// permission prompt is up.
+  final Completer<bool>? gate;
 
   int listenCalls = 0;
   int stopCalls = 0;
@@ -33,14 +44,21 @@ class _FakeListener implements PlatformSpeechListener {
   bool get isListening => _listening;
 
   @override
-  Future<bool> initialize() async => available;
+  Future<PlatformSpeechStatus> status() async => outcome;
 
   @override
-  Future<bool> listen() async {
+  Future<PlatformSpeechStatus> requestAuthorization() async => outcome;
+
+  @override
+  Future<PlatformSpeechStatus> listen() async {
     listenCalls++;
-    if (!available) return false;
+    final gate = this.gate;
+    if (gate != null && !await gate.future) {
+      return PlatformSpeechStatus.notAuthorized;
+    }
+    if (outcome != PlatformSpeechStatus.ready) return outcome;
     _listening = true;
-    return true;
+    return outcome;
   }
 
   @override
@@ -186,6 +204,8 @@ void main() {
     _FakeListener? listener,
     _FakeRecorder? recorder,
     _FakeRuntime? runtime,
+    Duration tickInterval = const Duration(hours: 1),
+    Duration? maximumLength,
   }) {
     final speech = _FakeListener(transcript: 'hello from the composer');
     return ProviderContainer(
@@ -198,8 +218,11 @@ void main() {
           recorder ?? _FakeRecorder(clipPath: clipPath),
         ),
         recordingControllerProvider.overrideWith(
-          (ref) =>
-              RecordingController(ref, tickInterval: const Duration(hours: 1)),
+          (ref) => RecordingController(
+            ref,
+            maximumLength: maximumLength,
+            tickInterval: tickInterval,
+          ),
         ),
         transcriptionModelProvider.overrideWithValue(_speechModel),
         speechToTextServiceProvider.overrideWithValue(
@@ -247,27 +270,40 @@ void main() {
     expect(field.selection.baseOffset, field.text.length);
   });
 
-  test(
-    'a device with no recognizer reports it instead of opening the mic',
-    () async {
-      final listener = _FakeListener(available: false);
-      final container = buildContainer(
-        engine: SttEngine.platform,
-        listener: listener,
-      );
-      addTearDown(container.dispose);
-      final field = TextEditingController();
-      addTearDown(field.dispose);
+  test('a device that has not allowed recognition reports it instead of '
+      'opening the mic', () async {
+    final container = buildContainer(
+      engine: SttEngine.platform,
+      listener: _FakeListener(outcome: PlatformSpeechStatus.notAuthorized),
+    );
+    addTearDown(container.dispose);
+    final field = TextEditingController();
+    addTearDown(field.dispose);
 
-      await container.read(composerDictationProvider.notifier).toggle(field);
+    await container.read(composerDictationProvider.notifier).toggle(field);
 
-      final state = container.read(composerDictationProvider);
-      expect(state.stage, DictationStage.idle);
-      expect(state.isBusy, isFalse);
-      expect(state.errorMessage, contains('Switch the transcription engine'));
-      expect(field.text, isEmpty);
-    },
-  );
+    final state = container.read(composerDictationProvider);
+    expect(state.stage, DictationStage.idle);
+    expect(state.isBusy, isFalse);
+    expect(state.errorMessage, contains('not allowed yet'));
+    expect(field.text, isEmpty);
+  });
+
+  test('a platform with no recognizer names the local model instead', () async {
+    final container = buildContainer(
+      engine: SttEngine.platform,
+      listener: _FakeListener(outcome: PlatformSpeechStatus.unsupported),
+    );
+    addTearDown(container.dispose);
+    final field = TextEditingController();
+    addTearDown(field.dispose);
+
+    await container.read(composerDictationProvider.notifier).toggle(field);
+
+    final state = container.read(composerDictationProvider);
+    expect(state.stage, DictationStage.idle);
+    expect(state.errorMessage, contains('no speech recognizer'));
+  });
 
   test('nothing recognizable leaves the draft alone and says so', () async {
     final container = buildContainer(
@@ -355,6 +391,102 @@ void main() {
     expect(recorder.deleted, [clipPath]);
     expect(File(clipPath).existsSync(), isFalse);
   });
+
+  test(
+    'a recording the capture limit ends finishes the turn by itself',
+    () async {
+      final runtime = _FakeRuntime();
+      final recorder = _FakeRecorder(clipPath: clipPath);
+      final container = buildContainer(
+        engine: SttEngine.localModel,
+        recorder: recorder,
+        runtime: runtime,
+        maximumLength: const Duration(milliseconds: 40),
+        tickInterval: const Duration(milliseconds: 10),
+      );
+      addTearDown(container.dispose);
+      final field = TextEditingController();
+      addTearDown(field.dispose);
+      final controller = container.read(composerDictationProvider.notifier);
+
+      runtime.emit('local ');
+      runtime.emit('words');
+      await controller.toggle(field);
+      expect(
+        container.read(composerDictationProvider).microphone,
+        ComposerMicState.active,
+      );
+
+      // The recorder stops on its own at the limit; the turn must not be left
+      // waiting for a tap that can never come.
+      await pumpUntil(() => runtime.transcribeCalls == 1);
+      await runtime.finish();
+      await pumpUntil(() => field.text == 'local words');
+
+      expect(
+        container.read(composerDictationProvider).stage,
+        DictationStage.idle,
+      );
+      expect(runtime.transcribeCalls, 1);
+      expect(recorder.deleted, [clipPath]);
+    },
+  );
+
+  test('the mic shows a finish control while voice is open and a spinner only '
+      'while transcribing', () {
+    expect(const DictationState().microphone, ComposerMicState.idle);
+    expect(
+      const DictationState(stage: DictationStage.listening).microphone,
+      ComposerMicState.active,
+    );
+    expect(
+      const DictationState(stage: DictationStage.recording).microphone,
+      ComposerMicState.active,
+    );
+    expect(
+      const DictationState(stage: DictationStage.transcribing).microphone,
+      ComposerMicState.transcribing,
+    );
+  });
+
+  test(
+    'a tap while the recognizer is still opening does not open it twice',
+    () async {
+      final gate = Completer<bool>();
+      final listener = _FakeListener(gate: gate);
+      final container = buildContainer(
+        engine: SttEngine.platform,
+        listener: listener,
+      );
+      addTearDown(container.dispose);
+      final field = TextEditingController();
+      addTearDown(field.dispose);
+      final controller = container.read(composerDictationProvider.notifier);
+
+      final opening = controller.toggle(field);
+
+      // The mic shows that it is engaged while the permission prompt is up,
+      // rather than looking untouched.
+      expect(
+        container.read(composerDictationProvider).stage,
+        DictationStage.listening,
+      );
+
+      await controller.toggle(field);
+      expect(listener.listenCalls, 1);
+      expect(listener.stopCalls, 0);
+
+      gate.complete(true);
+      await opening;
+      expect(
+        container.read(composerDictationProvider).stage,
+        DictationStage.listening,
+      );
+
+      await controller.toggle(field);
+      expect(listener.stopCalls, 1);
+    },
+  );
 
   test('a refused microphone reports the permission problem', () async {
     final container = buildContainer(

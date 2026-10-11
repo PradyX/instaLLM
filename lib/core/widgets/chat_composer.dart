@@ -1,6 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
 
+/// What the composer's mic is doing.
+///
+/// The mic stays a control for as long as voice is open, and only becomes a
+/// spinner for work the user cannot end by tapping.
+enum ComposerMicState {
+  /// Nothing is being dictated: tapping the mic opens it.
+  idle,
+
+  /// Listening or recording: tapping the mic finishes the turn.
+  active,
+
+  /// A clip is being turned into words: there is nothing to press.
+  transcribing,
+}
+
 /// The app's one composer card: borderless expanding field on top, one
 /// action row at the bottom. Home and room chats share it so the two can
 /// never drift apart again.
@@ -22,7 +37,7 @@ class ChatComposer extends StatelessWidget {
     this.leading,
     this.middle,
     this.onMicPressed,
-    this.isTranscribing = false,
+    this.micState = ComposerMicState.idle,
   });
 
   /// Text being composed; owned by the hosting page.
@@ -52,8 +67,8 @@ class ChatComposer extends StatelessWidget {
   /// Inline voice input. Null hides the mic button.
   final VoidCallback? onMicPressed;
 
-  /// True while a clip transcribes: the mic shows a spinner and locks.
-  final bool isTranscribing;
+  /// What the mic shows; see [ComposerMicState].
+  final ComposerMicState micState;
 
   @override
   Widget build(BuildContext context) {
@@ -119,17 +134,27 @@ class ChatComposer extends StatelessWidget {
                 if (micHandler != null)
                   SizedBox.square(
                     dimension: 40,
-                    child: isTranscribing
-                        ? const Padding(
-                            padding: EdgeInsets.all(10),
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : IconButton(
-                            tooltip: 'Voice input',
-                            onPressed: enabled ? micHandler : null,
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(Icons.mic_none_rounded, size: 20),
-                          ),
+                    child: switch (micState) {
+                      // Only work the user cannot finish by tapping hides the
+                      // control; listening and recording keep a tappable mic,
+                      // because the tap is what ends them.
+                      ComposerMicState.transcribing => const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      ComposerMicState.active => IconButton.filledTonal(
+                        tooltip: 'Finish dictation',
+                        onPressed: enabled ? micHandler : null,
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.mic_rounded, size: 20),
+                      ),
+                      ComposerMicState.idle => IconButton(
+                        tooltip: 'Voice input',
+                        onPressed: enabled ? micHandler : null,
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.mic_none_rounded, size: 20),
+                      ),
+                    },
                   ),
                 if (micHandler != null) const SizedBox(width: 4),
                 SizedBox.square(

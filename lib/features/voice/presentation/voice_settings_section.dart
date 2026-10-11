@@ -11,6 +11,85 @@ import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
 import 'package:pocket_llm/features/voice/presentation/speech_voice_picker.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_model_picker.dart';
 
+/// Why the device engine cannot be picked, in the words the settings show.
+String _platformLimit(PlatformSpeechStatus? status) {
+  if (status == PlatformSpeechStatus.unsupported) {
+    return 'This platform has no speech recognizer Pocket LLM can use — the '
+        'local speech model covers it.';
+  }
+  if (status == PlatformSpeechStatus.notAuthorized) {
+    return 'Not allowed yet: allow it below, or keep the local model, which '
+        'needs no permission.';
+  }
+  return 'Checking whether this device can recognize speech...';
+}
+
+/// Asks macOS for speech recognition.
+///
+/// This is the one place a permission request is made, and only ever when the
+/// user presses it: an app that asks on its own can be aborted by the system
+/// when it was launched from a terminal or an IDE, which is where the request
+/// gets attributed to the launching process instead of to Pocket LLM.
+class _AllowDeviceRecognitionButton extends ConsumerStatefulWidget {
+  const _AllowDeviceRecognitionButton();
+
+  @override
+  ConsumerState<_AllowDeviceRecognitionButton> createState() =>
+      _AllowDeviceRecognitionButtonState();
+}
+
+class _AllowDeviceRecognitionButtonState
+    extends ConsumerState<_AllowDeviceRecognitionButton> {
+  bool _requesting = false;
+
+  Future<void> _ask() async {
+    setState(() => _requesting = true);
+    final status = await ref
+        .read(platformSpeechProvider)
+        .requestAuthorization();
+    if (!mounted) return;
+    setState(() => _requesting = false);
+    ref.invalidate(platformSttStatusProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_outcome(status)),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  static String _outcome(PlatformSpeechStatus status) {
+    return switch (status) {
+      PlatformSpeechStatus.ready => 'Device recognition is allowed now.',
+      PlatformSpeechStatus.unsupported =>
+        'This device has no speech recognizer Pocket LLM can use.',
+      PlatformSpeechStatus.notAuthorized =>
+        'macOS did not allow speech recognition. The local speech model needs '
+            'no permission.',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: OutlinedButton.icon(
+          onPressed: _requesting ? null : _ask,
+          icon: _requesting
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.mic_rounded, size: 18),
+          label: const Text('Allow device recognition'),
+        ),
+      ),
+    );
+  }
+}
+
 /// Voice settings, living in Settings since the Voice page went away.
 ///
 /// The composer mic transcribes in place with the engine chosen here; the
@@ -22,8 +101,8 @@ class VoiceSettingsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(voiceSettingsProvider);
     final settingsController = ref.read(voiceSettingsProvider.notifier);
-    final platformAvailable =
-        ref.watch(platformSttAvailableProvider).valueOrNull ?? true;
+    final platformStatus = ref.watch(platformSttStatusProvider).valueOrNull;
+    final platformAvailable = platformStatus == PlatformSpeechStatus.ready;
     final voiceState = ref.watch(voiceControllerProvider);
     final selectedModel = voiceState.selectedOption?.model;
     final tts = ref.watch(ttsControllerProvider);
@@ -57,13 +136,14 @@ class VoiceSettingsSection extends ConsumerWidget {
                     platformAvailable
                         ? 'Fast and lightweight, but the OS may process '
                               'audio on the vendor\u2019s servers.'
-                        : 'Not available on this platform — the local '
-                              'speech model covers it.',
+                        : _platformLimit(platformStatus),
                   ),
                 ),
               ],
             ),
           ),
+          if (platformStatus == PlatformSpeechStatus.notAuthorized)
+            const _AllowDeviceRecognitionButton(),
           if (settings.sttEngine == SttEngine.localModel) ...[
             const Divider(height: 1),
             ListTile(

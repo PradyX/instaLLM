@@ -1149,7 +1149,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .read(composerDictationProvider.notifier)
                   .toggle(_messageController),
             ),
-            isTranscribing: dictation.isBusy,
+            micState: dictation.microphone,
           ),
           if (_attachNotice != null)
             Padding(

@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
+import 'package:pocket_llm/core/widgets/chat_composer.dart'
+    show ComposerMicState;
 import 'package:pocket_llm/features/voice/application/recording_controller.dart';
 import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
@@ -39,6 +43,30 @@ class DictationState {
   }
 }
 
+/// Why device recognition could not open, in words the user can act on.
+///
+/// The app never asks the system for this permission itself, so the fix is
+/// always somewhere the user can reach rather than a retry.
+String platformRefusal(PlatformSpeechStatus status) {
+  if (status == PlatformSpeechStatus.unsupported) {
+    return 'This device has no speech recognizer Pocket LLM can use. Switch '
+        'the transcription engine to the local model in Settings.';
+  }
+  return 'Device recognition is not allowed yet. Allow it in Settings › '
+      'Voice, or switch the transcription engine to the local model — that '
+      'one needs no permission.';
+}
+
+/// What the composer's mic shows for this dictation.
+extension DictationMicrophone on DictationState {
+  ComposerMicState get microphone => switch (stage) {
+    DictationStage.idle => ComposerMicState.idle,
+    DictationStage.transcribing => ComposerMicState.transcribing,
+    DictationStage.listening ||
+    DictationStage.recording => ComposerMicState.active,
+  };
+}
+
 final composerDictationProvider =
     StateNotifierProvider<ComposerDictationController, DictationState>(
       (ref) => ComposerDictationController(ref),
@@ -51,15 +79,32 @@ final composerDictationProvider =
 /// transcribed and removed. The text lands in the composer's field for
 /// review — nothing is ever sent on its own.
 class ComposerDictationController extends StateNotifier<DictationState> {
-  ComposerDictationController(this._ref) : super(const DictationState());
+  ComposerDictationController(this._ref) : super(const DictationState()) {
+    // A recording can end without a tap: the capture limit stops it. The turn
+    // then finishes itself, instead of leaving a mic state nobody can leave.
+    _ref.listen<RecordingState>(recordingControllerProvider, _recorderChanged);
+  }
 
   final Ref _ref;
 
+  /// Field the open dictation will be inserted into, held so a turned that
+  /// ends on its own still knows where its words belong.
+  TextEditingController? _target;
+
+  /// True while a turn is being finished, so the recorder's own stop event
+  /// cannot start the same turn a second time.
+  bool _finishing = false;
+
+  /// True while an engine is being opened, so a second tap during the
+  /// permission round trip is ignored rather than opening it twice.
+  bool _starting = false;
+
   /// Opens the mic when idle, finishes and inserts when open.
   Future<void> toggle(TextEditingController target) async {
+    if (_starting) return;
     switch (state.stage) {
       case DictationStage.idle:
-        await _start();
+        await _start(target);
       case DictationStage.listening:
         await _finishPlatform(target);
       case DictationStage.recording:
@@ -69,23 +114,32 @@ class ComposerDictationController extends StateNotifier<DictationState> {
     }
   }
 
-  Future<void> _start() async {
+  Future<void> _start(TextEditingController target) async {
     final engine = _ref.read(voiceSettingsProvider).sttEngine;
     if (engine == SttEngine.platform) {
-      final started = await _ref.read(platformSpeechProvider).listen();
+      // Opening the recognizer can take a moment; the mic shows that it is
+      // engaged meanwhile instead of looking untouched.
+      _starting = true;
+      state = const DictationState(stage: DictationStage.listening);
+      late final PlatformSpeechStatus opened;
+      try {
+        opened = await _ref.read(platformSpeechProvider).listen();
+      } finally {
+        _starting = false;
+      }
       if (!mounted) return;
+      final started = opened == PlatformSpeechStatus.ready;
+      _target = started ? target : null;
       state = DictationState(
         stage: started ? DictationStage.listening : DictationStage.idle,
-        errorMessage: started
-            ? null
-            : 'Device recognition is not available here. Switch the '
-                  'transcription engine to the local model in Settings.',
+        errorMessage: started ? null : platformRefusal(opened),
       );
       return;
     }
     await _ref.read(recordingControllerProvider.notifier).start();
     if (!mounted) return;
     final recording = _ref.read(recordingControllerProvider);
+    _target = recording.isRecording ? target : null;
     state = DictationState(
       stage: recording.isRecording
           ? DictationStage.recording
@@ -94,8 +148,26 @@ class ComposerDictationController extends StateNotifier<DictationState> {
     );
   }
 
+  /// Finishes a clip the recorder ended on its own, such as at the capture
+  /// limit, so a closed microphone never leaves the mic showing work.
+  void _recorderChanged(RecordingState? previous, RecordingState next) {
+    if (_finishing || state.stage != DictationStage.recording) return;
+    if (!(previous?.isRecording ?? false) || next.isRecording) return;
+    final target = _target;
+    if (target == null) return;
+    if (next.recordedPath == null) {
+      _target = null;
+      state = const DictationState(
+        errorMessage: 'The recording produced no clip. Try again.',
+      );
+      return;
+    }
+    unawaited(_finishLocal(target));
+  }
+
   Future<void> _finishPlatform(TextEditingController target) async {
     final transcript = await _ref.read(platformSpeechProvider).stop();
+    _target = null;
     if (!mounted) return;
     if (transcript.trim().isEmpty) {
       state = const DictationState(
@@ -108,33 +180,44 @@ class ComposerDictationController extends StateNotifier<DictationState> {
   }
 
   Future<void> _finishLocal(TextEditingController target) async {
-    final path = await _ref.read(recordingControllerProvider.notifier).stop();
-    if (!mounted) return;
-    if (path == null) {
-      state = const DictationState(
-        errorMessage: 'The recording produced no clip. Try again.',
-      );
-      return;
+    // The recorder's own stop event reaches [_recorderChanged], and a limit
+    // that fires while a tap is already finishing the turn must not start a
+    // second run over the same clip.
+    if (_finishing) return;
+    _finishing = true;
+    try {
+      final path = await _ref.read(recordingControllerProvider.notifier).stop();
+      _target = null;
+      if (!mounted) return;
+      if (path == null) {
+        state = const DictationState(
+          errorMessage: 'The recording produced no clip. Try again.',
+        );
+        return;
+      }
+      state = const DictationState(stage: DictationStage.transcribing);
+      await _ref
+          .read(transcriptionControllerProvider.notifier)
+          .start(audioPath: path);
+      if (!mounted) return;
+      final transcription = _ref.read(transcriptionControllerProvider);
+      // The transcript is what the user keeps, so the audio is removed here
+      // rather than left lying in app storage.
+      await _ref.read(microphoneRecorderProvider).deleteRecording(path);
+      _ref.read(recordingControllerProvider.notifier).clearRecording();
+      if (!mounted) return;
+      if (!transcription.hasTranscript) {
+        state = DictationState(
+          errorMessage:
+              transcription.errorMessage ?? 'No speech was recognized.',
+        );
+        return;
+      }
+      _insert(target, transcription.transcript);
+      state = const DictationState();
+    } finally {
+      _finishing = false;
     }
-    state = const DictationState(stage: DictationStage.transcribing);
-    await _ref
-        .read(transcriptionControllerProvider.notifier)
-        .start(audioPath: path);
-    if (!mounted) return;
-    final transcription = _ref.read(transcriptionControllerProvider);
-    // The transcript is what the user keeps, so the audio is removed here
-    // rather than left lying in app storage.
-    await _ref.read(microphoneRecorderProvider).deleteRecording(path);
-    _ref.read(recordingControllerProvider.notifier).clearRecording();
-    if (!mounted) return;
-    if (!transcription.hasTranscript) {
-      state = DictationState(
-        errorMessage: transcription.errorMessage ?? 'No speech was recognized.',
-      );
-      return;
-    }
-    _insert(target, transcription.transcript);
-    state = const DictationState();
   }
 
   /// Appends [text] to the field with a separating space, leaving the

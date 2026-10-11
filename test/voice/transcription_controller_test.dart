@@ -4,9 +4,15 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:pocket_llm/core/services/model_storage_service.dart';
+import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
+import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
 import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
+import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
+import 'package:pocket_llm/features/voice/data/whisper_speech_service.dart';
+import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
 
 /// Speech runtime whose output the test controls token by token, so streaming,
 /// stopping and failures can be observed without a model on disk.
@@ -73,6 +79,9 @@ void main() {
   late Directory tempDir;
   late String clip;
 
+  final tiny = WhisperModelCatalog.models[0];
+  final small = WhisperModelCatalog.models[2];
+
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('pocket_llm_stt_run');
     final file = File(p.join(tempDir.path, 'note.wav'));
@@ -97,9 +106,19 @@ void main() {
     LlmModel? model,
     Future<String?> Function()? picker,
     bool modelReady = true,
+    SttEngine engine = SttEngine.localModel,
+    String? whisperModelId,
+    List<WhisperModelOption> whisperInstalled = const [],
+    WhisperRunner? whisperRunner,
   }) {
     return ProviderContainer(
       overrides: [
+        voiceSettingsProvider.overrideWith(
+          (ref) => _InMemoryVoiceSettings(
+            engine: engine,
+            whisperModelId: whisperModelId,
+          ),
+        ),
         transcriptionModelProvider.overrideWithValue(modelReady ? model : null),
         voiceAudioPickerProvider.overrideWithValue(picker ?? () async => clip),
         speechToTextServiceProvider.overrideWithValue(
@@ -110,6 +129,11 @@ void main() {
             isFileReady: (_) async => true,
           ),
         ),
+        whisperModelServiceProvider.overrideWithValue(
+          _FakeWhisperModelService(whisperInstalled),
+        ),
+        if (whisperRunner != null)
+          whisperRunnerProvider.overrideWithValue(whisperRunner),
       ],
     );
   }
@@ -256,4 +280,224 @@ void main() {
     expect(state.transcript, isEmpty);
     expect(state.audioLabel, isNull);
   });
+
+  test('runs a clip through Whisper when that engine is chosen', () async {
+    final runtime = _ControllableRuntime();
+    final runner = _FakeWhisperRunner(transcript: 'Whisper heard this');
+    final container = containerFor(
+      runtime: runtime,
+      // The GGUF model with an audio projector is not involved on this path,
+      // so none being chosen must not block a Whisper run.
+      modelReady: false,
+      engine: SttEngine.whisper,
+      whisperModelId: tiny.id,
+      whisperInstalled: [tiny],
+      whisperRunner: runner,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(transcriptionControllerProvider.notifier).start();
+
+    final state = container.read(transcriptionControllerProvider);
+    expect(state.stage, TranscriptionStage.finished);
+    expect(state.transcript, 'Whisper heard this');
+    expect(state.modelName, tiny.name);
+    expect(state.audioLabel, 'note.wav');
+    expect(state.errorMessage, isNull);
+    expect(runner.transcribeCalls, 1);
+    expect(runner.audioPath, clip);
+    expect(runner.encoderPath, '/models/${tiny.encoder.fileName}');
+    expect(runner.decoderPath, '/models/${tiny.decoder.fileName}');
+    expect(runner.tokensPath, '/models/${tiny.tokens.fileName}');
+    expect(runner.language, autoLanguage);
+    expect(runtime.transcribeCalls, 0);
+  });
+
+  test(
+    'Whisper falls back to an installed model when the chosen one is gone',
+    () async {
+      final runtime = _ControllableRuntime();
+      final runner = _FakeWhisperRunner();
+      final container = containerFor(
+        runtime: runtime,
+        modelReady: false,
+        engine: SttEngine.whisper,
+        whisperModelId: small.id,
+        whisperInstalled: [tiny],
+        whisperRunner: runner,
+      );
+      addTearDown(container.dispose);
+
+      await container.read(transcriptionControllerProvider.notifier).start();
+
+      expect(
+        container.read(transcriptionControllerProvider).hasTranscript,
+        isTrue,
+      );
+      expect(runner.encoderPath, '/models/${tiny.encoder.fileName}');
+    },
+  );
+
+  test('Whisper says what to do when no model is installed', () async {
+    final runtime = _ControllableRuntime();
+    final runner = _FakeWhisperRunner();
+    final container = containerFor(
+      runtime: runtime,
+      modelReady: false,
+      engine: SttEngine.whisper,
+      whisperRunner: runner,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(transcriptionControllerProvider.notifier).start();
+
+    final state = container.read(transcriptionControllerProvider);
+    expect(state.stage, TranscriptionStage.failed);
+    expect(state.errorMessage, contains('Whisper model'));
+    expect(state.errorMessage, contains('Settings'));
+    expect(runner.transcribeCalls, 0);
+    expect(runtime.transcribeCalls, 0);
+  });
+
+  test('a stopped Whisper run reports a stop, not a failure', () async {
+    final runtime = _ControllableRuntime();
+    final runner = _FakeWhisperRunner()..gate = Completer<void>();
+    final container = containerFor(
+      runtime: runtime,
+      modelReady: false,
+      engine: SttEngine.whisper,
+      whisperInstalled: [tiny],
+      whisperRunner: runner,
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(transcriptionControllerProvider.notifier);
+
+    final run = controller.start();
+    await pumpUntil(() => runner.transcribeCalls == 1);
+    expect(
+      container.read(transcriptionControllerProvider).stage,
+      TranscriptionStage.running,
+    );
+
+    controller.cancel();
+    expect(runner.cancelled, isTrue);
+
+    // The native abort of a decode in flight surfaces as an error; the clip
+    // was stopped by the user, which is not something to report as a failure.
+    runner.failure = 'decode aborted';
+    runner.gate!.complete();
+    await run;
+
+    final state = container.read(transcriptionControllerProvider);
+    expect(state.stage, TranscriptionStage.finished);
+    expect(state.wasStopped, isTrue);
+    expect(state.errorMessage, isNull);
+  });
+
+  test('reports a Whisper failure with the binding\'s own message', () async {
+    final runtime = _ControllableRuntime();
+    final runner = _FakeWhisperRunner(failure: 'failed to load the model');
+    final container = containerFor(
+      runtime: runtime,
+      modelReady: false,
+      engine: SttEngine.whisper,
+      whisperInstalled: [tiny],
+      whisperRunner: runner,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(transcriptionControllerProvider.notifier).start();
+
+    final state = container.read(transcriptionControllerProvider);
+    expect(state.stage, TranscriptionStage.failed);
+    expect(state.errorMessage, 'failed to load the model');
+    expect(state.wasStopped, isFalse);
+  });
+}
+
+/// Settings that stay in memory, so the tests never touch secure storage.
+class _InMemoryVoiceSettings extends VoiceSettingsNotifier {
+  _InMemoryVoiceSettings({
+    SttEngine engine = SttEngine.localModel,
+    String? whisperModelId,
+  }) {
+    state = state.copyWith(sttEngine: engine, whisperModelId: whisperModelId);
+  }
+
+  @override
+  Future<void> setSttEngine(SttEngine engine) async {
+    state = state.copyWith(sttEngine: engine);
+  }
+
+  @override
+  Future<void> setWhisperModel(String? modelId) async {
+    state = state.copyWith(whisperModelId: modelId);
+  }
+}
+
+/// Whisper model files the test decides on, so no download is involved.
+class _FakeWhisperModelService extends WhisperModelService {
+  _FakeWhisperModelService(this.installedOptions)
+    : super(ModelStorageService());
+
+  final List<WhisperModelOption> installedOptions;
+
+  @override
+  Future<List<InstalledWhisperModel>> installed() async {
+    return [
+      for (final option in WhisperModelCatalog.models)
+        if (installedOptions.contains(option))
+          InstalledWhisperModel(
+            option: option,
+            encoderPath: '/models/${option.encoder.fileName}',
+            decoderPath: '/models/${option.decoder.fileName}',
+            tokensPath: '/models/${option.tokens.fileName}',
+          ),
+    ];
+  }
+}
+
+/// Whisper, faked: the native library only exists inside a built app.
+class _FakeWhisperRunner implements WhisperRunner {
+  _FakeWhisperRunner({this.transcript = 'hello', this.failure});
+
+  final String transcript;
+
+  /// When set, the run fails with this message instead of answering.
+  String? failure;
+
+  /// When set, the run waits on it, so a running decode can be stopped.
+  Completer<void>? gate;
+
+  int transcribeCalls = 0;
+  bool cancelled = false;
+  String? encoderPath;
+  String? decoderPath;
+  String? tokensPath;
+  String? audioPath;
+  String? language;
+
+  @override
+  Future<String> transcribe({
+    required String encoderPath,
+    required String decoderPath,
+    required String tokensPath,
+    required String audioPath,
+    String language = autoLanguage,
+  }) async {
+    transcribeCalls++;
+    this.encoderPath = encoderPath;
+    this.decoderPath = decoderPath;
+    this.tokensPath = tokensPath;
+    this.audioPath = audioPath;
+    this.language = language;
+    final gate = this.gate;
+    if (gate != null) await gate.future;
+    final failure = this.failure;
+    if (failure != null) throw Exception(failure);
+    return transcript;
+  }
+
+  @override
+  Future<void> cancel() async => cancelled = true;
 }

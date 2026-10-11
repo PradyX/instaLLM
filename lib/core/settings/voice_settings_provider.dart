@@ -10,7 +10,12 @@ enum SttEngine {
 
   /// The operating system's recognizer. Lightweight, but on some setups
   /// the audio may be processed on the vendor's servers.
-  platform('platform');
+  platform('platform'),
+
+  /// whisper.cpp on this device. Fully offline like [localModel], but it runs
+  /// its own GGML speech model, downloaded from Settings instead of picked
+  /// from the app's multimodal model catalog.
+  whisper('whisper');
 
   const SttEngine(this.key);
 
@@ -34,6 +39,7 @@ class VoiceSettingsState {
   const VoiceSettingsState({
     this.sttModelId,
     this.sttEngine = SttEngine.localModel,
+    this.whisperModelId,
     this.ttsVoiceId,
     this.ttsRate,
     this.readRepliesAloud = false,
@@ -45,6 +51,13 @@ class VoiceSettingsState {
   /// Engine the composer mic uses. Local model is the default because it
   /// never sends audio anywhere.
   final SttEngine sttEngine;
+
+  /// Whisper model the Whisper engine runs, or null when none is chosen.
+  ///
+  /// Stored as an id rather than a path: a model that was removed resolves to
+  /// nothing, and the engine then falls back to whatever else is installed
+  /// instead of pointing at a file that is gone.
+  final String? whisperModelId;
 
   /// Voice used for reading text aloud, as `name|locale`, or null for the
   /// device default. Stored as text so a voice that is no longer installed
@@ -65,6 +78,7 @@ class VoiceSettingsState {
   VoiceSettingsState copyWith({
     Object? sttModelId = _unset,
     SttEngine? sttEngine,
+    Object? whisperModelId = _unset,
     Object? ttsVoiceId = _unset,
     Object? ttsRate = _unset,
     bool? readRepliesAloud,
@@ -74,6 +88,9 @@ class VoiceSettingsState {
           ? this.sttModelId
           : sttModelId as String?,
       sttEngine: sttEngine ?? this.sttEngine,
+      whisperModelId: whisperModelId == _unset
+          ? this.whisperModelId
+          : whisperModelId as String?,
       ttsVoiceId: ttsVoiceId == _unset
           ? this.ttsVoiceId
           : ttsVoiceId as String?,
@@ -104,6 +121,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
 
       final sttModelId = data['sttModelId'];
       final sttEngine = SttEngine.fromKey(data['sttEngine']);
+      final whisperModelId = data['whisperModelId'];
       final ttsVoiceId = data['ttsVoiceId'];
       final ttsRate = data['ttsRate'];
       final ttsRateVersion = data['ttsRateVersion'];
@@ -113,6 +131,10 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
             ? sttModelId
             : null,
         sttEngine: sttEngine,
+        whisperModelId:
+            whisperModelId is String && whisperModelId.trim().isNotEmpty
+            ? whisperModelId
+            : null,
         // Keys added after speech to text existed simply stay unset in a
         // document written by an older build.
         ttsVoiceId: ttsVoiceId is String && ttsVoiceId.trim().isNotEmpty
@@ -149,6 +171,16 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
     await _persist();
   }
 
+  /// Chooses the Whisper model the Whisper engine runs, or clears it with
+  /// null. The file itself is owned by the Whisper model picker.
+  Future<void> setWhisperModel(String? modelId) async {
+    final trimmed = modelId?.trim();
+    state = state.copyWith(
+      whisperModelId: trimmed == null || trimmed.isEmpty ? null : trimmed,
+    );
+    await _persist();
+  }
+
   /// Chooses the voice used to read text aloud, or null for the device one.
   Future<void> setTtsVoiceId(String? voiceId) async {
     final trimmed = voiceId?.trim();
@@ -176,6 +208,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
       value: {
         'sttModelId': state.sttModelId,
         'sttEngine': state.sttEngine.key,
+        'whisperModelId': state.whisperModelId,
         'ttsVoiceId': state.ttsVoiceId,
         'ttsRate': state.ttsRate,
         'ttsRateVersion': currentSpeechRateVersion,

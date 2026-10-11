@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:pocket_llm/core/services/service_providers.dart';
+import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/voice/application/voice_controller.dart';
+import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
 import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
+import 'package:pocket_llm/features/voice/data/whisper_speech_service.dart';
 
 /// The model transcription will run, or null when none is ready.
 ///
@@ -164,6 +169,9 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
   bool _cancelled = false;
   DateTime? _lastEmitAt;
 
+  /// True while a Whisper model is being resolved and run.
+  bool _whisperStarting = false;
+
   /// Chooses a clip and transcribes it with the selected speech model.
   ///
   /// [audioPath] lets a caller transcribe a file it already has; the picker is
@@ -171,6 +179,13 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
   /// the screen as it was.
   Future<void> start({String? audioPath}) async {
     if (state.isBusy) return;
+
+    // Whisper is its own engine with its own models: the GGUF model with an
+    // audio projector that the local engine needs has nothing to do with it.
+    if (_ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
+      await _startWhisper(audioPath: audioPath);
+      return;
+    }
 
     final model = _ref.read(transcriptionModelProvider);
     if (model == null) {
@@ -239,11 +254,104 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
     }
   }
 
+  /// Transcribes a clip with the whisper.cpp model installed on this device.
+  ///
+  /// Whisper decodes a whole clip and answers once, so there are no partial
+  /// words to stream here: the screen reports that a model is working instead
+  /// of filling in text as it is recognized.
+  Future<void> _startWhisper({String? audioPath}) async {
+    // Reading the model directory takes a moment, and a double tap in that
+    // window must not transcribe the same clip twice.
+    if (_whisperStarting) return;
+    _whisperStarting = true;
+    try {
+      final modelService = _ref.read(whisperModelServiceProvider);
+      final runner = _ref.read(whisperRunnerProvider);
+      final preferredId = _ref.read(voiceSettingsProvider).whisperModelId;
+      final model = await modelService.resolve(preferredId);
+      if (!mounted || state.isBusy) return;
+
+      if (model == null) {
+        state = const TranscriptionState(
+          stage: TranscriptionStage.failed,
+          errorMessage:
+              'Download a Whisper model first — Settings › Voice › Whisper '
+              'model — or switch the engine back to the local speech model.',
+        );
+        return;
+      }
+
+      final path = audioPath ?? await _ref.read(voiceAudioPickerProvider)();
+      if (path == null || path.trim().isEmpty) return;
+
+      _cancelled = false;
+      _lastEmitAt = null;
+      _buffer.clear();
+      state = TranscriptionState(
+        stage: TranscriptionStage.preparing,
+        audioPath: path,
+        audioLabel: p.basename(path),
+        modelName: model.option.name,
+        statusText: 'Preparing ${model.option.name}...',
+      );
+
+      final stopwatch = Stopwatch()..start();
+      state = state.copyWith(
+        stage: TranscriptionStage.running,
+        statusText:
+            'Transcribing ${state.audioLabel ?? 'audio'} with '
+            '${model.option.name}...',
+      );
+      try {
+        final transcript = await runner.transcribe(
+          encoderPath: model.encoderPath,
+          decoderPath: model.decoderPath,
+          tokensPath: model.tokensPath,
+          audioPath: path,
+        );
+        stopwatch.stop();
+        if (!mounted) return;
+        state = state.copyWith(
+          stage: TranscriptionStage.finished,
+          transcript: transcript,
+          statusText: '',
+          wasStopped: _cancelled,
+          elapsed: stopwatch.elapsed,
+          clearError: true,
+        );
+      } catch (error) {
+        stopwatch.stop();
+        if (!mounted) return;
+        // A stop the user asked for surfaces here as a native abort; that is
+        // not a failure to report.
+        state = state.copyWith(
+          stage: _cancelled
+              ? TranscriptionStage.finished
+              : TranscriptionStage.failed,
+          transcript: '',
+          statusText: '',
+          wasStopped: _cancelled,
+          errorMessage: _cancelled ? null : _messageOf(error),
+          elapsed: stopwatch.elapsed,
+          clearError: _cancelled,
+        );
+      }
+    } finally {
+      _whisperStarting = false;
+    }
+  }
+
   /// Stops a running transcription. Words decoded so far are kept.
   void cancel() {
     if (!state.isBusy) return;
     _cancelled = true;
     state = state.copyWith(statusText: 'Stopping...');
+    if (_ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
+      // An offline Whisper decode cannot be interrupted; the runner reports
+      // the stop and the pass's own words are kept (see [WhisperRunner]).
+      unawaited(_ref.read(whisperRunnerProvider).cancel());
+      return;
+    }
     _ref.read(speechToTextServiceProvider).cancel();
   }
 

@@ -8,10 +8,12 @@ import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/voice/application/tts_controller.dart';
 import 'package:pocket_llm/features/voice/application/voice_controller.dart';
 import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
+import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
 import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
 import 'package:pocket_llm/features/voice/presentation/speech_voice_picker.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_model_picker.dart';
+import 'package:pocket_llm/features/voice/presentation/whisper_model_picker.dart';
 
 /// Why the device engine cannot be picked, in the words the settings show.
 String _platformLimit(PlatformSpeechStatus? status) {
@@ -118,6 +120,15 @@ class VoiceSettingsSection extends ConsumerWidget {
     final platformAvailable = platformStatus == PlatformSpeechStatus.ready;
     final voiceState = ref.watch(voiceControllerProvider);
     final selectedModel = voiceState.selectedOption?.model;
+    final whisperModels = ref.watch(whisperModelsProvider);
+    // The chosen Whisper model when it is installed, otherwise what is there:
+    // transcription itself falls back the same way, so the row never claims a
+    // model that a run would not use.
+    final whisperModel =
+        whisperModels.installedModel(settings.whisperModelId ?? '') ??
+        (whisperModels.installed.isEmpty
+            ? null
+            : whisperModels.installed.first);
     final tts = ref.watch(ttsControllerProvider);
     final ttsController = ref.read(ttsControllerProvider.notifier);
     final readiness = ref.watch(voiceConversationReadinessProvider);
@@ -152,6 +163,19 @@ class VoiceSettingsSection extends ConsumerWidget {
                         : _platformLimit(platformStatus),
                   ),
                 ),
+                RadioListTile<SttEngine>(
+                  value: SttEngine.whisper,
+                  title: const Text('Whisper'),
+                  subtitle: Text(
+                    whisperModel == null
+                        ? 'Fully offline with a whisper.cpp model. Download '
+                              'one from Whisper model below first.'
+                        : 'Fully offline, running '
+                              '${whisperModel.option.name} '
+                              '(${whisperModel.option.sizeLabel}) on this '
+                              'device. Audio never leaves it.',
+                  ),
+                ),
               ],
             ),
           ),
@@ -169,6 +193,22 @@ class VoiceSettingsSection extends ConsumerWidget {
               ),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => showVoiceModelPicker(context),
+            ),
+          ],
+          if (settings.sttEngine == SttEngine.whisper) ...[
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.graphic_eq_rounded),
+              title: const Text('Whisper model'),
+              subtitle: Text(
+                whisperModel == null
+                    ? 'Choose a model to download'
+                    : '${whisperModel.option.name} · '
+                          '${whisperModel.option.sizeLabel} · '
+                          '${whisperModel.option.detail}',
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => showWhisperModelPicker(context),
             ),
           ],
           const Divider(height: 1),

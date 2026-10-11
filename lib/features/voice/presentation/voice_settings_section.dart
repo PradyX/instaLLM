@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,15 +77,26 @@ class _AllowDeviceRecognitionButtonState
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          onPressed: _requesting ? null : _ask,
-          icon: _requesting
-              ? const SizedBox.square(
-                  dimension: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.mic_rounded, size: 18),
-          label: const Text('Allow device recognition'),
+        child: Tooltip(
+          // macOS credits a first-time request to whatever launched the app,
+          // so a build started from a terminal cannot be granted this and is
+          // aborted instead of prompted. Saying so is the only warning the app
+          // can give before the system takes it down.
+          message: Platform.isMacOS
+              ? 'macOS only shows this prompt for an app launched from '
+                    'Finder or the Dock. Started from a terminal, the app is '
+                    'closed instead — allow it there first.'
+              : 'Ask the system to let Pocket LLM use its speech recognizer.',
+          child: OutlinedButton.icon(
+            onPressed: _requesting ? null : _ask,
+            icon: _requesting
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.mic_rounded, size: 18),
+            label: const Text('Allow device recognition'),
+          ),
         ),
       ),
     );

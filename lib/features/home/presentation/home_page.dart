@@ -1473,15 +1473,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.folder_copy_outlined),
-            title: const Text('Documents'),
-            subtitle: Text(_documentsSubtitle(ref.watch(documentsProvider))),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.documents);
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.mic_none_rounded),
             title: const Text('Voice'),
             subtitle: Text(
@@ -2450,27 +2441,6 @@ String _voiceSubtitle(VoiceSettingsState voice, List<LlmModel> models) {
     if (model.id == modelId) return 'Speech: ${model.name}';
   }
   return 'The chosen speech model is no longer installed';
-}
-
-/// Subtitle for the Documents drawer entry.
-String _documentsSubtitle(DocumentsState state) {
-  if (!state.isReady) return 'Opening the local index…';
-  final documents = state.documents.length;
-  if (documents == 0) {
-    return state.totalDocumentCount > 0
-        ? 'Nothing in "${state.activeCollection?.name ?? 'this collection'}"'
-        : 'Add local files to ask about them';
-  }
-
-  final changed = state.outdatedCount;
-  // Name the collection once there is more than one, so the subtitle says what
-  // chat will actually search.
-  final prefix = state.collections.length > 1
-      ? '${state.activeCollection?.name} · '
-      : '';
-  return '$prefix$documents ${documents == 1 ? 'document' : 'documents'} · '
-      '${state.chunkCount} chunks'
-      '${changed > 0 ? ' · $changed changed' : ''}';
 }
 
 class _MarkdownSegment {

@@ -233,12 +233,6 @@ class _Sidebar extends ConsumerWidget {
                   ),
                   _navTile(
                     context,
-                    icon: Icons.folder_copy_outlined,
-                    label: 'Documents',
-                    route: AppRoutes.documents,
-                  ),
-                  _navTile(
-                    context,
                     icon: Icons.mic_none_rounded,
                     label: 'Voice',
                     route: AppRoutes.voice,

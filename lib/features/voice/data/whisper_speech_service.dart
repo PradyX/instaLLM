@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/utils/logger.dart';
+import 'package:pocket_llm/features/voice/data/audio_clip_reader.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
 /// Runs one audio file through a Whisper model.
@@ -95,8 +96,11 @@ String _decodeClip({
   required int threads,
 }) {
   sherpa.initBindings();
-  final wave = sherpa.readWave(audioPath);
-  if (wave.sampleRate <= 0 || wave.samples.isEmpty) {
+  // Read in Dart rather than with `sherpa.readWave`: the native reader rejects
+  // the extensible WAV header macOS writes for this app's own recordings and
+  // returns an empty wave instead of an error — see [readAudioClip].
+  final clip = readAudioClip(audioPath);
+  if (clip.isEmpty) {
     throw StateError('The clip could not be read as audio: $audioPath');
   }
 
@@ -122,7 +126,7 @@ String _decodeClip({
   try {
     final stream = recognizer.createStream();
     try {
-      stream.acceptWaveform(samples: wave.samples, sampleRate: wave.sampleRate);
+      stream.acceptWaveform(samples: clip.samples, sampleRate: clip.sampleRate);
       recognizer.decode(stream);
       return recognizer.getResult(stream).text.trim();
     } finally {

@@ -376,10 +376,13 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
     );
   }
 
-  /// `Exception: something` reads badly in the UI, so the prefix is dropped.
+  /// `Exception: something` and `Bad state: something` read badly in the UI, so
+  /// the prefix is dropped; the message behind it is written for the user.
   static String _messageOf(Object error) {
-    const prefix = 'Exception: ';
     final text = error.toString();
-    return text.startsWith(prefix) ? text.substring(prefix.length) : text;
+    for (final prefix in const ['Exception: ', 'Bad state: ']) {
+      if (text.startsWith(prefix)) return text.substring(prefix.length);
+    }
+    return text;
   }
 }

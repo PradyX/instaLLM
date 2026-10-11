@@ -1,11 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
 
-/// The service is only allowed to *check* permission: asking for it aborts the
-/// app when macOS attributes the request to whatever launched it, so a device
-/// that has not allowed recognition must never reach the prepare call these
-/// tests count.
+/// The service may only *check* permission unless it is asked to ask: reading
+/// the state never prepares the recognizer, and the request itself is refused
+/// where macOS would answer it by ending the app — an app another program
+/// started has the launcher's usage description read instead of its own, and a
+/// launcher without one is what took the chat down. The tests count the
+/// prepare call to see which of the two happened.
 void main() {
   group('RecognizedSpeech', () {
     test('a final transcript wins over the partials before it', () {
@@ -124,6 +128,7 @@ void main() {
         prepares++;
         return true;
       },
+      canAsk: () => true,
     );
 
     // Reading the state asks for nothing.
@@ -139,6 +144,7 @@ void main() {
     final service = PlatformSpeechService(
       permissionCheck: () async => false,
       prepare: () async => false,
+      canAsk: () => true,
     );
 
     expect(
@@ -151,6 +157,7 @@ void main() {
     final service = PlatformSpeechService(
       permissionCheck: () async => throw MissingPluginException('no plugin'),
       prepare: () async => throw MissingPluginException('no plugin'),
+      canAsk: () => true,
     );
 
     expect(
@@ -158,4 +165,57 @@ void main() {
       PlatformSpeechStatus.unsupported,
     );
   });
+
+  test('a launch the system does not credit is refused, never asked', () async {
+    var prepares = 0;
+    final service = PlatformSpeechService(
+      permissionCheck: () async => false,
+      prepare: () async {
+        prepares++;
+        return true;
+      },
+      canAsk: () => false,
+    );
+
+    // The request is what macOS ends the app for, so nothing may reach the
+    // prepare call that would make it. The caller gets the same answer it
+    // would have got from a refusal and explains why.
+    expect(
+      await service.requestAuthorization(),
+      PlatformSpeechStatus.notAuthorized,
+    );
+    expect(prepares, 0);
+  });
+
+  test(
+    'macOS credits a request to the app only when the system started it',
+    () {
+      // Finder, the Dock and `open` hand the app to launchd, which is pid 1.
+      expect(canOwnSystemPermissionPrompt(parentProcessId: () => 1), isTrue);
+      // `flutter run`, a terminal and an IDE keep the app as their own child.
+      expect(
+        canOwnSystemPermissionPrompt(parentProcessId: () => 31337),
+        isFalse,
+      );
+    },
+    skip: Platform.isMacOS
+        ? null
+        : 'no other platform reads the launcher\'s Info.plist',
+  );
+
+  test('every other platform can ask, whatever started the app', () {
+    expect(canOwnSystemPermissionPrompt(parentProcessId: () => 31337), isTrue);
+  }, skip: Platform.isMacOS ? 'covered above' : null);
+
+  test(
+    'the parent process is actually readable',
+    () {
+      // The rule refuses an unreadable launch, so a lookup that quietly failed
+      // would read as "never ask" on every launch.
+      expect(systemParentProcessId(), greaterThan(0));
+    },
+    skip: Platform.isMacOS
+        ? null
+        : 'libc is read through the macOS system library',
+  );
 }

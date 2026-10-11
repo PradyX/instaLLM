@@ -9,6 +9,7 @@ import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/voice/application/recording_controller.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
+import 'package:pocket_llm/features/voice/presentation/voice_settings_section.dart';
 
 /// Drives the composer microphone against the real device: the real recorder
 /// plugin and the real platform recognizer.
@@ -176,6 +177,48 @@ void main() {
     // Silence is allowed; a microphone left open is not.
     expect(transcript, isA<String>());
     expect(listener.isListening, isFalse);
+  });
+
+  testWidgets('the settings do not offer an ask this launch cannot be granted', (
+    tester,
+  ) async {
+    // The crash this guards against: with the app started by `flutter run`
+    // from an IDE, the speech-recognition request belonged to the IDE, whose
+    // Info.plist has no speech-recognition description, so macOS aborted the
+    // app instead of prompting. This run has the same launch shape, so the
+    // settings card must read it as one it cannot ask in — the real card, with
+    // the real providers, not a fake.
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          home: Scaffold(
+            body: ListView(children: const [VoiceSettingsSection()]),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // ignore: avoid_print
+    print(
+      'parent process: ${systemParentProcessId()} '
+      '(credited to this app: ${canOwnSystemPermissionPrompt()})',
+    );
+    if (!Platform.isMacOS) return;
+
+    expect(
+      canOwnSystemPermissionPrompt(),
+      isFalse,
+      reason:
+          'a test run starts the app from the test runner, so a request '
+          'belongs to the runner and not to Pocket LLM',
+    );
+    expect(find.text('Allow device recognition'), findsNothing);
+    expect(
+      find.textContaining('macOS only shows this prompt to an app it started'),
+      findsOneWidget,
+      reason: 'the row says what to do instead of offering the ask',
+    );
   });
 }
 

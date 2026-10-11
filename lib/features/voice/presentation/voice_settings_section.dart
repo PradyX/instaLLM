@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,12 +14,25 @@ import 'package:pocket_llm/features/voice/presentation/voice_model_picker.dart';
 import 'package:pocket_llm/features/voice/presentation/whisper_model_picker.dart';
 
 /// Why the device engine cannot be picked, in the words the settings show.
-String _platformLimit(PlatformSpeechStatus? status) {
+///
+/// [canAskFromHere] is false when the system would take the app down for
+/// asking rather than prompting — on macOS that is every launch except one the
+/// system started itself — so there is no request to offer and the reason says
+/// what to do instead.
+String _platformLimit(
+  PlatformSpeechStatus? status, {
+  required bool canAskFromHere,
+}) {
   if (status == PlatformSpeechStatus.unsupported) {
     return 'This platform has no speech recognizer Pocket LLM can use — the '
         'local speech model covers it.';
   }
   if (status == PlatformSpeechStatus.notAuthorized) {
+    if (!canAskFromHere) {
+      return 'macOS only shows this prompt to an app it started itself, and '
+          'another program started this one. Open Pocket LLM from Finder or '
+          'the Dock to allow it; the local models need no permission.';
+    }
     return 'Not allowed yet: allow it below, or keep the local model, which '
         'needs no permission.';
   }
@@ -30,10 +41,12 @@ String _platformLimit(PlatformSpeechStatus? status) {
 
 /// Asks macOS for speech recognition.
 ///
-/// This is the one place a permission request is made, and only ever when the
-/// user presses it: an app that asks on its own can be aborted by the system
-/// when it was launched from a terminal or an IDE, which is where the request
-/// gets attributed to the launching process instead of to Pocket LLM.
+/// This is the one place a permission request is made, and it is only offered
+/// where the system credits this app for the request (see
+/// [systemPermissionPromptOwnershipProvider]). Asking from an app that another
+/// program started makes macOS read *that program's* usage description and end
+/// the app when it has none, which is what used to take the chat down from
+/// here; where that is the case, the settings explain it instead of asking.
 class _AllowDeviceRecognitionButton extends ConsumerStatefulWidget {
   const _AllowDeviceRecognitionButton();
 
@@ -80,15 +93,9 @@ class _AllowDeviceRecognitionButtonState
       child: Align(
         alignment: Alignment.centerLeft,
         child: Tooltip(
-          // macOS credits a first-time request to whatever launched the app,
-          // so a build started from a terminal cannot be granted this and is
-          // aborted instead of prompted. Saying so is the only warning the app
-          // can give before the system takes it down.
-          message: Platform.isMacOS
-              ? 'macOS only shows this prompt for an app launched from '
-                    'Finder or the Dock. Started from a terminal, the app is '
-                    'closed instead — allow it there first.'
-              : 'Ask the system to let Pocket LLM use its speech recognizer.',
+          message:
+              'Ask the system to let Pocket LLM use its speech '
+              'recognizer.',
           child: OutlinedButton.icon(
             onPressed: _requesting ? null : _ask,
             icon: _requesting
@@ -118,6 +125,9 @@ class VoiceSettingsSection extends ConsumerWidget {
     final settingsController = ref.read(voiceSettingsProvider.notifier);
     final platformStatus = ref.watch(platformSttStatusProvider).valueOrNull;
     final platformAvailable = platformStatus == PlatformSpeechStatus.ready;
+    // macOS credits a privacy request to the program that started the app, so
+    // a launch another program started cannot be granted device recognition.
+    final canAskFromHere = ref.watch(systemPermissionPromptOwnershipProvider);
     final voiceState = ref.watch(voiceControllerProvider);
     final selectedModel = voiceState.selectedOption?.model;
     final whisperModels = ref.watch(whisperModelsProvider);
@@ -160,7 +170,10 @@ class VoiceSettingsSection extends ConsumerWidget {
                     platformAvailable
                         ? 'Fast and lightweight, but the OS may process '
                               'audio on the vendor\u2019s servers.'
-                        : _platformLimit(platformStatus),
+                        : _platformLimit(
+                            platformStatus,
+                            canAskFromHere: canAskFromHere,
+                          ),
                   ),
                 ),
                 RadioListTile<SttEngine>(
@@ -179,7 +192,8 @@ class VoiceSettingsSection extends ConsumerWidget {
               ],
             ),
           ),
-          if (platformStatus == PlatformSpeechStatus.notAuthorized)
+          if (platformStatus == PlatformSpeechStatus.notAuthorized &&
+              canAskFromHere)
             const _AllowDeviceRecognitionButton(),
           if (settings.sttEngine == SttEngine.localModel) ...[
             const Divider(height: 1),

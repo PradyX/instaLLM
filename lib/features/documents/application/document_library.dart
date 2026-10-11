@@ -390,12 +390,16 @@ class DocumentLibrary {
   /// be the installed model the collection pins; a collection whose model is not
   /// installed fails with an actionable message rather than quietly indexing
   /// text it cannot search.
+  /// [addedByConversationId] records the chat the file came in through, so
+  /// deleting that chat can forget it; null means it came from the Documents
+  /// screen and no chat owns it.
   Future<DocumentIngestResult> addDocument({
     required String path,
     String? name,
     String? collectionId,
     EmbeddingModelRef? embeddingModel,
     CancelToken? cancelToken,
+    String? addedByConversationId,
     void Function(DocumentIngestProgress progress)? onProgress,
   }) async {
     cancelToken?.throwIfCancelled();
@@ -432,6 +436,17 @@ class DocumentLibrary {
       onProgress?.call(
         const DocumentIngestProgress(DocumentIngestStage.done, 1),
       );
+      // The stored index still applies, so the file is not re-read. It may
+      // still change hands: picking it from another chat makes that chat the
+      // one whose deletion forgets it, and picking it from the Documents
+      // screen hands it back to no chat at all.
+      if (existing.addedByConversationId != addedByConversationId) {
+        final moved = addedByConversationId == null
+            ? _detachedFromChat(existing)
+            : existing.attributedTo(addedByConversationId);
+        _replace(moved);
+        return DocumentIngestResult(document: moved, reusedIndex: true);
+      }
       return DocumentIngestResult(document: existing, reusedIndex: true);
     }
 
@@ -509,6 +524,7 @@ class DocumentLibrary {
       chunkerVersion: documentChunkerVersion,
       embeddingModelId: embeddingModelId,
       embeddingDimensions: vectors?.dimensions,
+      addedByConversationId: addedByConversationId,
     );
 
     onProgress?.call(
@@ -687,6 +703,32 @@ class DocumentLibrary {
     );
   }
 
+  /// Forgets every document the chat [conversationId] added, with its vectors,
+  /// in a single write.
+  ///
+  /// This is what deleting a chat does to the library: the same kind of forget
+  /// [removeDocument] performs, for a whole chat at once. Original files are
+  /// never touched, and a document no chat owns is left alone.
+  List<IndexedDocument> forgetDocumentsAddedBy(String conversationId) {
+    final id = conversationId.trim();
+    if (id.isEmpty) return const [];
+    final forgotten = [
+      for (final document in _documents)
+        if (document.addedByConversationId == id) document,
+    ];
+    if (forgotten.isEmpty) return const [];
+
+    var snapshot = _snapshot;
+    for (final document in forgotten) {
+      snapshot = snapshot.remove(document.id);
+    }
+    _documents = snapshot.documents;
+    _vectors = snapshot.vectors;
+    _rebuildRetriever();
+    _persist();
+    return forgotten;
+  }
+
   /// Removes a document's derived data. The original file is never touched.
   bool removeDocument(String documentId) {
     if (documentById(documentId) == null) return false;
@@ -697,6 +739,21 @@ class DocumentLibrary {
     _persist();
     return true;
   }
+
+  /// The same document with no chat owning it.
+  static IndexedDocument _detachedFromChat(IndexedDocument document) =>
+      IndexedDocument(
+        source: document.source,
+        chunks: document.chunks,
+        charCount: document.charCount,
+        indexedAt: document.indexedAt,
+        contentHash: document.contentHash,
+        collectionId: document.collectionId,
+        chunking: document.chunking,
+        chunkerVersion: document.chunkerVersion,
+        embeddingModelId: document.embeddingModelId,
+        embeddingDimensions: document.embeddingDimensions,
+      );
 
   void _replace(
     IndexedDocument document, {

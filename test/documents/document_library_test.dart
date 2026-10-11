@@ -38,6 +38,116 @@ void main() {
     return file;
   }
 
+  group('document provenance', () {
+    test('records the chat a file was added from, and reloads it', () async {
+      final file = await writeFile('notes.txt', 'Docker images stay local.');
+
+      await library.addDocument(
+        path: file.path,
+        addedByConversationId: 'chat-1',
+      );
+
+      expect(library.documents.single.addedByConversationId, 'chat-1');
+
+      final reloaded = DocumentLibrary(
+        extractor: DocumentExtractionService(),
+        store: DocumentIndexStore(indexFile),
+      )..load();
+      expect(reloaded.documents.single.addedByConversationId, 'chat-1');
+    });
+
+    test('a file added without a chat belongs to none', () async {
+      final file = await writeFile('notes.txt', 'Docker images stay local.');
+
+      await library.addDocument(path: file.path);
+
+      expect(library.documents.single.addedByConversationId, isNull);
+    });
+
+    test('picking the same file from another chat hands it over', () async {
+      final file = await writeFile('notes.txt', 'Docker images stay local.');
+
+      await library.addDocument(
+        path: file.path,
+        addedByConversationId: 'chat-1',
+      );
+      final again = await library.addDocument(
+        path: file.path,
+        addedByConversationId: 'chat-2',
+      );
+
+      // The index is reused, but the file now belongs to the newer chat.
+      expect(again.reusedIndex, isTrue);
+      expect(library.documents.single.addedByConversationId, 'chat-2');
+      expect(library.documents, hasLength(1));
+    });
+
+    test(
+      'adding it from the documents screen detaches it from a chat',
+      () async {
+        final file = await writeFile('notes.txt', 'Docker images stay local.');
+
+        await library.addDocument(
+          path: file.path,
+          addedByConversationId: 'chat-1',
+        );
+        await library.addDocument(path: file.path);
+
+        expect(library.documents.single.addedByConversationId, isNull);
+      },
+    );
+
+    test('forgets only the documents one chat added', () async {
+      final first = await writeFile('first.txt', 'Docker images stay local.');
+      final second = await writeFile('second.txt', 'Notes about styling.');
+      final third = await writeFile('third.txt', 'Shared reference notes.');
+
+      await library.addDocument(
+        path: first.path,
+        addedByConversationId: 'chat-1',
+      );
+      await library.addDocument(
+        path: second.path,
+        addedByConversationId: 'chat-2',
+      );
+      await library.addDocument(path: third.path);
+
+      final forgotten = library.forgetDocumentsAddedBy('chat-1');
+
+      expect(forgotten.map((document) => document.source.name), ['first.txt']);
+      expect(
+        library.documents.map((document) => document.source.name),
+        containsAll(<String>['second.txt', 'third.txt']),
+      );
+      expect(library.documents, hasLength(2));
+
+      // And nothing comes back after a reload.
+      final reloaded = DocumentLibrary(
+        extractor: DocumentExtractionService(),
+        store: DocumentIndexStore(indexFile),
+      )..load();
+      expect(reloaded.documents, hasLength(2));
+      expect(
+        reloaded.documents.map((document) => document.source.name),
+        isNot(contains('first.txt')),
+      );
+      // The file on disk is untouched by any of this.
+      expect(await first.exists(), isTrue);
+    });
+
+    test('forgetting an unknown chat changes nothing', () async {
+      final file = await writeFile('notes.txt', 'Docker images stay local.');
+      await library.addDocument(
+        path: file.path,
+        addedByConversationId: 'chat-1',
+      );
+
+      expect(library.forgetDocumentsAddedBy('chat-9'), isEmpty);
+      expect(library.forgetDocumentsAddedBy('  '), isEmpty);
+      expect(library.documents, hasLength(1));
+    });
+  });
+
   test('ingests a text file and reloads it from disk', () async {
     final file = await writeFile(
       'notes.txt',

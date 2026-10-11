@@ -33,6 +33,8 @@ extension UiStateX<T> on UiState<T> {
   bool get isError => this is UiError<T>;
   bool get isInitial => this is UiInitial<T>;
 
-  T? get dataOrNull => this is UiSuccess<T> ? (this as UiSuccess<T>).data : null;
-  String? get errorOrNull => this is UiError<T> ? (this as UiError<T>).message : null;
+  T? get dataOrNull =>
+      this is UiSuccess<T> ? (this as UiSuccess<T>).data : null;
+  String? get errorOrNull =>
+      this is UiError<T> ? (this as UiError<T>).message : null;
 }

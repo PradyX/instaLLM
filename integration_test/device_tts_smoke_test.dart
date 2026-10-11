@@ -136,7 +136,11 @@ void main() {
           'never exercised',
     );
     expect(endedWhileHeld, isFalse, reason: 'pausing ended the utterance');
-    expect(finished, isTrue, reason: 'the utterance never finished after resuming');
+    expect(
+      finished,
+      isTrue,
+      reason: 'the utterance never finished after resuming',
+    );
   });
 }
 

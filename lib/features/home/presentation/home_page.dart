@@ -18,9 +18,7 @@ import 'package:pocket_llm/features/conversations/presentation/conversation_cont
 
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/documents/domain/document_scope.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
-import 'package:pocket_llm/features/documents/presentation/knowledge_scope_button.dart';
+import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
 import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
@@ -29,11 +27,25 @@ import 'package:pocket_llm/features/voice/application/voice_conversation_control
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
 import 'package:pocket_llm/features/tools/presentation/tool_approval_dialog.dart';
+
+/// What tapping an empty-state suggestion does before its prompt is prepared.
+///
+/// A card that names a file ("Summarize docs", "Ask about image") opens the
+/// picker that file needs; the rest only prepare text.
+enum _SuggestionAction {
+  /// Prepare the prompt and nothing else.
+  none,
+
+  /// Index files into the knowledge collection chat retrieves from.
+  pickDocuments,
+
+  /// Attach images to the message being composed.
+  pickImage,
+}
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -51,6 +63,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   ProviderSubscription<ModelSelectionState>? _modelSelectionSubscription;
   ProviderSubscription<String?>? _composerDraftSubscription;
   ProviderSubscription<HomeGenerationStatus>? _generationSubscription;
+  ProviderSubscription<String?>? _conversationSubscription;
 
   /// Reply currently being read aloud, so its own button can offer a stop.
   String? _readingMessageId;
@@ -60,6 +73,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// stored path, so they can be sent as the copies they already are instead
   /// of being prepared again.
   final Map<String, MessageAttachment> _reusedImages = {};
+
+  /// What the last attach action put into the knowledge collection, or null.
+  ///
+  /// Images already show their own preview above the composer; a picked
+  /// document is indexed into the collection chat retrieves from, which left no
+  /// visible trace at all — so attaching a file the collection already had
+  /// looked exactly like cancelling the picker.
+  String? _attachNotice;
 
   /// More images than this would cost more context than a local model can
   /// afford per turn, so the composer stops taking them.
@@ -71,6 +92,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _modelSelectionSubscription?.close();
     _composerDraftSubscription?.close();
     _generationSubscription?.close();
+    _conversationSubscription?.close();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -120,6 +142,19 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (reply == null) return;
       unawaited(_readReplyAloud(reply));
     });
+
+    // A sentence about what a chat's attach added is only true for that chat.
+    // Switching, starting or deleting a conversation must not leave the old
+    // one sitting under the composer of a chat that never saw that file.
+    _conversationSubscription = ref.listenManual(
+      conversationControllerProvider.select(
+        (state) => state.activeConversationId,
+      ),
+      (_, _) {
+        if (_attachNotice == null) return;
+        setState(() => _attachNotice = null);
+      },
+    );
 
     _modelSelectionSubscription = ref.listenManual(
       modelSelectionControllerProvider,
@@ -177,14 +212,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final draftImages = List<XFile>.of(_draftImages);
 
     if (draftImages.isNotEmpty && !_isVisionReady(selectedModel)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Choose a downloaded vision-capable model before sending an image.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      _showVisionRequiredMessage();
       return;
     }
 
@@ -383,118 +411,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           // what this conversation already uses.
           personaId: ref.read(personasProvider).defaultPersonaId,
         );
-  }
-
-  /// Applies the knowledge scope chosen for the open conversation.
-  ///
-  /// The choice is stored on the conversation, so it survives a restart and
-  /// travels with the chat when it is opened again.
-  Future<void> _setDocumentScope(String? collectionId, bool enabled) async {
-    final conversationId = ref
-        .read(conversationControllerProvider)
-        .activeConversationId;
-    if (conversationId == null) return;
-    final controller = ref.read(conversationControllerProvider.notifier);
-    if (!enabled) {
-      await controller.setDocumentsEnabled(conversationId, false);
-      return;
-    }
-    await controller.setDocumentsEnabled(conversationId, true);
-    await controller.setDocumentCollection(conversationId, collectionId);
-  }
-
-  /// Chooses the persona for the active conversation, or the app default when
-  /// no conversation exists yet.
-  Future<void> _pickPersona() async {
-    final personasState = ref.read(personasProvider);
-    final conversation = ref
-        .read(conversationControllerProvider)
-        .activeConversation;
-    final currentId = conversation?.personaId ?? personasState.defaultPersonaId;
-
-    final chosenId = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: RadioGroup<String>(
-          groupValue: currentId,
-          onChanged: (value) => Navigator.of(sheetContext).pop(value),
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Text(
-                  conversation == null
-                      ? 'Default persona for new chats'
-                      : 'Persona for this chat',
-                  style: Theme.of(sheetContext).textTheme.titleMedium,
-                ),
-              ),
-              for (final persona in personasState.personas)
-                RadioListTile<String>(
-                  value: persona.id,
-                  title: Text(persona.name),
-                  subtitle: Text(
-                    persona.description.isEmpty
-                        ? persona.promptLabel
-                        : persona.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.tune_rounded),
-                title: const Text('Manage personas'),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  context.push(AppRoutes.personas);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (chosenId == null || chosenId == currentId || !mounted) return;
-
-    if (conversation == null) {
-      await ref.read(personasProvider.notifier).selectDefault(chosenId);
-      return;
-    }
-
-    await ref
-        .read(conversationControllerProvider.notifier)
-        .setPersona(conversation.id, chosenId);
-    if (!mounted) return;
-
-    final persona = ref.read(personasProvider).personaById(chosenId);
-    final preferredModelId = persona?.defaultModelId;
-    if (preferredModelId == null) return;
-
-    final selection = ref.read(modelSelectionControllerProvider);
-    LlmModel? preferredModel;
-    for (final model in selection.models) {
-      if (model.id == preferredModelId && model.isDownloaded) {
-        preferredModel = model;
-        break;
-      }
-    }
-    if (preferredModel == null ||
-        selection.selectedModelId == preferredModelId) {
-      return;
-    }
-
-    ref
-        .read(modelSelectionControllerProvider.notifier)
-        .selectModel(preferredModel);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Switched to ${preferredModel.name} for this persona.'),
-      ),
-    );
   }
 
   Future<void> _regenerateMessage(Message message) async {
@@ -720,6 +636,91 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  /// Runs an empty-state suggestion: the picker it implies first, then the
+  /// prompt it prepares.
+  ///
+  /// The prompt is only placed in the composer once the picker produced
+  /// something, so cancelling one leaves the composer exactly as it was. Both
+  /// pickers are the app's own: images become draft attachments, documents are
+  /// indexed into the knowledge collection chat retrieves from.
+  Future<void> _runSuggestion(
+    _SuggestionAction action,
+    String prompt,
+    LlmModel? selectedModel,
+  ) async {
+    switch (action) {
+      case _SuggestionAction.none:
+        break;
+      case _SuggestionAction.pickImage:
+        if (!_isVisionReady(selectedModel)) {
+          _showVisionRequiredMessage();
+          return;
+        }
+        await _pickImage(selectedModel);
+        if (!mounted || _draftImages.isEmpty) return;
+        break;
+      case _SuggestionAction.pickDocuments:
+        final attached = await _attachDocuments();
+        if (!attached) return;
+        break;
+    }
+
+    _fillComposer(prompt);
+  }
+
+  /// Opens the document picker and reports what it added to the knowledge
+  /// collection.
+  ///
+  /// Returns true when the user chose at least one file. The count comes from
+  /// the picker itself rather than from the library, because a file that is
+  /// already indexed adds nothing and would otherwise read as a cancel.
+  Future<bool> _attachDocuments() async {
+    // The chat has to exist before the file is indexed: a document belongs to
+    // the chat it was added from, and deleting that chat is what forgets it.
+    final conversationId = await ref
+        .read(homeControllerProvider.notifier)
+        .ensureActiveConversation();
+    if (!mounted) return false;
+
+    final notifier = ref.read(documentsProvider.notifier);
+    final chosen = await notifier.pickDocuments(
+      addedByConversationId: conversationId,
+    );
+    if (!mounted) return false;
+
+    final documents = ref.read(documentsProvider);
+    final error = documents.errorMessage;
+    if (error != null) {
+      notifier.clearError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), behavior: SnackBarBehavior.floating),
+      );
+      return false;
+    }
+    if (chosen == 0) return false;
+
+    // The library's own sentence already says whether the file was indexed or
+    // was already up to date, so the notice cannot drift from what happened.
+    final status = documents.statusMessage;
+    notifier.clearStatus();
+    if (status != null) {
+      setState(() => _attachNotice = status);
+    }
+    return true;
+  }
+
+  /// Explains that the selected model cannot take an image.
+  void _showVisionRequiredMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Choose a downloaded vision-capable model before sending an image.',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   /// Fills the composer with a suggestion so it waits for review, exactly
   /// like a draft prepared anywhere else.
   void _fillComposer(String prompt) {
@@ -736,6 +737,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   ) {
     final selectionState = ref.watch(modelSelectionControllerProvider);
     final hasDownloadedModel = selectionState.models.any((m) => m.isDownloaded);
+    final selectedModel = selectionState.selectedModel;
     final hour = DateTime.now().hour;
     final greeting = hour < 12
         ? 'Good morning'
@@ -792,32 +794,37 @@ class _HomePageState extends ConsumerState<HomePage> {
       );
     }
 
-    // Option A: a centered greeting with tappable suggestion cards that fill
-    // the composer, so the empty chat reads like a standard chat app.
+    // Option A: a centered greeting with tappable suggestion cards, so the
+    // empty chat reads like a standard chat app. A card that implies a file
+    // opens that picker first and only then prepares its prompt.
     const suggestions = [
       (
         icon: Icons.edit_outlined,
         title: 'Draft an email',
         subtitle: 'to my landlord\u2026',
         prompt: 'Help me draft a polite email to my landlord about ',
+        action: _SuggestionAction.none,
       ),
       (
         icon: Icons.folder_copy_outlined,
         title: 'Summarize docs',
         subtitle: 'from my knowledge\u2026',
         prompt: 'Summarize the key points from my documents about ',
+        action: _SuggestionAction.pickDocuments,
       ),
       (
         icon: Icons.lightbulb_outline_rounded,
         title: 'Brainstorm',
         subtitle: 'ideas for\u2026',
         prompt: 'Brainstorm 5 creative ideas for ',
+        action: _SuggestionAction.none,
       ),
       (
         icon: Icons.add_photo_alternate_outlined,
         title: 'Ask about image',
         subtitle: 'attach, then ask\u2026',
         prompt: 'What do you see in this image? ',
+        action: _SuggestionAction.pickImage,
       ),
     ];
 
@@ -870,7 +877,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                     margin: EdgeInsets.zero,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: () => _fillComposer(suggestion.prompt),
+                      onTap: () => unawaited(
+                        _runSuggestion(
+                          suggestion.action,
+                          suggestion.prompt,
+                          selectedModel,
+                        ),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -938,38 +951,8 @@ class _HomePageState extends ConsumerState<HomePage> {
       ref.watch(homeControllerProvider),
     );
 
-    // Reference bar: text on top, one action row at the bottom, context and
-    // docs below the card.
-    final activeConversation = ref.watch(
-      conversationControllerProvider.select(
-        (state) => state.activeConversation,
-      ),
-    );
-    final composerPersonaName = ref
-        .watch(personasProvider)
-        .resolve(activeConversation?.personaId)
-        .name;
-
-    // Loaded once per session and shared with the retrieval that runs on send;
-    // a chat with no documents at all simply shows an empty picker.
-    final documentLibrary = ref.watch(documentLibraryProvider).valueOrNull;
-    final docScope = DocumentScope.resolve(
-      collections: documentLibrary?.collections ?? const [],
-      activeCollectionId:
-          documentLibrary?.activeCollectionId ?? KnowledgeCollection.defaultId,
-      pinnedCollectionId: activeConversation?.documentCollectionId,
-      documentsEnabled: activeConversation?.documentsEnabled ?? true,
-    );
-    var docsLabel = 'Docs: All';
-    if (!docScope.retrieves) {
-      docsLabel = 'Docs off';
-    } else if (!docScope.isAutomatic && docScope.collectionId != null) {
-      for (final collection in documentLibrary?.collections ?? const []) {
-        if (collection.id == docScope.collectionId) {
-          docsLabel = collection.name;
-        }
-      }
-    }
+    // Reference bar: text on top, one action row at the bottom, and the
+    // context readout below the card.
 
     // The model pill moved down from the toolbar: the composer owns model
     // switching now.
@@ -1108,47 +1091,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                     padding: const EdgeInsets.only(top: 6),
                     child: Row(
                       children: [
-                        if (canAttachImage)
-                          PopupMenuButton<String>(
-                            tooltip: 'Attach',
-                            enabled: canCompose,
-                            onSelected: (value) {
-                              if (value == 'pick') {
-                                _pickImage(selectedModel);
-                              } else if (value == 'history') {
-                                _showAttachmentHistory(historyImages);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'pick',
-                                child: Text('Add image'),
-                              ),
-                              if (historyImages.isNotEmpty)
-                                const PopupMenuItem(
-                                  value: 'history',
-                                  child: Text('Images from this chat'),
-                                ),
-                            ],
-                            child: _composerCircleButton(
-                              context,
-                              colorScheme,
-                              icon: Icons.add_rounded,
-                              tooltip: 'Attach',
-                              // The popup menu owns the taps; a non-null
-                              // callback keeps the enabled look.
-                              onTap: canCompose ? () {} : null,
-                            ),
-                          ),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: _composerCircleButton(
-                            context,
-                            colorScheme,
-                            icon: Icons.face_retouching_natural,
-                            tooltip: 'Persona: $composerPersonaName',
-                            onTap: isGenerating ? null : _pickPersona,
-                          ),
+                        ComposerAttachButton(
+                          enabled: canCompose,
+                          canAttachImage: canAttachImage,
+                          hasHistoryImages: historyImages.isNotEmpty,
+                          onPickImage: () => _pickImage(selectedModel),
+                          onPickHistory: () =>
+                              _showAttachmentHistory(historyImages),
+                          onAttachFiles: () => unawaited(_attachDocuments()),
                         ),
                         Expanded(
                           child: Align(
@@ -1267,6 +1217,11 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
             ),
           ),
+          if (_attachNotice != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _buildAttachNotice(context, colorScheme, textTheme),
+            ),
           if (hasDownloadedModel && meterUsage != null)
             Padding(
               padding: const EdgeInsets.only(top: 6, right: 4),
@@ -1277,27 +1232,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                     'Context: ${_formatTokens(meterUsage.usedTokens)}',
                     style: textTheme.labelSmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  KnowledgeScopeButton(
-                    collections: documentLibrary?.collections ?? const [],
-                    activeCollectionId:
-                        documentLibrary?.activeCollectionId ??
-                        KnowledgeCollection.defaultId,
-                    pinnedCollectionId:
-                        activeConversation?.documentCollectionId,
-                    documentsEnabled:
-                        activeConversation?.documentsEnabled ?? true,
-                    isGenerating: isGenerating,
-                    onScopeChanged: (collectionId, enabled) =>
-                        unawaited(_setDocumentScope(collectionId, enabled)),
-                    child: Text(
-                      docsLabel,
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
                     ),
                   ),
                 ],
@@ -1335,25 +1269,44 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  /// Circular action button for the composer's bottom row.
-  Widget _composerCircleButton(
+  /// Says what the last attach action added, so every attach path leaves
+  /// something visible behind it.
+  Widget _buildAttachNotice(
     BuildContext context,
-    ColorScheme colorScheme, {
-    required IconData icon,
-    String? tooltip,
-    VoidCallback? onTap,
-  }) {
-    return SizedBox.square(
-      dimension: 40,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onTap,
-        padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 19),
-        style: IconButton.styleFrom(
-          backgroundColor: colorScheme.surfaceContainerLow,
-          foregroundColor: colorScheme.primary,
-        ),
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.library_add_check_outlined,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _attachNotice!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Dismiss',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => setState(() => _attachNotice = null),
+            icon: const Icon(Icons.close_rounded, size: 16),
+          ),
+        ],
       ),
     );
   }

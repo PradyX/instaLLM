@@ -5,6 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/services/service_providers.dart';
 import 'package:pocket_llm/core/utils/cancel_token.dart';
+import 'package:pocket_llm/core/utils/logger.dart';
 import 'package:pocket_llm/features/documents/application/document_embedding_models.dart';
 import 'package:pocket_llm/features/documents/application/document_library.dart';
 import 'package:pocket_llm/features/documents/domain/document.dart';
@@ -381,8 +382,16 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
   ///
   /// Stops at the first failure so the message points at the file that caused
   /// it, and a failed or cancelled file stores nothing.
-  Future<void> pickDocuments() async {
-    if (state.isIndexing) return;
+  ///
+  /// Returns how many files the user chose. A caller that opened the picker
+  /// itself needs that number: a file the collection already holds is not an
+  /// error and changes no count, so the choice is the only thing that tells
+  /// "picked this file again" apart from "cancelled the picker".
+  /// [addedByConversationId] is the chat the files are being added for, so
+  /// deleting that chat can forget them again; null indexes them without a chat
+  /// owning them, which is what the Documents screen does.
+  Future<int> pickDocuments({String? addedByConversationId}) async {
+    if (state.isIndexing) return 0;
     final library = _library;
     if (library == null) {
       state = state.copyWith(
@@ -390,7 +399,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
             'The document index is still opening. Try again in a '
             'moment.',
       );
-      return;
+      return 0;
     }
 
     final List<String> paths;
@@ -400,9 +409,9 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
       state = state.copyWith(
         errorMessage: 'Could not open the file picker: $error',
       );
-      return;
+      return 0;
     }
-    if (paths.isEmpty) return;
+    if (paths.isEmpty) return 0;
 
     for (final path in paths) {
       final indexed = await _run(
@@ -415,15 +424,21 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
             library.activeCollectionId,
           ),
           cancelToken: token,
+          addedByConversationId: addedByConversationId,
           onProgress: onProgress,
         ),
       );
       if (!indexed || !mounted) break;
     }
+    return paths.length;
   }
 
   /// Indexes one file by path, without the picker.
-  Future<void> addDocument(String path, {String? name}) async {
+  Future<void> addDocument(
+    String path, {
+    String? name,
+    String? addedByConversationId,
+  }) async {
     final library = _library;
     if (library == null) return;
     await _run(
@@ -437,9 +452,51 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
           library.activeCollectionId,
         ),
         cancelToken: token,
+        addedByConversationId: addedByConversationId,
         onProgress: onProgress,
       ),
     );
+  }
+
+  /// The library this notifier owns, opened when it is not loaded yet.
+  ///
+  /// Anything that can run before the Documents screen was ever shown —
+  /// deleting a chat, for instance — has to be able to reach the index, or it
+  /// would silently act on an empty library.
+  Future<DocumentLibrary?> _openLibrary() async {
+    final loaded = _library;
+    if (loaded != null) return loaded;
+    try {
+      final opened = await _ref.read(documentLibraryProvider.future);
+      _library = opened;
+      return opened;
+    } catch (error) {
+      AppLogger.debug(
+        'DocumentsNotifier: could not open the document index: $error',
+      );
+      return null;
+    }
+  }
+
+  /// Forgets the documents [conversationId] added, because that chat is gone.
+  ///
+  /// Returns how many documents were forgotten. The index is opened here when
+  /// it has not been read yet, so deleting a chat cannot leave a file behind
+  /// merely because the Documents screen was never visited. Original files are
+  /// never touched.
+  Future<int> forgetDocumentsAddedBy(String conversationId) async {
+    final library = await _openLibrary();
+    if (library == null) return 0;
+
+    final forgotten = library.forgetDocumentsAddedBy(conversationId);
+    if (forgotten.isEmpty) return 0;
+
+    AppLogger.debug(
+      'DocumentsNotifier: forgot ${forgotten.length} document(s) added by '
+      '$conversationId.',
+    );
+    _publishFromLibrary();
+    return forgotten.length;
   }
 
   /// Re-reads one document, rebuilding its chunks when the file or the stored

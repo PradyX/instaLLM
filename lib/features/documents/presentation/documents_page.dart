@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
 import 'package:pocket_llm/features/documents/application/documents_controller.dart';
 import 'package:pocket_llm/features/documents/domain/document.dart';
 import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
@@ -37,6 +38,14 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
     final notifier = ref.read(documentsProvider.notifier);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    // A document row has to say where the file came from: one a chat brought in
+    // leaves with that chat, while one added here has no owning chat and stays.
+    // The conversation list is what turns a stored id into a chat name.
+    final conversations = ref.watch(conversationControllerProvider);
+    final conversationTitles = <String, String>{
+      for (final summary in conversations.summaries)
+        summary.conversation.id: summary.conversation.title,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -179,6 +188,11 @@ class _DocumentsPageState extends ConsumerState<DocumentsPage> {
                 document: document,
                 isOutdated: state.isOutdated(document),
                 isBusy: state.isIndexing,
+                ownerLabel: documentOwnerLabel(
+                  document,
+                  conversationTitles: conversationTitles,
+                  conversationsLoaded: conversations.isInitialized,
+                ),
                 onRefresh: () => notifier.refreshDocument(document.id),
                 onRemove: () => _confirmRemove(context, notifier, document),
               ),
@@ -661,11 +675,36 @@ class _CollectionBar extends StatelessWidget {
   }
 }
 
+/// One line under a document row saying where the file came from.
+///
+/// A file a chat brought in is forgotten when that chat is deleted; a file
+/// added from this screen has no owning chat and stays until it is removed
+/// here. Without this the two look identical on screen, so a library file
+/// reads as leftover state from a chat that is long gone.
+String documentOwnerLabel(
+  IndexedDocument document, {
+  required Map<String, String> conversationTitles,
+  required bool conversationsLoaded,
+}) {
+  final conversationId = document.addedByConversationId;
+  if (conversationId == null) {
+    return 'Added here · stays until you remove it';
+  }
+  final title = conversationTitles[conversationId];
+  if (title != null) return 'From chat "$title" · removed with that chat';
+  // The conversation list may just not have loaded yet, so it is only safe to
+  // call the chat gone once that list is known.
+  return conversationsLoaded
+      ? 'From a chat that no longer exists · remove it here'
+      : 'From a chat';
+}
+
 class _DocumentTile extends StatelessWidget {
   const _DocumentTile({
     required this.document,
     required this.isOutdated,
     required this.isBusy,
+    required this.ownerLabel,
     required this.onRefresh,
     required this.onRemove,
   });
@@ -673,6 +712,9 @@ class _DocumentTile extends StatelessWidget {
   final IndexedDocument document;
   final bool isOutdated;
   final bool isBusy;
+
+  /// Where the file came from: a chat that owns it, or this screen.
+  final String ownerLabel;
   final VoidCallback onRefresh;
   final VoidCallback onRemove;
 
@@ -722,6 +764,14 @@ class _DocumentTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Text(
+              ownerLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelSmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
             ),

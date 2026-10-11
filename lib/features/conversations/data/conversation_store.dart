@@ -9,7 +9,21 @@ import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
 
 /// Current schema version of the on-disk conversation store.
-const int conversationStoreSchemaVersion = 1;
+///
+/// Version 2 removed the per-conversation document scope
+/// (`documentCollectionId`, `documentsEnabled`): retrieval always follows the
+/// app-wide active collection now, so a conversation no longer stores one.
+const int conversationStoreSchemaVersion = 2;
+
+/// Oldest schema version this build can still read.
+///
+/// A file written by an older version is migrated in place when it is read:
+/// the removed keys are simply not parsed, so dropping them cannot lose a
+/// conversation or a message, and the file is rewritten at the current
+/// version. A file from a version *above* [conversationStoreSchemaVersion] is
+/// still left untouched, so a downgrade cannot quietly discard data this
+/// build does not understand.
+const int conversationStoreMinimumSchemaVersion = 1;
 
 /// File-backed, versioned store for conversations and their messages.
 ///
@@ -24,7 +38,8 @@ const int conversationStoreSchemaVersion = 1;
 /// Per-conversation files are the source of truth; `index.json` is a
 /// rebuildable cache that keeps the conversation list fast to load. Writes are
 /// atomic (temp file + rename) and serialized. Corrupt entries are skipped
-/// without deleting user data.
+/// without deleting user data. Files from an older schema version are migrated
+/// on read (see [conversationStoreMinimumSchemaVersion]).
 class ConversationStore {
   ConversationStore({Directory? rootDirectory}) : _providedRoot = rootDirectory;
 
@@ -224,11 +239,25 @@ class ConversationStore {
     });
   }
 
+  /// Whether a stored schema version is one this build can read.
+  ///
+  /// Older versions are migrated on read; newer ones are left untouched, and a
+  /// file with no version at all predates versioning and is treated the same
+  /// way — it is never rewritten on a guess.
+  bool _isReadableSchema(int? version) =>
+      version != null &&
+      version >= conversationStoreMinimumSchemaVersion &&
+      version <= conversationStoreSchemaVersion;
+
   /// Reads and validates the index file.
   ///
   /// Returns null when the index is missing or corrupt (callers may rebuild),
   /// or a snapshot with `supported == false` when it was written by a newer
   /// schema version that must not be touched.
+  ///
+  /// An index from an older schema version is rewritten at the current one as
+  /// soon as it is read, so the migration does not have to wait for the next
+  /// write to land.
   Future<_IndexSnapshot?> _readIndex(Directory root) async {
     final file = _indexFile(root);
     if (!await file.exists()) return null;
@@ -237,7 +266,7 @@ class ConversationStore {
       if (decoded is! Map) return null;
       final payload = Map<String, dynamic>.from(decoded);
       final version = (payload['schemaVersion'] as num?)?.toInt();
-      if (version != conversationStoreSchemaVersion) {
+      if (!_isReadableSchema(version)) {
         debugPrint(
           'ConversationStore: index schema version $version is not supported '
           'by this build; leaving it untouched.',
@@ -257,11 +286,15 @@ class ConversationStore {
         }
       }
       final rawMeta = payload['meta'];
-      return _IndexSnapshot(
+      final snapshot = _IndexSnapshot(
         supported: true,
         summaries: summaries,
         meta: rawMeta is Map ? Map<String, dynamic>.from(rawMeta) : const {},
       );
+      if (version != conversationStoreSchemaVersion) {
+        await _writeIndex(root, summaries, snapshot.meta);
+      }
+      return snapshot;
     } catch (error) {
       debugPrint('ConversationStore: unreadable index, will rebuild: $error');
       return null;
@@ -341,7 +374,7 @@ class ConversationStore {
       if (decoded is! Map) return null;
       final payload = Map<String, dynamic>.from(decoded);
       final version = (payload['schemaVersion'] as num?)?.toInt();
-      if (version != conversationStoreSchemaVersion) {
+      if (!_isReadableSchema(version)) {
         debugPrint(
           'ConversationStore: skipping $conversationId with unsupported '
           'schema version $version.',
@@ -367,10 +400,25 @@ class ConversationStore {
           }
         }
       }
-      return _StoredConversation(
+      final stored = _StoredConversation(
         conversation: conversation,
         messages: messages,
       );
+      if (version != conversationStoreSchemaVersion) {
+        // Migrate in place. Re-serializing the conversation is the migration:
+        // keys an older version carried and this one no longer has are simply
+        // not written back, and everything else is preserved. A failure here
+        // does not spoil the read the caller asked for.
+        try {
+          await _writeConversationFile(root, conversation, messages);
+        } catch (error) {
+          debugPrint(
+            'ConversationStore: could not migrate $conversationId from schema '
+            'version $version: $error',
+          );
+        }
+      }
+      return stored;
     } catch (error) {
       debugPrint(
         'ConversationStore: unreadable conversation $conversationId: $error',

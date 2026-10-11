@@ -2,98 +2,45 @@ import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
 
 /// Which knowledge collection one request may read from.
 ///
-/// Road Map 1 Phase 6B: a collection is a group of local documents with its own
-/// index, and retrieval reads one collection at a time so unrelated material
-/// cannot influence an answer. Which collection that is used to be a single
-/// app-wide choice, so switching from "Work" notes to a personal collection
-/// changed what *every* chat could see. A conversation can now pin a collection
-/// or turn local documents off, and this is the only place that decides what
-/// such a conversation really reads.
+/// A collection is a group of local documents with its own index, and retrieval
+/// reads one collection at a time so unrelated material cannot influence an
+/// answer. That collection is the app-wide active one the user chose on the
+/// Documents screen; this is the only place that decides what a request really
+/// reads, so the chat can never silently search material the user did not
+/// select.
 ///
-/// The rule is deliberately forgiving about stale data: a conversation that
-/// pins a collection which has since been removed falls back to the app-wide
-/// one instead of silently retrieving nothing, and says so.
+/// The rule is deliberately forgiving about stale data: an active collection
+/// that has since been removed falls back to one that still exists instead of
+/// silently retrieving nothing.
 class DocumentScope {
-  const DocumentScope({
-    required this.collectionId,
-    required this.isAutomatic,
-    required this.description,
-  });
+  const DocumentScope._(this.collectionId);
 
-  /// Collection the request reads from, or null when it reads from none.
-  final String? collectionId;
-
-  /// True when the conversation follows the app-wide active collection rather
-  /// than one of its own.
-  final bool isAutomatic;
-
-  /// One sentence for the chat's scope control, explaining the choice.
-  final String description;
-
-  /// True when this scope can return chunks at all.
-  bool get retrieves => collectionId != null;
-
-  /// Resolves the scope of a conversation against the collections that exist.
+  /// Collection the request reads from.
   ///
-  /// [pinnedCollectionId] and [documentsEnabled] come from the conversation
-  /// (both absent on a chat stored before this existed, which is why the
-  /// defaults follow the app-wide collection exactly as before).
-  factory DocumentScope.resolve({
+  /// Never null: a store with no collections at all still resolves to the
+  /// built-in default, so "reads nothing" cannot come from a missing id — only
+  /// from a collection that holds no usable chunks.
+  final String collectionId;
+
+  /// Resolves the scope of a request against the collections that exist.
+  ///
+  /// [activeCollectionId] comes from the document library. It is absent on a
+  /// store written before collections existed and normally points at a
+  /// collection that is still there; when it does not, the first collection
+  /// that exists is read instead, so an orphaned id cannot leave a chat with
+  /// no documents at all.
+  static DocumentScope resolve({
     required List<KnowledgeCollection> collections,
     required String activeCollectionId,
-    String? pinnedCollectionId,
-    bool documentsEnabled = true,
   }) {
-    final fallback =
-        _existing(collections, activeCollectionId)?.id ??
-        (collections.isEmpty
-            ? KnowledgeCollection.defaultCollection().id
-            : collections.first.id);
-
-    if (!documentsEnabled) {
-      return DocumentScope(
-        collectionId: null,
-        isAutomatic: false,
-        description: 'Local documents are off for this chat.',
-      );
-    }
-
-    if (pinnedCollectionId == null || pinnedCollectionId.isEmpty) {
-      final active = _existing(collections, fallback);
-      return DocumentScope(
-        collectionId: active?.id ?? fallback,
-        isAutomatic: true,
-        description: active == null
-            ? 'Reads from the app-wide collection.'
-            : 'Follows the app-wide collection, currently "${active.name}".',
-      );
-    }
-
-    final pinned = _existing(collections, pinnedCollectionId);
-    if (pinned == null) {
-      final active = _existing(collections, fallback);
-      return DocumentScope(
-        collectionId: active?.id ?? fallback,
-        isAutomatic: true,
-        description:
-            'The pinned collection is gone, so this chat follows the '
-            'app-wide collection${active == null ? '' : ' "${active.name}"'}.',
-      );
-    }
-    return DocumentScope(
-      collectionId: pinned.id,
-      isAutomatic: false,
-      description: 'Reads from "${pinned.name}" only.',
-    );
-  }
-
-  static KnowledgeCollection? _existing(
-    List<KnowledgeCollection> collections,
-    String id,
-  ) {
     for (final collection in collections) {
-      if (collection.id == id) return collection;
+      if (collection.id == activeCollectionId) {
+        return DocumentScope._(collection.id);
+      }
     }
-    return null;
+    if (collections.isEmpty) {
+      return DocumentScope._(KnowledgeCollection.defaultCollection().id);
+    }
+    return DocumentScope._(collections.first.id);
   }
 }

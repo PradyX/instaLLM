@@ -560,6 +560,21 @@ class HomeController extends _$HomeController {
     }
   }
 
+  /// The conversation the open chat writes to, created when there is none yet.
+  ///
+  /// A document belongs to the chat it was added from, so that chat has to
+  /// exist before the file is indexed — otherwise deleting it later could not
+  /// forget the file. Returns null only when the conversation could not be
+  /// created, and the caller then indexes the file with no chat owning it.
+  Future<String?> ensureActiveConversation() async {
+    try {
+      return await _ensureActiveConversation();
+    } catch (error) {
+      debugPrint('HomeController: could not open a conversation: $error');
+      return null;
+    }
+  }
+
   /// Returns the active conversation id, creating a conversation when none is
   /// active yet.
   Future<String?> _ensureActiveConversation() async {
@@ -1284,28 +1299,15 @@ class HomeController extends _$HomeController {
   ///
   /// A failure here is reported as "no documents" rather than breaking the
   /// request: retrieval is an addition to the chat, never a requirement. The
-  /// collection is decided on the Documents screen, so chat never silently
-  /// searches material the user did not select.
-  /// The documents this request may read from, or null when it may read none.
-  ///
-  /// The collection comes from the conversation, not from the app-wide choice:
-  /// a chat that pins "Work" keeps answering from it while the Documents screen
-  /// shows something else, and a chat with documents turned off retrieves
-  /// nothing at all (Road Map 1 Phase 6B).
+  /// collection is the app-wide active one, decided on the Documents screen,
+  /// so chat never silently searches material the user did not select.
   Future<_DocumentRetrieval?> _availableDocumentRetrieval() async {
     try {
       final library = await ref.read(documentLibraryProvider.future);
-      final conversation = ref
-          .read(conversationControllerProvider)
-          .activeConversation;
-      final scope = DocumentScope.resolve(
+      final collectionId = DocumentScope.resolve(
         collections: library.collections,
         activeCollectionId: library.activeCollectionId,
-        pinnedCollectionId: conversation?.documentCollectionId,
-        documentsEnabled: conversation?.documentsEnabled ?? true,
-      );
-      final collectionId = scope.collectionId;
-      if (collectionId == null) return null;
+      ).collectionId;
       if (library.chunkCountIn(collectionId) == 0) return null;
 
       // A collection that answers from embeddings needs this question embedded

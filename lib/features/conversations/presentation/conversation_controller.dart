@@ -8,6 +8,7 @@ import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:pocket_llm/features/documents/application/documents_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'conversation_controller.g.dart';
@@ -210,29 +211,6 @@ class ConversationController extends _$ConversationController {
     _replaceConversation(updated);
   }
 
-  /// Pins (or unpins) the knowledge collection a conversation reads from.
-  Future<void> setDocumentCollection(
-    String conversationId,
-    String? collectionId,
-  ) async {
-    if (_findSummary(conversationId) == null) return;
-    final updated = await _repository.setDocumentCollection(
-      conversationId,
-      collectionId,
-    );
-    _replaceConversation(updated);
-  }
-
-  /// Turns local document retrieval on or off for a conversation.
-  Future<void> setDocumentsEnabled(String conversationId, bool enabled) async {
-    if (_findSummary(conversationId) == null) return;
-    final updated = await _repository.setDocumentsEnabled(
-      conversationId,
-      enabled,
-    );
-    _replaceConversation(updated);
-  }
-
   /// Stores (or clears) the local summary of a conversation's older turns.
   Future<void> setMemory(
     String conversationId,
@@ -327,10 +305,20 @@ class ConversationController extends _$ConversationController {
     await renameConversation(conversationId, title);
   }
 
-  /// Deletes a conversation, its messages and its locally stored attachments.
-  Future<void> deleteConversation(String conversationId) async {
+  /// Deletes a conversation, its messages, its locally stored attachments and
+  /// the documents it added to the knowledge collection.
+  ///
+  /// Returns how many documents were forgotten. This is the single place a chat
+  /// is deleted from, so the conversation list and the chat header cannot leave
+  /// different things behind: a file a deleted chat brought in is no longer
+  /// retrievable by the chats that remain. The original file on disk is never
+  /// touched.
+  Future<int> deleteConversation(String conversationId) async {
     final messages = await _repository.loadMessages(conversationId);
     await _repository.deleteConversation(conversationId);
+    final forgottenDocuments = await ref
+        .read(documentsProvider.notifier)
+        .forgetDocumentsAddedBy(conversationId);
 
     final storage = ref.read(modelStorageServiceProvider);
     final attachmentPaths = <String>{};
@@ -360,6 +348,7 @@ class ConversationController extends _$ConversationController {
       activeConversationId: activeId,
       activeConversation: active,
     );
+    return forgottenDocuments;
   }
 
   void setSearchQuery(String query) {

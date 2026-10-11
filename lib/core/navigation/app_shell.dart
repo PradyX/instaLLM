@@ -132,135 +132,140 @@ class _Sidebar extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
     final workspace = ref.watch(workspacesProvider).active;
 
+    // The shell sits above each page's Scaffold, so no page Material covers
+    // this rail: this Material paints the background and hosts every ink
+    // response (header, tiles) below it.
     return Container(
       width: AppShell.railWidth,
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
         border: Border(
           right: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
         ),
       ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => context.push(AppRoutes.workspaces),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Image.asset(
-                        'assets/icons/pocketllm_new.png',
-                        fit: BoxFit.contain,
+      child: Material(
+        color: colorScheme.surfaceContainerLow,
+        child: Column(
+          children: [
+            InkWell(
+              onTap: () => context.push(AppRoutes.workspaces),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Image.asset(
+                          'assets/icons/pocketllm_new.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pocket LLM',
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pocket LLM',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Text(
-                          workspace?.name ?? 'No workspace',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
+                          Text(
+                            workspace?.name ?? 'No workspace',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const Icon(Icons.swap_horiz_rounded, size: 18),
+                  ],
+                ),
+              ),
+            ),
+            if (leading case final Widget widget) widget,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                children: [
+                  _sectionLabel(context, 'Chats'),
+                  _ChatRows(
+                    current: section == AppSection.chats,
+                    isGenerating: isGenerating,
                   ),
-                  const Icon(Icons.swap_horiz_rounded, size: 18),
+                  _sectionLabel(context, 'Bots'),
+                  _BotRows(
+                    current: section == AppSection.bots,
+                    workspaceId: workspace?.id,
+                  ),
+                  _sectionLabel(context, 'Rooms'),
+                  _RoomRows(
+                    current: section == AppSection.rooms,
+                    workspaceId: workspace?.id,
+                  ),
+                  _sectionLabel(context, 'Board'),
+                  _BoardTile(current: section == AppSection.board),
+                  _sectionLabel(context, 'More'),
+                  _navTile(
+                    context,
+                    icon: Icons.smart_toy_outlined,
+                    label: 'Models',
+                    route: AppRoutes.modelSelection,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.folder_copy_outlined,
+                    label: 'Documents',
+                    route: AppRoutes.documents,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.mic_none_rounded,
+                    label: 'Voice',
+                    route: AppRoutes.voice,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'Agent',
+                    route: AppRoutes.agent,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.timeline_outlined,
+                    label: 'Activity',
+                    route: AppRoutes.activity,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.account_tree_outlined,
+                    label: 'Workflows',
+                    route: AppRoutes.workflows,
+                  ),
+                  _navTile(
+                    context,
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    route: AppRoutes.settings,
+                  ),
                 ],
               ),
             ),
-          ),
-          if (leading case final Widget widget) widget,
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-              children: [
-                _sectionLabel(context, 'Chats'),
-                _ChatRows(
-                  current: section == AppSection.chats,
-                  isGenerating: isGenerating,
-                ),
-                _sectionLabel(context, 'Bots'),
-                _BotRows(
-                  current: section == AppSection.bots,
-                  workspaceId: workspace?.id,
-                ),
-                _sectionLabel(context, 'Rooms'),
-                _RoomRows(
-                  current: section == AppSection.rooms,
-                  workspaceId: workspace?.id,
-                ),
-                _sectionLabel(context, 'Board'),
-                _BoardTile(current: section == AppSection.board),
-                _sectionLabel(context, 'More'),
-                _navTile(
-                  context,
-                  icon: Icons.smart_toy_outlined,
-                  label: 'Models',
-                  route: AppRoutes.modelSelection,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.folder_copy_outlined,
-                  label: 'Documents',
-                  route: AppRoutes.documents,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.mic_none_rounded,
-                  label: 'Voice',
-                  route: AppRoutes.voice,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.auto_awesome_outlined,
-                  label: 'Agent',
-                  route: AppRoutes.agent,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.timeline_outlined,
-                  label: 'Activity',
-                  route: AppRoutes.activity,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.account_tree_outlined,
-                  label: 'Workflows',
-                  route: AppRoutes.workflows,
-                ),
-                _navTile(
-                  context,
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                  route: AppRoutes.settings,
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -126,6 +126,31 @@ void main() {
     );
   });
 
+  test('reports the files chosen even when the index is reused', () async {
+    final file = await writeFile('notes.txt', 'Docker images stay local.');
+    final container = buildContainer(picked: [file.path]);
+    final notifier = await loaded(container);
+
+    expect(await notifier.pickDocuments(), 1);
+    final indexed = state(container).totalDocumentCount;
+
+    // Picking the same file again reuses its index, so nothing about the
+    // library changes. The count has to say the user chose a file anyway, or
+    // a caller waiting for a selection reads it as a cancelled picker.
+    expect(await notifier.pickDocuments(), 1);
+    expect(state(container).totalDocumentCount, indexed);
+    expect(state(container).statusMessage, contains('already up to date'));
+    expect(state(container).errorMessage, isNull);
+  });
+
+  test('reports no choice when the picker is cancelled', () async {
+    final container = buildContainer(picked: const []);
+    final notifier = await loaded(container);
+
+    expect(await notifier.pickDocuments(), 0);
+    expect(state(container).documents, isEmpty);
+  });
+
   test('keeps earlier documents when a later file fails', () async {
     final good = await writeFile('good.txt', 'Docker images stay local.');
     final bad = await writeBinaryFile('bad.txt');

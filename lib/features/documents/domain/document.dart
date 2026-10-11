@@ -327,6 +327,7 @@ class IndexedDocument {
     this.chunkerVersion = documentChunkerVersion,
     this.embeddingModelId,
     this.embeddingDimensions,
+    this.addedByConversationId,
   });
 
   final DocumentSource source;
@@ -356,6 +357,15 @@ class IndexedDocument {
   /// Width of the stored vectors when [embeddingModelId] is set.
   final int? embeddingDimensions;
 
+  /// Chat that brought this file in, or null when it was added from the
+  /// Documents screen instead.
+  ///
+  /// Deletion follows this: a chat that is deleted forgets the documents it
+  /// added, so the library has to remember where each file came from. Absent on
+  /// an index written before this existed, and then the document is only ever
+  /// removed from the Documents screen.
+  final String? addedByConversationId;
+
   /// Returns this document with [newSource] replacing its source.
   ///
   /// Used when a file's metadata changed but its extracted text did not, so the
@@ -371,6 +381,7 @@ class IndexedDocument {
     chunkerVersion: chunkerVersion,
     embeddingModelId: embeddingModelId,
     embeddingDimensions: embeddingDimensions,
+    addedByConversationId: addedByConversationId,
   );
 
   /// Returns this document moved to another collection.
@@ -388,6 +399,26 @@ class IndexedDocument {
     chunkerVersion: chunkerVersion,
     embeddingModelId: embeddingModelId,
     embeddingDimensions: embeddingDimensions,
+    addedByConversationId: addedByConversationId,
+  );
+
+  /// Returns this document attributed to [conversationId].
+  ///
+  /// Used when the same file is picked again from another chat: the file then
+  /// belongs to the chat that most recently brought it in, so deleting that
+  /// chat forgets it.
+  IndexedDocument attributedTo(String conversationId) => IndexedDocument(
+    source: source,
+    chunks: chunks,
+    charCount: charCount,
+    indexedAt: indexedAt,
+    contentHash: contentHash,
+    collectionId: collectionId,
+    chunking: chunking,
+    chunkerVersion: chunkerVersion,
+    embeddingModelId: embeddingModelId,
+    embeddingDimensions: embeddingDimensions,
+    addedByConversationId: conversationId,
   );
 
   String get id => source.id;
@@ -403,6 +434,7 @@ class IndexedDocument {
     'chunkerVersion': chunkerVersion,
     'embeddingModelId': embeddingModelId,
     'embeddingDimensions': embeddingDimensions,
+    'addedByConversationId': addedByConversationId,
     'chunks': chunks.map((chunk) => chunk.toJson()).toList(),
   };
 
@@ -440,6 +472,9 @@ class IndexedDocument {
           (json['chunkerVersion'] as num?)?.toInt() ?? documentChunkerVersion,
       embeddingModelId: json['embeddingModelId'] as String?,
       embeddingDimensions: (json['embeddingDimensions'] as num?)?.toInt(),
+      // Absent on an index written before chats owned their documents, and
+      // then the file is simply not tied to a chat.
+      addedByConversationId: json['addedByConversationId'] as String?,
     );
   }
 }

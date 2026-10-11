@@ -22,7 +22,11 @@ class _FakeListener implements PlatformSpeechListener {
     this.outcome = PlatformSpeechStatus.ready,
     this.transcript = '',
     this.gate,
+    this.error,
   });
+
+  /// Reason the recognizer reports when it stops, if any.
+  final String? error;
 
   /// What the device answers when asked to open.
   final PlatformSpeechStatus outcome;
@@ -48,6 +52,9 @@ class _FakeListener implements PlatformSpeechListener {
 
   @override
   Future<PlatformSpeechStatus> requestAuthorization() async => outcome;
+
+  @override
+  String? get lastError => error;
 
   @override
   Future<PlatformSpeechStatus> listen() async {
@@ -304,6 +311,32 @@ void main() {
     expect(state.stage, DictationStage.idle);
     expect(state.errorMessage, contains('no speech recognizer'));
   });
+
+  test(
+    'a silence report carries the recognizer\'s own reason when it has one',
+    () async {
+      final container = buildContainer(
+        engine: SttEngine.platform,
+        listener: _FakeListener(
+          transcript: '',
+          error: 'Recognition request was canceled  \n  because of an error',
+        ),
+      );
+      addTearDown(container.dispose);
+      final field = TextEditingController();
+      addTearDown(field.dispose);
+      final controller = container.read(composerDictationProvider.notifier);
+
+      await controller.toggle(field);
+      await controller.toggle(field);
+
+      final error = container.read(composerDictationProvider).errorMessage;
+      expect(error, contains('The recognizer reported: Recognition request'));
+      // Flattened, so a multi-line native message fits a snackbar.
+      expect(error, isNot(contains('\n')));
+      expect(field.text, isEmpty);
+    },
+  );
 
   test('nothing recognizable leaves the draft alone and says so', () async {
     final container = buildContainer(

@@ -166,12 +166,19 @@ class ComposerDictationController extends StateNotifier<DictationState> {
   }
 
   Future<void> _finishPlatform(TextEditingController target) async {
-    final transcript = await _ref.read(platformSpeechProvider).stop();
+    final speaker = _ref.read(platformSpeechProvider);
+    final transcript = await speaker.stop();
     _target = null;
     if (!mounted) return;
     if (transcript.trim().isEmpty) {
-      state = const DictationState(
-        errorMessage: 'Nothing recognizable was heard. Try again.',
+      // The recognizer's own reason is worth passing on: "nothing was heard"
+      // is wrong when the session failed for a reason it knows.
+      final reason = speaker.lastError?.trim();
+      state = DictationState(
+        errorMessage: reason == null || reason.isEmpty
+            ? 'Nothing recognizable was heard. Try again.'
+            : 'Nothing recognizable was heard. The recognizer reported: '
+                  '${_shorten(reason)}',
       );
       return;
     }
@@ -218,6 +225,12 @@ class ComposerDictationController extends StateNotifier<DictationState> {
     } finally {
       _finishing = false;
     }
+  }
+
+  /// Keeps a recognizer's explanation to a length a snackbar can show.
+  static String _shorten(String text, {int limit = 160}) {
+    final flat = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return flat.length <= limit ? flat : '${flat.substring(0, limit)}…';
   }
 
   /// Appends [text] to the field with a separating space, leaving the

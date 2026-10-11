@@ -35,9 +35,45 @@ enum PlatformSpeechStatus {
 /// takes the whole chat down. Device recognition is used only where the system
 /// has already allowed it, and the local model remains the engine that always
 /// works.
+/// Text heard so far, keeping the newest partial in case the recognizer never
+/// marks a result final.
+///
+/// This is not belt-and-braces: with partial results off, the native side
+/// drops every non-final result, and a final one only ever arrives when the
+/// session is ended for us — so a session macOS ends by itself (its pause
+/// timer) can otherwise hand back nothing at all and be reported as silence.
+class RecognizedSpeech {
+  String? _finalWords;
+  String _partialWords = '';
+
+  /// Records one result from the recognizer.
+  void record(String words, {required bool isFinal}) {
+    if (isFinal) {
+      _finalWords = words;
+      return;
+    }
+    _partialWords = words;
+  }
+
+  /// What to insert: the final transcript when the recognizer produced one,
+  /// otherwise the newest words it heard.
+  String get best => (_finalWords ?? _partialWords).trim();
+
+  bool get hasWords => best.isNotEmpty;
+
+  void clear() {
+    _finalWords = null;
+    _partialWords = '';
+  }
+}
+
 abstract class PlatformSpeechListener {
   /// Whether device recognition can run, without asking for anything.
   Future<PlatformSpeechStatus> status();
+
+  /// The reason the recognizer last stopped, when it reported one. Surfaced
+  /// so an empty transcript can say why instead of always claiming silence.
+  String? get lastError;
 
   /// Asks the system for permission. Only ever called from an explicit user
   /// action, because on macOS this is the call that shows the system prompt
@@ -79,10 +115,15 @@ class PlatformSpeechService implements PlatformSpeechListener {
 
   bool _ready = false;
   bool _listening = false;
+  String? _lastError;
   Completer<String>? _result;
+  final RecognizedSpeech _capture = RecognizedSpeech();
 
   @override
   bool get isListening => _listening;
+
+  @override
+  String? get lastError => _lastError;
 
   @override
   Future<PlatformSpeechStatus> status() async {
@@ -127,11 +168,18 @@ class PlatformSpeechService implements PlatformSpeechListener {
 
   /// Prepares the recognizer, prompting for permission when the system has
   /// not decided yet.
+  ///
+  /// The plugin reports recognition failures through the listener it is given
+  /// here, which is why the reason is kept: a session that ends in silence
+  /// otherwise cannot be told apart from one that failed.
   Future<bool> _initializeRecognition() async {
     final prepare = _prepare;
     return prepare != null
         ? await prepare()
-        : await _speech.initialize(onError: (_) {}, debugLogging: false);
+        : await _speech.initialize(
+            onError: (error) => _lastError = error.errorMsg,
+            debugLogging: false,
+          );
   }
 
   @override
@@ -140,9 +188,12 @@ class PlatformSpeechService implements PlatformSpeechListener {
     final status = await this.status();
     if (status != PlatformSpeechStatus.ready) return status;
     _result = Completer<String>();
+    _lastError = null;
+    _capture.clear();
     try {
       await _speech.listen(
         onResult: (result) {
+          _capture.record(result.recognizedWords, isFinal: result.finalResult);
           if (result.finalResult && !(_result?.isCompleted ?? true)) {
             _result?.complete(result.recognizedWords);
           }
@@ -150,7 +201,10 @@ class PlatformSpeechService implements PlatformSpeechListener {
         listenOptions: stt.SpeechListenOptions(
           listenFor: const Duration(minutes: 2),
           pauseFor: const Duration(seconds: 5),
-          partialResults: false,
+          // Partial results are kept, not just the final one: macOS ends a
+          // session on its own pause timer, and the words heard before that
+          // are the whole transcript.
+          partialResults: true,
           cancelOnError: true,
         ),
       );
@@ -168,19 +222,31 @@ class PlatformSpeechService implements PlatformSpeechListener {
 
   @override
   Future<String> stop() async {
-    if (!_listening) return '';
-    try {
-      await _speech.stop();
-    } catch (_) {}
-    _listening = false;
+    final wasListening = _listening;
+    if (wasListening) {
+      try {
+        await _speech.stop();
+      } catch (_) {}
+      _listening = false;
+    }
     final result = _result;
     _result = null;
-    if (result == null) return '';
-    try {
-      return await result.future.timeout(const Duration(seconds: 10));
-    } catch (_) {
-      return '';
+    // A session the plugin already ended delivers its final result through
+    // the plugin's own short final timer; asking ourselves to stop is the case
+    // that needs the longer wait for the recognizer to answer.
+    final waitFor = wasListening
+        ? const Duration(seconds: 10)
+        : const Duration(seconds: 2);
+    if (result != null && !result.isCompleted) {
+      try {
+        await result.future.timeout(waitFor);
+      } catch (_) {
+        // Nothing final arrived; whatever was heard is still worth keeping.
+      }
     }
+    final transcript = _capture.best;
+    _capture.clear();
+    return transcript;
   }
 
   @override
@@ -189,6 +255,7 @@ class PlatformSpeechService implements PlatformSpeechListener {
       await _speech.cancel();
     } catch (_) {}
     _listening = false;
+    _capture.clear();
     _result?.complete('');
     _result = null;
   }

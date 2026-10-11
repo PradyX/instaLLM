@@ -7,6 +7,42 @@ import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
 /// that has not allowed recognition must never reach the prepare call these
 /// tests count.
 void main() {
+  group('RecognizedSpeech', () {
+    test('a final transcript wins over the partials before it', () {
+      final capture = RecognizedSpeech();
+      capture.record('hello', isFinal: false);
+      capture.record('hello there', isFinal: false);
+      capture.record('Hello, there.', isFinal: true);
+
+      expect(capture.best, 'Hello, there.');
+      expect(capture.hasWords, isTrue);
+    });
+
+    test('partials alone are still words, because macOS can end a session '
+        'without ever finalizing one', () {
+      final capture = RecognizedSpeech();
+      capture.record('spoken words', isFinal: false);
+
+      expect(capture.best, 'spoken words');
+    });
+
+    test('nothing heard is empty, not whitespace', () {
+      final capture = RecognizedSpeech();
+      capture.record('   ', isFinal: false);
+
+      expect(capture.best, isEmpty);
+      expect(capture.hasWords, isFalse);
+    });
+
+    test('clearing forgets the session it belonged to', () {
+      final capture = RecognizedSpeech();
+      capture.record('old words', isFinal: true);
+      capture.clear();
+
+      expect(capture.best, isEmpty);
+    });
+  });
+
   test('a device that was never allowed is checked, never asked', () async {
     var prepared = false;
     final service = PlatformSpeechService(

@@ -2,7 +2,6 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/activity/application/activity_providers.dart';
 import 'package:pocket_llm/features/git/application/git_service.dart';
 import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
 import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
@@ -11,9 +10,9 @@ import 'package:go_router/go_router.dart';
 
 /// One project screen for everything in the workspace (Road Map 2 §13).
 ///
-/// Chat, board, documents, bots, skills, MCP, workflows and activity stay
-/// separate screens; this is the map that links them, plus the vault sync
-/// conflicts and the repository state that need a home.
+/// Chat, board, documents, bots, skills and MCP stay separate screens; this
+/// is the map that links them, plus the vault sync conflicts and the
+/// repository state that need a home.
 class WorkspaceDetailPage extends ConsumerStatefulWidget {
   const WorkspaceDetailPage({super.key, required this.workspaceId});
 
@@ -94,16 +93,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
                 route: AppRoutes.groupChats,
               ),
               _GoChip(
-                icon: Icons.account_tree_outlined,
-                label: 'Workflows',
-                route: AppRoutes.workflows,
-              ),
-              _GoChip(
-                icon: Icons.timeline,
-                label: 'Activity',
-                route: AppRoutes.activity,
-              ),
-              _GoChip(
                 icon: Icons.smart_toy_outlined,
                 label: 'Bots',
                 route: AppRoutes.bots,
@@ -149,10 +138,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
               repositoryPath: workspace.repositoryPath,
               onPick: () => _pickRepository(workspace.id),
             ),
-          ),
-          _Section(
-            title: 'Recent activity',
-            child: _RecentActivity(workspaceId: workspace.id),
           ),
         ],
       ),
@@ -390,44 +375,6 @@ class _Repo extends StatelessWidget {
           title: const Text('Repository'),
           subtitle: Text(subtitle, overflow: TextOverflow.ellipsis),
           trailing: TextButton(onPressed: onPick, child: const Text('Change')),
-        );
-      },
-    );
-  }
-}
-
-class _RecentActivity extends ConsumerWidget {
-  const _RecentActivity({required this.workspaceId});
-
-  final String workspaceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feed = ref.watch(workspaceActivityProvider(workspaceId));
-    return feed.when(
-      loading: () => const LinearProgressIndicator(),
-      error: (error, _) => Text('Could not load: $error'),
-      data: (events) {
-        if (events.isEmpty) {
-          return Text(
-            'Nothing yet.',
-            style: Theme.of(context).textTheme.bodySmall,
-          );
-        }
-        return Column(
-          children: [
-            for (final event in events.take(5))
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: Text(
-                  event.summary,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(event.kind.label),
-              ),
-          ],
         );
       },
     );

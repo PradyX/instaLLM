@@ -8,15 +8,12 @@ import 'package:pocket_llm/features/group_chat/application/group_chat_controller
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
-import 'package:pocket_llm/features/activity/domain/activity_event.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
 import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
 import 'package:pocket_llm/features/tools/presentation/tool_approval_dialog.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
-import 'package:pocket_llm/features/workflows/application/workflows_controller.dart';
-import 'package:pocket_llm/features/workflows/presentation/workflows_page.dart';
 
 /// Group chats of the active workspace, and one room to talk in.
 ///
@@ -288,8 +285,6 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
       ),
       body: Column(
         children: [
-          if (chat.workflowRunId != null)
-            _WorkflowBanner(runId: chat.workflowRunId!),
           Expanded(
             child: messages.isEmpty
                 ? Center(
@@ -393,15 +388,6 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
         relatedMessages: [message.id],
         createdBy: 'user',
       );
-      await logBoardActivity(
-        workspaceId: workspaceId,
-        event: ActivityEvent.create(
-          workspaceId: workspaceId,
-          kind: ActivityEventKind.taskCreated,
-          summary: '${task.id} created from the room: ${task.title}',
-          relatedTaskId: task.id,
-        ),
-      );
       if (ref.read(activeWorkspaceIdProvider) == workspaceId) {
         await ref.read(kanbanProvider.notifier).reload();
       }
@@ -501,43 +487,6 @@ class _Line extends ConsumerWidget {
   }
 }
 
-/// One line under the room title when the room feeds a workflow run.
-class _WorkflowBanner extends ConsumerWidget {
-  const _WorkflowBanner({required this.runId});
-
-  final String runId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final runs = ref.watch(workflowsProvider).snapshot.runs;
-    var label = 'Workflow linked';
-    for (final run in runs) {
-      if (run.id == runId) {
-        final step = run.currentStepId == null ? '' : ' · ${run.currentStepId}';
-        label = 'Workflow · ${run.status.label}$step';
-      }
-    }
-    return InkWell(
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (context) => const WorkflowsPage())),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        child: Row(
-          children: [
-            const Icon(Icons.account_tree_outlined, size: 18),
-            const SizedBox(width: 8),
-            Expanded(child: Text(label)),
-            const Icon(Icons.chevron_right, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _PendingReply extends ConsumerStatefulWidget {
   const _PendingReply({required this.message});
 
@@ -624,7 +573,6 @@ class _RoomSheet extends ConsumerWidget {
     if (chat == null) return const SizedBox();
     final notifier = ref.read(groupChatsProvider.notifier);
     final bots = ref.watch(botsProvider);
-    final workflows = ref.watch(workflowsProvider);
     final room = chat;
 
     return Padding(
@@ -669,8 +617,8 @@ class _RoomSheet extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Manual answers @mentions only. Workflow follows the linked '
-                'run. Auto lets a local relevance vote pick — optional.',
+                'Manual answers @mentions only. Auto lets a local relevance '
+                'vote pick — optional.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
@@ -692,31 +640,6 @@ class _RoomSheet extends ConsumerWidget {
                     );
                   },
                 ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String?>(
-                initialValue: room.workflowRunId,
-                decoration: const InputDecoration(
-                  labelText: 'Linked workflow run',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  for (final run in workflows.snapshot.runsFor(
-                    room.workspaceId,
-                  ))
-                    if (!run.status.isFinished)
-                      DropdownMenuItem<String?>(
-                        value: run.id,
-                        child: Text('${run.id} · ${run.status.label}'),
-                      ),
-                ],
-                onChanged: (runId) => notifier.updateChat(
-                  room.copyWith(workflowRunId: runId, clearRun: runId == null),
-                ),
-              ),
               const SizedBox(height: 8),
               Row(
                 children: [

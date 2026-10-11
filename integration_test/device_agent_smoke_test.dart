@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pocket_llm/features/agents/application/agent_controller.dart';
+import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
 import 'package:pocket_llm/features/agents/domain/agent_run.dart';
+import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
 import 'package:pocket_llm/features/tools/application/tools_providers.dart';
 
 /// Exercises the real agent wiring on this machine: the tool registry the app
@@ -58,33 +60,34 @@ void main() {
     addTearDown(container.dispose);
     await tester.pumpWidget(const SizedBox.shrink());
 
-    final models = container.read(installedAgentModelsProvider);
+    final models = agentRunnableModels(
+      container.read(installedAgentModelsProvider),
+    );
     if (models.isEmpty) {
       // ignore: avoid_print
       print(
-        'skipping: no installed model, so the agent loop cannot run here. '
+        'skipping: no tool-capable model, so the agent loop cannot run here. '
         'Add a GGUF model through Model Selection first.',
       );
       return;
     }
 
-    final controller = container.read(agentControllerProvider.notifier);
-    controller
-      ..setModel(models.first.id)
-      ..setMaxIterations(4)
-      ..setGoal(
-        'What is 18% of 2450? Use the calculator tool, then answer in one '
-        'sentence.',
-      );
+    final run = await container
+        .read(agentLoopServiceProvider)
+        .run(
+          model: models.first,
+          goal:
+              'What is 18% of 2450? Use the calculator tool, then answer in '
+              'one sentence.',
+          registry: container.read(toolRegistryProvider),
+          maxIterations: 4,
+          budget: container.read(contextBudgetProvider).budget,
+        )
+        .timeout(const Duration(minutes: 10));
 
-    await controller.run().timeout(const Duration(minutes: 10));
-
-    final state = container.read(agentControllerProvider);
-    final run = state.run;
     expect(run, isNotNull);
     // ignore: avoid_print
-    print(
-      'agent run: ${run!.status.label} · ${run.iterations} iteration(s) · '
+    print(        'agent run: ${run.status.label} · ${run.iterations} iteration(s) · '
       '${run.toolCallCount} tool call(s)',
     );
     for (final step in run.steps) {
@@ -101,6 +104,5 @@ void main() {
     // A run must always end inside its own limits, whatever it answers.
     expect(run.status, isNot(AgentRunStatus.failed), reason: run.errorMessage);
     expect(run.iterations, lessThanOrEqualTo(4));
-    expect(state.isRunning, isFalse);
   });
 }

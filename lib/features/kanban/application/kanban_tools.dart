@@ -1,5 +1,3 @@
-import 'package:pocket_llm/features/activity/data/activity_store.dart';
-import 'package:pocket_llm/features/activity/domain/activity_event.dart';
 import 'package:pocket_llm/features/kanban/data/task_repository.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
@@ -21,7 +19,7 @@ class KanbanToolContext {
   /// notes when linked, the local store otherwise).
   final Future<TaskRepository> Function(String workspaceId) repositoryFor;
 
-  /// Name recorded on comments and activity entries.
+  /// Name recorded on comments.
   final String actorName;
 
   /// Runs after a tool saves, so an open board can refresh. Null in tests.
@@ -171,15 +169,6 @@ Future<String> _createTask(
     description: description,
     createdBy: context.actorName,
   );
-  await logBoardActivity(
-    workspaceId: context.workspaceId,
-    event: ActivityEvent.create(
-      workspaceId: context.workspaceId,
-      kind: ActivityEventKind.taskCreated,
-      summary: '${task.id} created: ${task.title}',
-      relatedTaskId: task.id,
-    ),
-  );
   await context.onBoardChanged?.call();
   return 'Created ${task.id}: ${task.title}';
 }
@@ -196,28 +185,6 @@ Future<String> _moveTask(
   final updated = tasks[index].copyWith(status: status);
   final next = [...tasks]..[index] = updated;
   await repository.save(context.workspaceId, next);
-  await logBoardActivity(
-    workspaceId: context.workspaceId,
-    event: ActivityEvent.create(
-      workspaceId: context.workspaceId,
-      kind: ActivityEventKind.taskMoved,
-      summary: '$taskId → ${status.label}',
-      relatedTaskId: taskId,
-    ),
-  );
   await context.onBoardChanged?.call();
   return 'Moved $taskId to ${status.label}.';
-}
-
-/// Records one board line in the workspace's activity feed.
-///
-/// Best-effort: a board write that cannot log still stands.
-Future<void> logBoardActivity({
-  required String workspaceId,
-  required ActivityEvent event,
-}) async {
-  try {
-    final store = await ActivityStore.open(workspaceId);
-    store.append(event);
-  } catch (_) {}
 }

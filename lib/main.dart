@@ -6,6 +6,7 @@ import 'package:pocket_llm/core/utils/logger.dart';
 import 'package:pocket_llm/i18n/strings.g.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocket_llm/core/data/legacy_store_cleanup.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,9 @@ Future<void> main() async {
 
   await LocalNotificationService.instance.initialize();
   await LocalNotificationService.instance.requestPermissions();
+
+  // Removes store files of deleted features (workflows, activity feed).
+  await LegacyStoreCleanup.run();
 
   AppLogger.info('App started successfully');
   runApp(TranslationProvider(child: const ProviderScope(child: MyApp())));

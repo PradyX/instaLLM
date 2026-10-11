@@ -1,6 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/activity/data/activity_store.dart';
-import 'package:pocket_llm/features/activity/domain/activity_event.dart';
 import 'package:pocket_llm/features/kanban/data/task_repository.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
@@ -84,8 +82,7 @@ final kanbanProvider = StateNotifierProvider<KanbanNotifier, KanbanState>(
 /// Owns one workspace's board: tasks, moves, assignments and comments.
 ///
 /// Bots use the same operations the UI does (§9.3): create, assign, move,
-/// comment, link document, mark blocked, mark complete. Moves into Done and
-/// assignments write an activity entry so the board's history outlives chat.
+/// comment, link document, mark blocked, mark complete.
 class KanbanNotifier extends StateNotifier<KanbanState> {
   KanbanNotifier(this._ref) : super(const KanbanState()) {
     _ref.listen<String?>(
@@ -146,13 +143,6 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     );
   }
 
-  Future<void> _log(ActivityEvent event) async {
-    try {
-      final store = await ActivityStore.open(event.workspaceId);
-      store.append(event);
-    } catch (_) {}
-  }
-
   String _nextLocalId(String workspaceId, List<ProjectTask> tasks) {
     var max = 0;
     for (final task in tasks) {
@@ -194,13 +184,6 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     );
     state = state.copyWith(tasks: [...state.tasks, task], clearError: true);
     await _persist();
-    await _log(
-      ActivityEvent.create(
-        workspaceId: workspaceId,
-        kind: ActivityEventKind.taskCreated,
-        summary: '${task.id} created: ${task.title}',
-      ),
-    );
     return task;
   }
 
@@ -210,17 +193,6 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     final updated = task.copyWith(status: status);
     _replace(updated);
     await _persist();
-    final workspaceId = _workspaceId;
-    if (workspaceId == null) return;
-    await _log(
-      ActivityEvent.create(
-        workspaceId: workspaceId,
-        kind: ActivityEventKind.taskMoved,
-        summary: '${task.id} → ${status.label}',
-        relatedTaskId: task.id,
-        actorBotId: updated.assignedBotId,
-      ),
-    );
   }
 
   Future<void> assignTask(String taskId, String? botId) async {
@@ -228,17 +200,6 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     if (task == null) return;
     _replace(task.copyWith(assignedBotId: botId, clearAssignee: botId == null));
     await _persist();
-    final workspaceId = _workspaceId;
-    if (workspaceId == null || botId == null) return;
-    await _log(
-      ActivityEvent.create(
-        workspaceId: workspaceId,
-        kind: ActivityEventKind.taskAssigned,
-        summary: '${task.id} assigned to $botId',
-        relatedTaskId: task.id,
-        actorBotId: botId,
-      ),
-    );
   }
 
   Future<void> addComment(String taskId, String author, String text) async {

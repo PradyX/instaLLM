@@ -245,24 +245,6 @@ class _Sidebar extends ConsumerWidget {
                   ),
                   _navTile(
                     context,
-                    icon: Icons.auto_awesome_outlined,
-                    label: 'Agent',
-                    route: AppRoutes.agent,
-                  ),
-                  _navTile(
-                    context,
-                    icon: Icons.timeline_outlined,
-                    label: 'Activity',
-                    route: AppRoutes.activity,
-                  ),
-                  _navTile(
-                    context,
-                    icon: Icons.account_tree_outlined,
-                    label: 'Workflows',
-                    route: AppRoutes.workflows,
-                  ),
-                  _navTile(
-                    context,
                     icon: Icons.settings_outlined,
                     label: 'Settings',
                     route: AppRoutes.settings,

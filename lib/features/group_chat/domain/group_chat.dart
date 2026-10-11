@@ -5,9 +5,6 @@ enum SpeakerMode {
   /// Only a mentioned bot responds (`@planner ...`).
   manual('Manual'),
 
-  /// The linked workflow's waiting step decides.
-  workflow('Workflow'),
-
   /// A local relevance vote picks the next bot. Optional, off by default.
   auto('Auto');
 
@@ -29,8 +26,6 @@ class GroupChat {
     this.directBotId,
     this.mode = SpeakerMode.manual,
     this.maxRounds = defaultMaxRounds,
-    this.workflowId,
-    this.workflowRunId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -75,8 +70,6 @@ class GroupChat {
 
   final SpeakerMode mode;
   final int maxRounds;
-  final String? workflowId;
-  final String? workflowRunId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -86,10 +79,6 @@ class GroupChat {
     String? directBotId,
     SpeakerMode? mode,
     int? maxRounds,
-    String? workflowId,
-    bool clearWorkflow = false,
-    String? workflowRunId,
-    bool clearRun = false,
     DateTime? updatedAt,
   }) {
     return GroupChat(
@@ -105,8 +94,6 @@ class GroupChat {
         minMaxRounds,
         maxMaxRounds,
       ),
-      workflowId: clearWorkflow ? null : (workflowId ?? this.workflowId),
-      workflowRunId: clearRun ? null : (workflowRunId ?? this.workflowRunId),
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
@@ -121,8 +108,6 @@ class GroupChat {
       'directBotId': directBotId,
       'mode': mode.name,
       'maxRounds': maxRounds,
-      'workflowId': workflowId,
-      'workflowRunId': workflowRunId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -162,8 +147,6 @@ class GroupChat {
       maxRounds: json['maxRounds'] is num
           ? (json['maxRounds'] as num).toInt()
           : defaultMaxRounds,
-      workflowId: readOpt(json['workflowId']),
-      workflowRunId: readOpt(json['workflowRunId']),
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),
     ).copyWith();

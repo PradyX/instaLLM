@@ -143,13 +143,6 @@ class SettingsPage extends ConsumerWidget {
                   subtitle: const Text('Human-readable project knowledge'),
                   onTap: () => context.push(AppRoutes.vaults),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.account_tree_outlined),
-                  title: const Text('Workflows'),
-                  subtitle: const Text('Research to done, with approvals'),
-                  onTap: () => context.push(AppRoutes.workflows),
-                ),
               ],
             ),
           ),

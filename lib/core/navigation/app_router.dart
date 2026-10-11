@@ -11,13 +11,10 @@ import 'package:pocket_llm/features/settings/presentation/settings_page.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_conversation_page.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_page.dart';
 import 'package:pocket_llm/features/about/presentation/about_page.dart';
-import 'package:pocket_llm/features/agents/presentation/agent_page.dart';
 import 'package:pocket_llm/features/bots/presentation/bots_page.dart';
-import 'package:pocket_llm/features/activity/presentation/activity_page.dart';
 import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
 import 'package:pocket_llm/features/workspaces/presentation/workspace_detail_page.dart';
 import 'package:pocket_llm/features/kanban/presentation/kanban_page.dart';
-import 'package:pocket_llm/features/workflows/presentation/workflows_page.dart';
 import 'package:pocket_llm/features/obsidian/presentation/vaults_page.dart';
 import 'package:pocket_llm/features/mcp/presentation/mcp_page.dart';
 import 'package:pocket_llm/features/skills/presentation/skills_page.dart';
@@ -43,17 +40,14 @@ abstract class AppRoutes {
   static const documents = '/documents';
   static const voice = '/voice';
   static const voiceConversation = '/voice/conversation';
-  static const agent = '/agent';
   static const workspaces = '/workspaces';
   static const skills = '/skills';
   static const mcp = '/mcp';
   static const bots = '/bots';
   static const vaults = '/vaults';
   static const kanban = '/kanban';
-  static const workflows = '/workflows';
   static const groupChats = '/group-chats';
   static const workspace = '/workspace';
-  static const activity = '/activity';
 
   /// Route to one workspace's detail screen.
   static String workspaceFor(String workspaceId) {
@@ -128,10 +122,6 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const VoicePage(),
       ),
       GoRoute(
-        path: AppRoutes.agent,
-        builder: (context, state) => const AgentPage(),
-      ),
-      GoRoute(
         path: AppRoutes.about,
         builder: (context, state) => const AboutPage(),
       ),
@@ -160,10 +150,6 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const KanbanPage(),
       ),
       GoRoute(
-        path: AppRoutes.workflows,
-        builder: (context, state) => const WorkflowsPage(),
-      ),
-      GoRoute(
         path: AppRoutes.groupChats,
         builder: (context, state) => const GroupChatsPage(),
       ),
@@ -172,10 +158,6 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => WorkspaceDetailPage(
           workspaceId: state.uri.queryParameters['id'] ?? '',
         ),
-      ),
-      GoRoute(
-        path: AppRoutes.activity,
-        builder: (context, state) => const ActivityPage(),
       ),
     ],
   );

@@ -4,10 +4,9 @@ import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 /// Picks the next speaker without any model call.
 ///
 /// The order is fixed: an explicit `@mention` always wins (manual intent
-/// beats automation), then the linked workflow's waiting bot, then — only
-/// in auto mode — a local relevance vote. No rule ever returns two bots at
-/// once, which is what keeps Bot A → Bot B → Bot A … impossible without
-/// the user's next line or the next workflow step.
+/// beats automation), then — only in auto mode — a local relevance vote.
+/// No rule ever returns two bots at once, which is what keeps
+/// Bot A → Bot B → Bot A … impossible without the user's next line.
 abstract final class GroupRouter {
   /// Bot ids mentioned as `@name` in [text], in mention order.
   static List<String> mentions({
@@ -31,7 +30,6 @@ abstract final class GroupRouter {
     required GroupChat chat,
     required List<Bot> members,
     required String userText,
-    String? workflowWaitingBotId,
   }) {
     final mentioned = mentions(text: userText, members: members);
     if (mentioned.isNotEmpty) return mentioned.first;
@@ -40,12 +38,6 @@ abstract final class GroupRouter {
     if (chat.directBotId != null &&
         members.any((bot) => bot.id == chat.directBotId)) {
       return chat.directBotId;
-    }
-
-    if (chat.mode == SpeakerMode.workflow && workflowWaitingBotId != null) {
-      if (members.any((bot) => bot.id == workflowWaitingBotId)) {
-        return workflowWaitingBotId;
-      }
     }
 
     if (chat.mode == SpeakerMode.auto) {

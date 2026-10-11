@@ -48,9 +48,6 @@ abstract final class TaskNoteCodec {
         buffer.writeln('  - $dependency');
       }
     }
-    if (task.workflowId != null) {
-      buffer.writeln('workflow: ${task.workflowId}');
-    }
     if (task.relatedDocuments.isNotEmpty) {
       buffer.writeln('documents:');
       for (final document in task.relatedDocuments) {
@@ -147,7 +144,6 @@ abstract final class TaskNoteCodec {
       assignedBotId: readOpt(frontmatter['assignee']),
       parentTaskId: readOpt(frontmatter['parent']),
       dependencies: readList(frontmatter['depends_on']),
-      workflowId: readOpt(frontmatter['workflow']),
       relatedDocuments: readList(frontmatter['documents']),
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),

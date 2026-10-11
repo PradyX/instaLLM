@@ -57,7 +57,6 @@ class ProjectTask {
     this.createdBy,
     this.parentTaskId,
     this.dependencies = const [],
-    this.workflowId,
     this.relatedDocuments = const [],
     this.relatedMessages = const [],
     this.comments = const [],
@@ -100,11 +99,10 @@ class ProjectTask {
   /// Bot currently owning the task, if any.
   final String? assignedBotId;
 
-  /// `user`, a bot id, or a workflow id.
+  /// `user` or a bot id.
   final String? createdBy;
   final String? parentTaskId;
   final List<String> dependencies;
-  final String? workflowId;
   final List<String> relatedDocuments;
   final List<String> relatedMessages;
   final List<TaskComment> comments;
@@ -134,7 +132,6 @@ class ProjectTask {
     String? createdBy,
     String? parentTaskId,
     List<String>? dependencies,
-    String? workflowId,
     List<String>? relatedDocuments,
     List<String>? relatedMessages,
     List<TaskComment>? comments,
@@ -158,7 +155,6 @@ class ProjectTask {
       createdBy: createdBy ?? this.createdBy,
       parentTaskId: parentTaskId ?? this.parentTaskId,
       dependencies: dependencies ?? this.dependencies,
-      workflowId: workflowId ?? this.workflowId,
       relatedDocuments: relatedDocuments ?? this.relatedDocuments,
       relatedMessages: relatedMessages ?? this.relatedMessages,
       comments: comments ?? this.comments,
@@ -185,7 +181,6 @@ class ProjectTask {
       'createdBy': createdBy,
       'parentTaskId': parentTaskId,
       'dependencies': dependencies,
-      'workflowId': workflowId,
       'relatedDocuments': relatedDocuments,
       'relatedMessages': relatedMessages,
       'comments': comments.map((comment) => comment.toJson()).toList(),
@@ -249,7 +244,6 @@ class ProjectTask {
       createdBy: readOpt(json['createdBy']),
       parentTaskId: readOpt(json['parentTaskId']),
       dependencies: readStrings(json['dependencies']),
-      workflowId: readOpt(json['workflowId']),
       relatedDocuments: readStrings(json['relatedDocuments']),
       relatedMessages: readStrings(json['relatedMessages']),
       comments: comments,
@@ -268,7 +262,7 @@ class TaskComment {
     required this.createdAt,
   });
 
-  /// `user`, a bot name, or a workflow name.
+  /// `user` or a bot name.
   final String author;
   final String text;
   final DateTime createdAt;

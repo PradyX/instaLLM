@@ -28,7 +28,6 @@ void main() {
             chat: chat(mode),
             members: members,
             userText: '@coder fix this',
-            workflowWaitingBotId: 'planner',
           ),
           'coder',
         );
@@ -46,24 +45,19 @@ void main() {
       );
     });
 
-    test('workflow mode follows the waiting bot', () {
+    test('a stored legacy workflow mode reads as manual', () {
+      final room = GroupChat.fromJson({
+        'id': 'r',
+        'workspaceId': 'ws',
+        'name': 'R',
+        'memberBotIds': const ['planner', 'coder'],
+        'mode': 'workflow',
+        'createdAt': '2026-01-01T00:00:00.000',
+        'updatedAt': '2026-01-01T00:00:00.000',
+      });
+      expect(room?.mode, SpeakerMode.manual);
       expect(
-        GroupRouter.nextSpeaker(
-          chat: chat(SpeakerMode.workflow),
-          members: members,
-          userText: 'go',
-          workflowWaitingBotId: 'planner',
-        ),
-        'planner',
-      );
-      // A bot that is not in the room never speaks.
-      expect(
-        GroupRouter.nextSpeaker(
-          chat: chat(SpeakerMode.workflow),
-          members: members,
-          userText: 'go',
-          workflowWaitingBotId: 'stranger',
-        ),
+        GroupRouter.nextSpeaker(chat: room!, members: members, userText: 'go'),
         isNull,
       );
     });

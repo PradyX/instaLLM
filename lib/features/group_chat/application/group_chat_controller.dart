@@ -16,8 +16,6 @@ import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart'
 import 'package:pocket_llm/features/skills/application/skills_controller.dart';
 import 'package:pocket_llm/features/skills/domain/skill_selector.dart';
 import 'package:pocket_llm/features/tools/application/tools_providers.dart';
-import 'package:pocket_llm/features/workflows/application/workflows_controller.dart';
-import 'package:pocket_llm/features/workflows/domain/workflow.dart';
 
 /// Group chat file, opened once per session.
 final groupChatStoreProvider = FutureProvider<GroupChatStore>(
@@ -74,14 +72,14 @@ final groupChatsProvider =
       (ref) => GroupChatsNotifier(ref),
     );
 
-/// Owns group chats: members, modes, turns and workflow linkage.
+/// Owns group chats: members, modes and turns.
 ///
 /// A turn is bounded on every axis (§11.2): at most the chat's maxRounds bot
 /// answers follow one user line, every answer shares the user's context
 /// budget, and a run can be cancelled mid-turn. Each bot hears its Soul,
-/// the relevant skills, shared workspace memory, the recent room history,
-/// its assigned task and the linked workflow's state — never the whole
-/// room history, and never another bot's private reasoning.
+/// the relevant skills, shared workspace memory, the recent room history
+/// and its assigned task — never the whole room history, and never another
+/// bot's private reasoning.
 class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   GroupChatsNotifier(this._ref) : super(const GroupChatsState()) {
     _load();
@@ -270,7 +268,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     if (chat == null) return;
     _replace(pending.copyWith(text: trimmed, pendingPrompt: null));
     await _persist();
-    await _feedWorkflow(chat, botId: pending.authorBotId!, output: trimmed);
     await _runTurn(chatId, firstText: trimmed, roundsUsed: 1);
   }
 
@@ -291,7 +288,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         chat: chat,
         members: _membersOf(chat),
         userText: text,
-        workflowWaitingBotId: _workflowWaitingBotId(chat),
       );
       while (speaker != null && rounds < chat.maxRounds) {
         if (_cancelRequested.contains(chatId)) break;
@@ -302,7 +298,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         chat = _chatById(chatId) ?? chat;
         final answer = _latestBotText(chatId, speaker);
         if (answer == null || _cancelRequested.contains(chatId)) break;
-        await _feedWorkflow(chat, botId: speaker, output: answer);
         // A direct chat is one question, one answer — the floor always
         // returns to the user instead of chaining follow-ups.
         speaker = chat.isDirect
@@ -413,8 +408,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     await _persist();
   }
 
-  /// What one bot hears: soul, relevant skills, shared memory, recent room,
-  /// assigned task and workflow state — as the goal of its run.
+  /// What one bot hears: soul, relevant skills, shared memory, recent room
+  /// and assigned task — as the goal of its run.
   Future<String> _assemblePrompt(GroupChat chat, Bot bot) async {
     final messages = state.snapshot.messagesFor(chat.id);
     final recent = messages.length > recentHistoryLines
@@ -479,8 +474,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         ? ''
         : 'Assigned tasks: ${assigned.map((t) => '${t.id} ${t.title}').join('; ')}';
 
-    final workflowLine = _workflowStateLine(chat);
-
     final parts = [
       'You are ${bot.name} in the group chat "${chat.name}". '
           'Answer as ${bot.name}, briefly and in character. '
@@ -489,8 +482,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       'Board tools for this workspace: kanban_list_tasks, '
           'kanban_create_task, kanban_move_task. When the room agrees on '
           'work, create the task; when you finish a step, move it. '
-          'Moves appear on the Board and in activity.',
-      if (workflowLine.isNotEmpty) workflowLine,
+          'Moves appear on the Board.',
       if (memory.isNotEmpty) 'Relevant project notes:\n$memory',
       'Recent room:\n${room.toString().trim()}',
     ];
@@ -502,61 +494,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       ),
       ...parts,
     ].join('\n\n');
-  }
-
-  String _workflowStateLine(GroupChat chat) {
-    if (chat.workflowRunId == null) return '';
-    final runs = _ref.read(workflowsProvider).snapshot.runs;
-    for (final run in runs) {
-      if (run.id == chat.workflowRunId) {
-        return 'Workflow state: ${run.status.label}'
-            '${run.currentStepId == null ? '' : ' at step ${run.currentStepId}'}'
-            '${run.errors.isEmpty ? '' : ' (errors: ${run.errors.last})'}';
-      }
-    }
-    return '';
-  }
-
-  String? _workflowWaitingBotId(GroupChat chat) {
-    if (chat.mode != SpeakerMode.workflow || chat.workflowRunId == null) {
-      return null;
-    }
-    final runs = _ref.read(workflowsProvider).snapshot.runs;
-    WorkflowRun? run;
-    for (final candidate in runs) {
-      if (candidate.id == chat.workflowRunId) run = candidate;
-    }
-    if (run == null || run.status != RunStatus.waitingBot) return null;
-    final workflows = _ref
-        .read(workflowsProvider.notifier)
-        .workflowsFor(chat.workspaceId);
-    for (final workflow in workflows) {
-      if (workflow.id != run.workflowId) continue;
-      final step = workflow.stepById(run.currentStepId ?? '');
-      if (step?.botId != null && chat.memberBotIds.contains(step!.botId)) {
-        return step.botId;
-      }
-    }
-    return null;
-  }
-
-  /// Feeds a bot's answer into the linked workflow run waiting for it.
-  Future<void> _feedWorkflow(
-    GroupChat chat, {
-    required String botId,
-    required String output,
-  }) async {
-    if (chat.workflowRunId == null) return;
-    final runs = _ref.read(workflowsProvider).snapshot.runs;
-    WorkflowRun? run;
-    for (final candidate in runs) {
-      if (candidate.id == chat.workflowRunId) run = candidate;
-    }
-    if (run == null || run.status != RunStatus.waitingBot) return;
-    // Only the waiting step's bot advances the workflow; anything else is
-    // room discussion.
-    if (_workflowWaitingBotId(chat) != botId) return;
-    await _ref.read(workflowsProvider.notifier).completeBotStep(run.id, output);
   }
 
   String? _latestBotText(String chatId, String botId) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
+import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
@@ -20,31 +21,12 @@ class BotsPage extends ConsumerWidget {
   const BotsPage({super.key});
 
   Future<void> _askName(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New bot'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Bot name'),
-          onSubmitted: (value) => Navigator.of(context).pop(value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+    final name = await NamePromptDialog.show(
+      context,
+      title: 'New bot',
+      hintText: 'Bot name',
+      confirmLabel: 'Create',
     );
-    controller.dispose();
     if (name == null || name.trim().isEmpty || !context.mounted) return;
     final bot = await ref.read(botsProvider.notifier).createBot(name.trim());
     if (bot != null && context.mounted) {

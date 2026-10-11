@@ -201,21 +201,27 @@ class _Sidebar extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                 children: [
-                  _sectionLabel(context, 'Chats'),
+                  _sectionHeader(
+                    context,
+                    label: 'Chats',
+                    onSeeMore: () => context.push(AppRoutes.conversations),
+                  ),
                   _ChatRows(
                     current: section == AppSection.chats,
                     isGenerating: isGenerating,
                   ),
-                  _sectionLabel(context, 'Bots'),
-                  _BotRows(
-                    current: section == AppSection.bots,
-                    workspaceId: workspace?.id,
+                  _sectionHeader(
+                    context,
+                    label: 'Bots',
+                    onSeeMore: () => context.push(AppRoutes.bots),
                   ),
-                  _sectionLabel(context, 'Rooms'),
-                  _RoomRows(
-                    current: section == AppSection.rooms,
-                    workspaceId: workspace?.id,
+                  _BotRows(workspaceId: workspace?.id),
+                  _sectionHeader(
+                    context,
+                    label: 'Rooms',
+                    onSeeMore: () => context.push(AppRoutes.groupChats),
                   ),
+                  _RoomRows(workspaceId: workspace?.id),
                   _sectionLabel(context, 'Board'),
                   _BoardTile(current: section == AppSection.board),
                   _sectionLabel(context, 'More'),
@@ -337,13 +343,6 @@ class _ChatRows extends ConsumerWidget {
                       if (!current) context.go(AppRoutes.home);
                     },
             ),
-        ListTile(
-          dense: true,
-          leading: const Icon(Icons.forum_outlined, size: 18),
-          title: const Text('See all & manage'),
-          trailing: const Icon(Icons.arrow_forward_rounded, size: 16),
-          onTap: () => context.push(AppRoutes.conversations),
-        ),
       ],
     );
   }
@@ -351,9 +350,8 @@ class _ChatRows extends ConsumerWidget {
 
 /// Every bot with its 1:1 room preview; tapping lands in that same room.
 class _BotRows extends ConsumerWidget {
-  const _BotRows({required this.current, required this.workspaceId});
+  const _BotRows({required this.workspaceId});
 
-  final bool current;
   final String? workspaceId;
 
   @override
@@ -367,20 +365,6 @@ class _BotRows extends ConsumerWidget {
       children: [
         for (final bot in bots.bots)
           _botTile(context, ref, rooms.snapshot, bot, colorScheme),
-        ListTile(
-          dense: true,
-          selected: current,
-          selectedTileColor: colorScheme.primaryContainer.withValues(
-            alpha: 0.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          leading: const Icon(Icons.smart_toy_outlined, size: 18),
-          title: const Text('See all & manage'),
-          trailing: const Icon(Icons.arrow_forward_rounded, size: 16),
-          onTap: () => context.push(AppRoutes.bots),
-        ),
       ],
     );
   }
@@ -448,9 +432,8 @@ class _BotRows extends ConsumerWidget {
 
 /// Group rooms of the active workspace with previews and needs-you badges.
 class _RoomRows extends ConsumerWidget {
-  const _RoomRows({required this.current, required this.workspaceId});
+  const _RoomRows({required this.workspaceId});
 
-  final bool current;
   final String? workspaceId;
 
   @override
@@ -511,20 +494,6 @@ class _RoomRows extends ConsumerWidget {
                 ),
               ),
             ),
-        ListTile(
-          dense: true,
-          selected: current,
-          selectedTileColor: colorScheme.primaryContainer.withValues(
-            alpha: 0.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          leading: const Icon(Icons.forum_outlined, size: 18),
-          title: const Text('See all & manage'),
-          trailing: const Icon(Icons.arrow_forward_rounded, size: 16),
-          onTap: () => context.push(AppRoutes.groupChats),
-        ),
       ],
     );
   }
@@ -591,6 +560,43 @@ class _BoardTile extends ConsumerWidget {
       onTap: () => context.push(AppRoutes.kanban),
     );
   }
+}
+
+/// Section header with an accent-colored "See more" text button on the
+/// right, replacing the old "See all & manage" tiles below each section.
+Widget _sectionHeader(
+  BuildContext context, {
+  required String label,
+  required VoidCallback onSeeMore,
+}) {
+  final colorScheme = Theme.of(context).colorScheme;
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.08,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: onSeeMore,
+          style: TextButton.styleFrom(
+            foregroundColor: colorScheme.primary,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('See more'),
+        ),
+      ],
+    ),
+  );
 }
 
 Widget _sectionLabel(BuildContext context, String label) {

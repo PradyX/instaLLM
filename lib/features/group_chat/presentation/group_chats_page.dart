@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
@@ -30,31 +31,12 @@ class GroupChatsPage extends ConsumerWidget {
     WidgetRef ref,
     String workspaceId,
   ) async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New group chat'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Room name'),
-          onSubmitted: (value) => Navigator.of(context).pop(value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+    final name = await NamePromptDialog.show(
+      context,
+      title: 'New group chat',
+      hintText: 'Room name',
+      confirmLabel: 'Create',
     );
-    controller.dispose();
     if (name == null || name.trim().isEmpty) return;
     await ref
         .read(groupChatsProvider.notifier)

@@ -1,0 +1,155 @@
+import 'package:flutter/material.dart';
+import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
+
+/// The app's one composer card: borderless expanding field on top, one
+/// action row at the bottom. Home and room chats share it so the two can
+/// never drift apart again.
+///
+/// Slots keep each surface's extras: [header] is home's generating row and
+/// draft-image preview, [leading] its attach button, [middle] its model
+/// pill. A room passes none of those and gets the same field, mic and send
+/// controls. [onMicPressed] null hides the mic — rooms had nowhere to send
+/// a clip until inline transcription landed, so they hid it first.
+class ChatComposer extends StatelessWidget {
+  const ChatComposer({
+    super.key,
+    required this.controller,
+    required this.enabled,
+    required this.hintText,
+    required this.onSend,
+    this.sendsOnEnter = true,
+    this.header,
+    this.leading,
+    this.middle,
+    this.onMicPressed,
+    this.isTranscribing = false,
+  });
+
+  /// Text being composed; owned by the hosting page.
+  final TextEditingController controller;
+
+  /// False while generating or with no model: field locks, buttons disable.
+  final bool enabled;
+
+  /// Idle prompt inside the empty field.
+  final String hintText;
+
+  /// Sends [controller]'s text.
+  final Future<void> Function() onSend;
+
+  /// Desktop Return-to-send behavior; mobile keeps its own send action.
+  final bool sendsOnEnter;
+
+  /// Extra rows above the field (home's generating row, draft preview).
+  final Widget? header;
+
+  /// First action in the bottom row (home's attach button).
+  final Widget? leading;
+
+  /// Right-aligned action next to mic/send (home's model pill).
+  final Widget? middle;
+
+  /// Inline voice input. Null hides the mic button.
+  final VoidCallback? onMicPressed;
+
+  /// True while a clip transcribes: the mic shows a spinner and locks.
+  final bool isTranscribing;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final micHandler = onMicPressed;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (header case final Widget widget) widget,
+          // Desktop: Return sends, Shift+Return adds a line. Mobile
+          // keyboards keep their own send action and Return as a line
+          // break, which is what the shortcut wrapper checks. No Expanded
+          // here: this column shrink-wraps, so the field sizes itself.
+          ComposerSendOnEnter(
+            sendsOnEnter: enabled && sendsOnEnter,
+            onSend: onSend,
+            child: TextField(
+              controller: controller,
+              enabled: enabled,
+              readOnly: !enabled,
+              maxLines: 5,
+              minLines: 1,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: hintText,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+              ),
+              onSubmitted: enabled ? (_) => onSend() : null,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
+                if (leading case final Widget widget) widget,
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: middle ?? const SizedBox(),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                if (micHandler != null)
+                  SizedBox.square(
+                    dimension: 40,
+                    child: isTranscribing
+                        ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : IconButton(
+                            tooltip: 'Voice input',
+                            onPressed: enabled ? micHandler : null,
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.mic_none_rounded, size: 20),
+                          ),
+                  ),
+                if (micHandler != null) const SizedBox(width: 4),
+                SizedBox.square(
+                  dimension: 40,
+                  child: IconButton.filled(
+                    tooltip: 'Send',
+                    onPressed: enabled ? onSend : null,
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

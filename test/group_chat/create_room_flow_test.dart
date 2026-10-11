@@ -106,6 +106,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Message the room'), findsOneWidget);
 
+    // The shared composer sends through the room turn loop.
+    await tester.enterText(find.byType(TextField), 'hello room');
+    await tester.tap(find.byTooltip('Send'));
+    await pumpUntil(
+      tester,
+      () => find.text('hello room').evaluate().isNotEmpty,
+    );
+    expect(find.text('hello room'), findsOneWidget);
+
     final container = ProviderScope.containerOf(
       tester.element(find.byType(GroupChatDetailPage)),
     );

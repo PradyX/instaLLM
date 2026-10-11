@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
@@ -329,27 +330,13 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _inputController,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        hintText: 'Message the room (@name for a bot)',
-                        border: OutlineInputBorder(),
-                      ),
-                      onSubmitted: _send,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: running
-                        ? null
-                        : () => _send(_inputController.text),
-                    child: const Text('Send'),
-                  ),
-                ],
+              child: ChatComposer(
+                controller: _inputController,
+                enabled: !running,
+                hintText: chat.isDirect
+                    ? 'Message ${chat.name}...'
+                    : 'Message the room (@name for a bot)...',
+                onSend: () => _send(_inputController.text),
               ),
             ),
           ),

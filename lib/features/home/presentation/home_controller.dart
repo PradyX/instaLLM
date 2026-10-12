@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:pocket_llm/core/settings/attachment_settings_provider.dart';
 import 'package:pocket_llm/core/settings/inference_settings_provider.dart';
+import 'package:pocket_llm/core/settings/reasoning_settings_provider.dart';
 import 'package:pocket_llm/core/services/attachment_image_service.dart';
 import 'package:pocket_llm/core/inference/inference_engine.dart';
 import 'package:pocket_llm/core/services/model_storage_service.dart';
@@ -325,6 +326,21 @@ class HomeController extends _$HomeController {
     return composePersonaSystemPrompt(
       persona: _activePersona,
       toolContract: ref.read(toolRegistryProvider).describeForPrompt(),
+    );
+  }
+
+  /// What [model]'s own chat template writes where its reply begins.
+  ///
+  /// A model whose template declares no reasoning appends nothing, and one the
+  /// user has not decided on runs in the state the template would have used: a
+  /// choice is a deviation from the model, never a requirement on it.
+  Future<String> _reasoningPrefillFor(LlmModel model) async {
+    final reasoning = await ref
+        .read(modelReasoningServiceProvider)
+        .resolve(model);
+    if (reasoning == null) return '';
+    return reasoning.prefillFor(
+      ref.read(reasoningSettingsProvider).choiceFor(model.id),
     );
   }
 
@@ -720,6 +736,7 @@ class HomeController extends _$HomeController {
         _promptMessagesFor(assembly.messages),
         systemPrompt: assembly.systemPrompt,
         promptFormatId: selectedModel.promptFormatId,
+        assistantPrefill: await _reasoningPrefillFor(selectedModel),
       );
 
       String? mmprojPath;
@@ -999,6 +1016,7 @@ class HomeController extends _$HomeController {
       ),
       systemPrompt: assembly.systemPrompt,
       promptFormatId: selectedModel.promptFormatId,
+      assistantPrefill: await _reasoningPrefillFor(selectedModel),
     );
     // Some prompt formats carry images inline and some pass them separately;
     // the first prompt already worked out which paths this request sends.

@@ -20,6 +20,7 @@ import 'package:pocket_llm/features/documents/application/documents_controller.d
 import 'package:pocket_llm/core/widgets/chat_bubble.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
+import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
 import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
@@ -1105,6 +1106,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .read(modelSelectionControllerProvider.notifier)
                   .selectModel(next),
               onEmptyPressed: () => context.push(AppRoutes.modelSelection),
+            ),
+            reasoning: ComposerReasoningControl(
+              modelId: pillModel?.id ?? '',
+              enabled: !isGenerating,
             ),
             middle: hasDownloadedModel
                 ? ComposerAttachButton(

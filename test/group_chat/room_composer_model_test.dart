@@ -178,39 +178,24 @@ void main() {
     expect(roomModel(), isNull);
   });
 
-  testWidgets(
-    'picking one stores it on the room, and handing it back clears it',
-    (tester) async {
-      container = buildContainer(
-        installed: const [_small, _picked],
-        selected: _picked,
-      );
-      final room = await openRoom(tester);
+  testWidgets('picking one stores it on the room', (tester) async {
+    container = buildContainer(
+      installed: const [_small, _picked],
+      selected: _picked,
+    );
+    final room = await openRoom(tester);
 
-      await pumpChatPage(tester, room);
-      await tester.tap(pillLabel('Picked · 1.1B'));
-      await pumpMenu(tester);
-      await tester.tap(
-        find.widgetWithText(CheckedPopupMenuItem<String>, 'Small · 360M'),
-      );
-      await pumpChatPage(tester, room, frames: 5);
+    await pumpChatPage(tester, room);
+    await tester.tap(pillLabel('Picked · 1.1B'));
+    await pumpMenu(tester);
+    await tester.tap(
+      find.widgetWithText(CheckedPopupMenuItem<String>, 'Small · 360M'),
+    );
+    await pumpChatPage(tester, room, frames: 5);
 
-      expect(roomModel(), 'm-small');
-      expect(pillLabel('Small · 360M'), findsOneWidget);
-
-      // The bot editor's "Conversation model", in the composer: back to the
-      // app's own model instead of a choice this room keeps forever.
-      await tester.tap(pillLabel('Small · 360M'));
-      await pumpMenu(tester);
-      await tester.tap(
-        find.widgetWithText(CheckedPopupMenuItem<String>, 'Conversation model'),
-      );
-      await pumpChatPage(tester, room, frames: 5);
-
-      expect(roomModel(), isNull);
-      expect(pillLabel('Picked · 1.1B'), findsOneWidget);
-    },
-  );
+    expect(roomModel(), 'm-small');
+    expect(pillLabel('Small · 360M'), findsOneWidget);
+  });
 
   testWidgets('with nothing installed the room asks for a model', (
     tester,

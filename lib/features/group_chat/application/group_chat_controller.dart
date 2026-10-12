@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocket_llm/core/services/service_providers.dart';
+import 'package:pocket_llm/core/settings/reasoning_settings_provider.dart';
 import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
@@ -394,6 +396,17 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           ),
         );
     try {
+      // What the model's own template writes where its reply begins, so a
+      // bot answers in the reasoning state this user set for that model.
+      final reasoning = await _ref
+          .read(modelReasoningServiceProvider)
+          .resolve(model);
+      final assistantPrefill =
+          reasoning?.prefillFor(
+            _ref.read(reasoningSettingsProvider).choiceFor(model.id),
+          ) ??
+          '';
+
       final run = await _ref
           .read(agentLoopServiceProvider)
           .run(
@@ -402,6 +415,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             registry: registry,
             maxIterations: 6,
             systemPrompt: BotPrompt.assemble(bot: bot),
+            assistantPrefill: assistantPrefill,
           );
       final answer = run.answer.trim().isEmpty
           ? '(The model gave no answer.)'

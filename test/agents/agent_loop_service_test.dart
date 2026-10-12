@@ -82,6 +82,41 @@ void main() {
     });
   }
 
+  test('a bot answers in the reasoning state the user chose', () async {
+    // A room has no composer of its own to carry the choice: the prompt the
+    // run is built from has to say what the model's template would say.
+    final runtime = ScriptedAgentRuntime(script: ['4 is even.']);
+    final service = serviceFor(runtime);
+
+    await service.run(
+      model: model,
+      goal: 'Is 4 even?',
+      registry: registryFor(calls: []),
+      assistantPrefill: '<think>\n\n</think>\n\n',
+    );
+
+    expect(
+      runtime.prompts.single,
+      endsWith('<|im_start|>assistant\n<think>\n\n</think>\n\n'),
+    );
+  });
+
+  test(
+    'without a reasoning choice the prompt ends where it always did',
+    () async {
+      final runtime = ScriptedAgentRuntime(script: ['4 is even.']);
+      final service = serviceFor(runtime);
+
+      await service.run(
+        model: model,
+        goal: 'Is 4 even?',
+        registry: registryFor(calls: []),
+      );
+
+      expect(runtime.prompts.single, endsWith('<|im_start|>assistant\n'));
+    },
+  );
+
   test('answers a goal that needs no tool', () async {
     final runtime = ScriptedAgentRuntime(script: ['4 is even.']);
     final service = serviceFor(runtime);

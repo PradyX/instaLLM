@@ -28,6 +28,7 @@ class BuiltLlmPrompt {
 String buildLlmChatPrompt(
   List<LlmPromptMessage> messages, {
   String systemPrompt = 'You are a helpful and concise assistant.',
+  String assistantPrefill = '',
 }) {
   final promptBuffer = StringBuffer();
   promptBuffer.writeln('<|im_start|>system\n$systemPrompt<|im_end|>');
@@ -37,21 +38,37 @@ String buildLlmChatPrompt(
     promptBuffer.writeln('<|im_start|>$role\n${message.text}<|im_end|>');
   }
 
-  promptBuffer.write('<|im_start|>assistant\n');
+  promptBuffer.write('<|im_start|>assistant\n$assistantPrefill');
   return promptBuffer.toString();
 }
 
+/// Builds the prompt for [promptFormatId], with [assistantPrefill] written
+/// where the model's own reply begins.
+///
+/// The prefill is what a model's own chat template appends there — today the
+/// empty, already-closed thought block a thinking template emits when the user
+/// asks for an answer instead of a deliberation (the model's declared
+/// reasoning). Writing
+/// it is how a reasoning choice reaches the model without rendering its Jinja
+/// template: the app builds the prompt itself, so the template's own text for
+/// that state is what it inserts. The gemma3 branch ignores it, because the
+/// templates that declare a reasoning control are chatml-shaped.
 BuiltLlmPrompt buildModelChatPrompt(
   List<LlmPromptMessage> messages, {
   String systemPrompt = 'You are a helpful and concise assistant.',
   String promptFormatId = 'chatml',
+  String assistantPrefill = '',
 }) {
   switch (promptFormatId) {
     case 'gemma3':
       return _buildGemma3Prompt(messages, systemPrompt: systemPrompt);
     default:
       return BuiltLlmPrompt(
-        prompt: buildLlmChatPrompt(messages, systemPrompt: systemPrompt),
+        prompt: buildLlmChatPrompt(
+          messages,
+          systemPrompt: systemPrompt,
+          assistantPrefill: assistantPrefill,
+        ),
       );
   }
 }

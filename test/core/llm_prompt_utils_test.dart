@@ -20,6 +20,44 @@ void main() {
     });
   });
 
+  group('the reasoning prefill', () {
+    test('is written where the model starts answering', () {
+      // A thinking model switched off answers directly because the prompt opens
+      // the thought block it is told not to use — the template's own trick.
+      final bundle = buildModelChatPrompt(const [
+        LlmPromptMessage.user('Say hello'),
+      ], assistantPrefill: '<think>\n\n</think>\n\n');
+
+      expect(
+        bundle.prompt,
+        endsWith('<|im_start|>assistant\n<think>\n\n</think>\n\n'),
+      );
+    });
+
+    test('is nothing at all for a model that declares no reasoning', () {
+      final bundle = buildModelChatPrompt(const [
+        LlmPromptMessage.user('Say hello'),
+      ]);
+
+      expect(bundle.prompt, endsWith('<|im_start|>assistant\n'));
+    });
+
+    test('is left out of the format that cannot carry it', () {
+      // Gemma's turns are not chatml; a template that declared a reasoning
+      // control would have to be read as one, not bolted onto this.
+      final bundle = buildModelChatPrompt(
+        const [LlmPromptMessage.user('Say hello')],
+        promptFormatId: 'gemma3',
+        assistantPrefill:
+            '<think>\n\n'
+            '</think>\n\n',
+      );
+
+      expect(bundle.prompt, isNot(contains('<think>')));
+      expect(bundle.prompt, endsWith('<start_of_turn>model\n'));
+    });
+  });
+
   group('buildModelChatPrompt', () {
     test('writes one image marker per attached image, in order', () {
       final bundle = buildModelChatPrompt(const [

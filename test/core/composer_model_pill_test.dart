@@ -89,34 +89,7 @@ void main() {
     expect(find.text('Alpha · 1B'), findsOneWidget);
   });
 
-  testWidgets('offers the app\'s own model when the caller can hand it back', (
-    tester,
-  ) async {
-    var cleared = false;
-    await _pump(
-      tester,
-      ComposerModelPill(
-        models: const [_alpha, _beta],
-        selected: _beta,
-        enabled: true,
-        onSelected: (_) {},
-        onCleared: () => cleared = true,
-      ),
-    );
-
-    await tester.tap(find.text('Beta · 3B'));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithText(CheckedPopupMenuItem<String>, 'Conversation model'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(cleared, isTrue);
-  });
-
-  testWidgets('a surface that owns the choice gets no such row', (
-    tester,
-  ) async {
+  testWidgets('offers models and nothing else', (tester) async {
     await _pump(
       tester,
       ComposerModelPill(
@@ -130,7 +103,9 @@ void main() {
     await tester.tap(find.text('Beta · 3B'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Conversation model'), findsNothing);
+    // Every row is a model that can answer: the menu carries no second kind
+    // of choice, so nothing in it can be mistaken for a setting.
+    expect(find.byType(CheckedPopupMenuItem<String>), findsNWidgets(2));
     expect(
       find.widgetWithText(CheckedPopupMenuItem<String>, 'Alpha · 1B'),
       findsOneWidget,

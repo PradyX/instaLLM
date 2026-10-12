@@ -160,6 +160,7 @@ class AgentLoopService {
     ContextBudget budget = ContextBudget.auto,
     void Function(AgentStep step)? onStep,
     String? systemPrompt,
+    String assistantPrefill = '',
   }) async {
     final trimmedGoal = goal.trim();
     if (trimmedGoal.isEmpty) {
@@ -258,6 +259,7 @@ class AgentLoopService {
         history,
         systemPrompt: systemPrompt ?? _systemPromptWithTools(registry),
         promptFormatId: model.promptFormatId,
+        assistantPrefill: assistantPrefill,
       );
       final promptTokens =
           TokenEstimator.estimateText(promptBundle.prompt) +

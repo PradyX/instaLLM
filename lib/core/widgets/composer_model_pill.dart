@@ -16,17 +16,11 @@ class ComposerModelPill extends StatelessWidget {
     required this.selected,
     required this.enabled,
     this.onSelected,
-    this.onCleared,
-    this.clearLabel = 'Conversation model',
     this.tooltip = 'Switch model',
     this.emptyLabel = 'Get a model',
     this.onEmptyPressed,
     this.maxWidth = 190,
   });
-
-  /// The menu value that means "no choice of my own". It cannot collide with a
-  /// model id, which always carries a prefix.
-  static const String followAppValue = '';
 
   /// The models the menu offers, in order. The same list the answer would
   /// resolve from — a pill that could offer an unusable model would lie.
@@ -42,15 +36,6 @@ class ComposerModelPill extends StatelessWidget {
   /// Called with the model the user picked, never with an id that is not in
   /// [models].
   final ValueChanged<LlmModel>? onSelected;
-
-  /// Called when the user hands the choice back to the app (the
-  /// [clearLabel] row). Null leaves that row out, which is what home wants:
-  /// there the pill *is* the app's choice.
-  final VoidCallback? onCleared;
-
-  /// Wording of the row that follows the app's own model, matching the bot
-  /// editor's "Conversation model".
-  final String clearLabel;
 
   final String tooltip;
 
@@ -74,10 +59,6 @@ class ComposerModelPill extends StatelessWidget {
               tooltip: tooltip,
               enabled: enabled,
               onSelected: (modelId) {
-                if (modelId == followAppValue) {
-                  onCleared?.call();
-                  return;
-                }
                 for (final candidate in models) {
                   if (candidate.id == modelId) {
                     onSelected?.call(candidate);
@@ -85,13 +66,9 @@ class ComposerModelPill extends StatelessWidget {
                   }
                 }
               },
+              // Only models: a room's pick is a model, and nothing in the menu
+              // pretends to be one.
               itemBuilder: (context) => [
-                if (onCleared != null)
-                  CheckedPopupMenuItem<String>(
-                    value: followAppValue,
-                    checked: false,
-                    child: Text(clearLabel, overflow: TextOverflow.ellipsis),
-                  ),
                 for (final candidate in models)
                   CheckedPopupMenuItem<String>(
                     value: candidate.id,

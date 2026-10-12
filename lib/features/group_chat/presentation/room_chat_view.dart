@@ -7,6 +7,7 @@ import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/widgets/chat_bubble.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
+import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
@@ -170,6 +171,14 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
         : ref.watch(botsProvider).botById(directBotId);
     final chatModels = ref.watch(chatModelsProvider);
     final selectedModel = ref.watch(selectedChatModelProvider);
+    // One resolution for the pill and for the reasoning chip beside it: the
+    // chip belongs to the model that will answer, not to the room.
+    final answerModel = roomAnswerModel(
+      chat: chat,
+      bot: bot,
+      installed: chatModels,
+      selected: selectedModel,
+    );
 
     if (messages.isNotEmpty) _scrollDown();
 
@@ -249,21 +258,17 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                   : 'Message the room (@name for a bot)...',
               leading: ComposerModelPill(
                 models: chatModels,
-                selected: roomAnswerModel(
-                  chat: chat,
-                  bot: bot,
-                  installed: chatModels,
-                  selected: selectedModel,
-                ),
+                selected: answerModel,
                 enabled: !running,
                 tooltip: 'Switch model',
                 onSelected: (model) => unawaited(
                   notifier.updateChat(chat.copyWith(modelId: model.id)),
                 ),
-                onCleared: () => unawaited(
-                  notifier.updateChat(chat.copyWith(clearModel: true)),
-                ),
                 onEmptyPressed: () => context.push(AppRoutes.modelSelection),
+              ),
+              reasoning: ComposerReasoningControl(
+                modelId: answerModel?.id ?? '',
+                enabled: !running,
               ),
               onSend: () => _send(_inputController.text),
               onMicPressed: () => unawaited(

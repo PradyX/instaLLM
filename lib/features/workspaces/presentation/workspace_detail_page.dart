@@ -88,16 +88,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
                 route: AppRoutes.kanban,
               ),
               _GoChip(
-                icon: Icons.forum_outlined,
-                label: 'Group chats',
-                route: AppRoutes.groupChats,
-              ),
-              _GoChip(
-                icon: Icons.smart_toy_outlined,
-                label: 'Bots',
-                route: AppRoutes.bots,
-              ),
-              _GoChip(
                 icon: Icons.extension_outlined,
                 label: 'Skills',
                 route: AppRoutes.skills,

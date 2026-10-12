@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:pocket_llm/core/widgets/chat_bubble.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
 import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
+import 'package:pocket_llm/features/group_chat/application/active_room.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
+import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:pocket_llm/features/home/presentation/home_page.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 
@@ -115,18 +118,22 @@ void main() {
     }
   });
 
-  /// Lets the app's own file work run, then draws a frame: the room writes
-  /// through real documents and some of its widgets animate continuously, so
-  /// waiting for the frame queue to empty would never return.
-  Future<void> pumpRoom(
+  /// Draws the app's chat page with [room] open on it. The page does real file
+  /// work and some of its widgets animate continuously, so it is stepped by
+  /// hand rather than settled.
+  Future<void> pumpChatPage(
     WidgetTester tester,
-    String chatId, {
+    GroupChat room, {
     int frames = 40,
   }) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    container.read(activeRoomIdProvider.notifier).state = room.id;
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(home: GroupChatDetailPage(chatId: chatId)),
+        child: const MaterialApp(home: HomePage()),
       ),
     );
     for (var attempt = 0; attempt < frames; attempt++) {
@@ -137,7 +144,7 @@ void main() {
     }
   }
 
-  /// Pumps the menu's open or close transition without settling the room.
+  /// Pumps the menu's open or close transition without settling the page.
   Future<void> pumpMenu(WidgetTester tester) async {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -153,7 +160,7 @@ void main() {
   String? roomModel() =>
       container.read(groupChatsProvider).snapshot.chats.first.modelId;
 
-  testWidgets('a bot room opens on the model the app is set to', (
+  testWidgets("a bot's chat opens on the model the app is set to", (
     tester,
   ) async {
     container = buildContainer(
@@ -162,9 +169,10 @@ void main() {
     );
     final room = await openRoom(tester);
 
-    await pumpRoom(tester, room.id);
+    await pumpChatPage(tester, room);
 
-    // Same model as home, and a model with no tool support still gets a pill.
+    // The bot's chat is the app's chat page, with the app's model in it.
+    expect(find.byType(RoomChatView), findsOneWidget);
     expect(find.byType(ComposerModelPill), findsOneWidget);
     expect(pillLabel('Picked · 1.1B'), findsOneWidget);
     expect(roomModel(), isNull);
@@ -179,13 +187,13 @@ void main() {
       );
       final room = await openRoom(tester);
 
-      await pumpRoom(tester, room.id);
+      await pumpChatPage(tester, room);
       await tester.tap(pillLabel('Picked · 1.1B'));
       await pumpMenu(tester);
       await tester.tap(
         find.widgetWithText(CheckedPopupMenuItem<String>, 'Small · 360M'),
       );
-      await pumpRoom(tester, room.id, frames: 5);
+      await pumpChatPage(tester, room, frames: 5);
 
       expect(roomModel(), 'm-small');
       expect(pillLabel('Small · 360M'), findsOneWidget);
@@ -197,7 +205,7 @@ void main() {
       await tester.tap(
         find.widgetWithText(CheckedPopupMenuItem<String>, 'Conversation model'),
       );
-      await pumpRoom(tester, room.id, frames: 5);
+      await pumpChatPage(tester, room, frames: 5);
 
       expect(roomModel(), isNull);
       expect(pillLabel('Picked · 1.1B'), findsOneWidget);
@@ -210,7 +218,7 @@ void main() {
     container = buildContainer(installed: const [], selected: null);
     final room = await openRoom(tester);
 
-    await pumpRoom(tester, room.id);
+    await pumpChatPage(tester, room);
 
     expect(find.text('Get a model'), findsOneWidget);
   });
@@ -227,9 +235,38 @@ void main() {
       directBotId: null,
     );
 
-    await pumpRoom(tester, room.id);
+    await pumpChatPage(tester, room);
 
     expect(find.text('Message the room (@name for a bot)...'), findsOneWidget);
     expect(find.byType(ComposerModelPill), findsNothing);
+  });
+
+  testWidgets('a room line is drawn as a bubble, named after the bot', (
+    tester,
+  ) async {
+    container = buildContainer(
+      installed: const [_small, _picked],
+      selected: _picked,
+    );
+    final room = await openRoom(tester);
+    await tester.runAsync(
+      () => container
+          .read(groupChatsProvider.notifier)
+          .sendUserMessage(room.id, 'hello room'),
+    );
+
+    await pumpChatPage(tester, room);
+
+    // The same bubble home draws, with the bot's name where home says
+    // "Assistant".
+    expect(find.byType(ChatBubble), findsNWidgets(2));
+    expect(find.text('hello room'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(ChatBubble),
+        matching: find.text('Coder'),
+      ),
+      findsOneWidget,
+    );
   });
 }

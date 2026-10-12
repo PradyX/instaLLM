@@ -17,6 +17,19 @@ import 'package:pocket_llm/features/documents/application/documents_controller.d
 /// pending-reply card under the text.
 class ChatBubble extends StatefulWidget {
   final Message message;
+
+  /// Who this bubble is from, above the text. Home says "Assistant"; a room
+  /// names the bot that spoke, because a room has several.
+  final String authorLabel;
+
+  /// Extra buttons in the bubble's action row, after the shared ones. A room
+  /// puts its line actions here.
+  final List<Widget> extraActions;
+
+  /// Anything the caller draws at the end of the bubble, still inside it: a
+  /// room's pending-reply card.
+  final Widget? below;
+
   final VoidCallback? onRegenerate;
   final VoidCallback? onEditResend;
 
@@ -37,6 +50,9 @@ class ChatBubble extends StatefulWidget {
   const ChatBubble({
     super.key,
     required this.message,
+    this.authorLabel = 'Assistant',
+    this.extraActions = const [],
+    this.below,
     this.onRegenerate,
     this.onEditResend,
     this.onReadAloud,
@@ -109,7 +125,9 @@ class _ChatBubbleState extends State<ChatBubble> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Assistant',
+                    widget.authorLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: textTheme.labelSmall?.copyWith(
                       color: colorScheme.primary,
                       fontWeight: FontWeight.w600,
@@ -206,7 +224,9 @@ class _ChatBubbleState extends State<ChatBubble> {
               padding: const EdgeInsets.only(top: 8),
               child: _MessageSources(sources: widget.message.sources),
             ),
-          if (widget.onRegenerate != null || widget.onReadAloud != null)
+          if (widget.onRegenerate != null ||
+              widget.onReadAloud != null ||
+              widget.extraActions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Wrap(
@@ -260,9 +280,12 @@ class _ChatBubbleState extends State<ChatBubble> {
                         side: BorderSide(color: actionBorder),
                       ),
                     ),
+                  ...widget.extraActions,
                 ],
               ),
             ),
+          if (widget.below case final Widget below)
+            Padding(padding: const EdgeInsets.only(top: 8), child: below),
         ],
       ),
     );

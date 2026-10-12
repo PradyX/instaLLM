@@ -9,8 +9,6 @@ import 'package:pocket_llm/features/personas/presentation/personas_page.dart';
 import 'package:pocket_llm/features/settings/presentation/settings_page.dart';
 import 'package:pocket_llm/features/voice/presentation/voice_conversation_page.dart';
 import 'package:pocket_llm/features/about/presentation/about_page.dart';
-import 'package:pocket_llm/features/bots/presentation/bots_page.dart';
-import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
 import 'package:pocket_llm/features/workspaces/presentation/workspace_detail_page.dart';
 import 'package:pocket_llm/features/kanban/presentation/kanban_page.dart';
 import 'package:pocket_llm/features/obsidian/presentation/vaults_page.dart';
@@ -39,10 +37,8 @@ abstract class AppRoutes {
   static const workspaces = '/workspaces';
   static const skills = '/skills';
   static const mcp = '/mcp';
-  static const bots = '/bots';
   static const vaults = '/vaults';
   static const kanban = '/kanban';
-  static const groupChats = '/group-chats';
   static const workspace = '/workspace';
 
   /// Route to one workspace's detail screen.
@@ -125,10 +121,7 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.mcp,
         builder: (context, state) => const McpPage(),
       ),
-      GoRoute(
-        path: AppRoutes.bots,
-        builder: (context, state) => const BotsPage(),
-      ),
+
       GoRoute(
         path: AppRoutes.vaults,
         builder: (context, state) => const VaultsPage(),
@@ -137,10 +130,7 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.kanban,
         builder: (context, state) => const KanbanPage(),
       ),
-      GoRoute(
-        path: AppRoutes.groupChats,
-        builder: (context, state) => const GroupChatsPage(),
-      ),
+
       GoRoute(
         path: AppRoutes.workspace,
         builder: (context, state) => WorkspaceDetailPage(

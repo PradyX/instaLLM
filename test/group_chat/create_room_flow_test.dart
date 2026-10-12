@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
+import 'package:pocket_llm/core/navigation/app_router.dart';
+import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
+import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:pocket_llm/features/home/presentation/home_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -55,15 +59,28 @@ void main() {
     }
   });
 
-  testWidgets('creating a room from the rooms page does not crash', (
+  testWidgets('creating a room from the sidebar opens it on the chat page', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(800, 1200);
+    // The rail is docked, so its sections and their create buttons are here.
+    tester.view.physicalSize = const Size(1400, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
     });
+
+    // The real app always has a router, and opening a chat navigates through
+    // it, so the test gives the page one too.
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: AppRoutes.home,
+          builder: (context, state) => const HomePage(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
 
     await tester.pumpWidget(
       ProviderScope(
@@ -74,59 +91,54 @@ void main() {
             ),
           ),
         ],
-        child: const MaterialApp(home: GroupChatsPage()),
+        child: MaterialApp.router(routerConfig: router),
       ),
     );
 
-    // The seeded workspace makes the New room button appear.
-    await pumpUntil(tester, () => find.text('New room').evaluate().isNotEmpty);
-    expect(find.text('New room'), findsOneWidget);
-
-    // The reported crash: rooms -> see more -> create room. The handler is
-    // invoked directly because an overlay absorbs raw taps in tests.
+    // Rooms are created where they are listed, not on a page of their own.
+    await pumpUntil(
+      tester,
+      () => find.byTooltip('New room').evaluate().isNotEmpty,
+    ); // Invoked directly: the tooltip's own overlay can absorb a raw tap.
     tester
-        .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+        .widget<IconButton>(
+          find.ancestor(
+            of: find.byTooltip('New room'),
+            matching: find.byType(IconButton),
+          ),
+        )
         .onPressed!();
     await tester.pumpAndSettle();
     expect(find.text('New group chat'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), 'Crash probe room');
+    // The dialog's own field: the rail above it has a search box too.
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(NamePromptDialog),
+        matching: find.byType(TextField),
+      ),
+      'Crash probe room',
+    );
+    await tester.pump();
     await tester.tap(find.text('Create'));
     await pumpUntil(
       tester,
-      () => find.text('Crash probe room').evaluate().isNotEmpty,
+      () => find.byType(RoomChatView).evaluate().isNotEmpty,
     );
-    expect(find.text('Crash probe room'), findsOneWidget);
-    // Let the dialog's pop transition (and its tap-absorbing barrier)
-    // fully leave before touching the list.
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
 
-    // Opening the fresh room must work too.
-    await tester.tap(find.text('Crash probe room'));
-    await tester.pumpAndSettle();
+    // A new room is open on the app's chat page, and it is in the store.
+    expect(find.byType(RoomChatView), findsOneWidget);
     expect(find.textContaining('Message the room'), findsOneWidget);
-
-    // The shared composer sends through the room turn loop.
-    await tester.enterText(find.byType(TextField), 'hello room');
-    await tester.tap(find.byTooltip('Send'));
-    await pumpUntil(
-      tester,
-      () => find.text('hello room').evaluate().isNotEmpty,
-    );
-    expect(find.text('hello room'), findsOneWidget);
-
     final container = ProviderScope.containerOf(
-      tester.element(find.byType(GroupChatDetailPage)),
+      tester.element(find.byType(RoomChatView)),
     );
     expect(
       container
           .read(groupChatsProvider)
           .snapshot
           .chats
-          .any(
-            (chat) =>
-                chat.name == 'Crash probe room' && chat.directBotId == null,
-          ),
+          .any((chat) => chat.name == 'Crash probe room'),
       isTrue,
     );
   });

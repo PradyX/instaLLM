@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
+import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
+import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
+import 'package:pocket_llm/features/group_chat/application/active_room.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
@@ -214,15 +216,19 @@ class _Sidebar extends ConsumerWidget {
                   _sectionHeader(
                     context,
                     label: 'Bots',
-                    onSeeMore: () => context.push(AppRoutes.bots),
+                    onCreate: () => _createBot(context, ref),
+                    createTooltip: 'New bot',
                   ),
-                  _BotRows(workspaceId: workspace?.id),
+                  BotChatRows(workspaceId: workspace?.id),
                   _sectionHeader(
                     context,
                     label: 'Rooms',
-                    onSeeMore: () => context.push(AppRoutes.groupChats),
+                    onCreate: workspace == null
+                        ? null
+                        : () => _createRoom(context, ref, workspace.id),
+                    createTooltip: 'New room',
                   ),
-                  _RoomRows(workspaceId: workspace?.id),
+                  RoomChatRows(workspaceId: workspace?.id),
                   _sectionLabel(context, 'Board'),
                   _BoardTile(current: section == AppSection.board),
                   _sectionLabel(context, 'More'),
@@ -337,6 +343,9 @@ class _ChatRows extends ConsumerWidget {
               onTap: isGenerating
                   ? null
                   : () {
+                      // A conversation is what the page shows when no room is
+                      // open, so choosing one here also leaves the room.
+                      showConversation(ref);
                       ref
                           .read(conversationControllerProvider.notifier)
                           .openConversation(summary.conversation.id);
@@ -348,11 +357,56 @@ class _ChatRows extends ConsumerWidget {
   }
 }
 
-/// Every bot with its 1:1 room preview; tapping lands in that same room.
-class _BotRows extends ConsumerWidget {
-  const _BotRows({required this.workspaceId});
+/// Creates a bot, then opens its editor: a new bot is shaped before it is
+/// talked to, and it appears in the Bots section from then on.
+///
+/// This replaces the roster page that used to own creation — the sidebar is
+/// the bot list now, and a bot's chat is a chat on the app's chat page.
+Future<void> _createBot(BuildContext context, WidgetRef ref) async {
+  final name = await NamePromptDialog.show(
+    context,
+    title: 'New bot',
+    hintText: 'Bot name',
+    confirmLabel: 'Create',
+  );
+  if (name == null || name.trim().isEmpty || !context.mounted) return;
+  final bot = await ref.read(botsProvider.notifier).createBot(name.trim());
+  if (bot == null || !context.mounted) return;
+  await Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (context) => BotEditorPage(botId: bot.id)),
+  );
+}
+
+/// Creates a room in [workspaceId] and opens it on the chat page.
+Future<void> _createRoom(
+  BuildContext context,
+  WidgetRef ref,
+  String workspaceId,
+) async {
+  final name = await NamePromptDialog.show(
+    context,
+    title: 'New group chat',
+    hintText: 'Room name',
+    confirmLabel: 'Create',
+  );
+  if (name == null || name.trim().isEmpty || !context.mounted) return;
+  final room = await ref
+      .read(groupChatsProvider.notifier)
+      .createChat(workspaceId: workspaceId, name: name.trim());
+  if (room == null || !context.mounted) return;
+  showRoom(ref, room.id);
+  context.go(AppRoutes.home);
+}
+
+/// Every bot with its 1:1 room preview; tapping lands in that same room, on
+/// the app's chat page.
+class BotChatRows extends ConsumerWidget {
+  const BotChatRows({super.key, required this.workspaceId, this.onOpened});
 
   final String? workspaceId;
+
+  /// Called after a bot's chat opens; the drawer closes itself with it.
+  final VoidCallback? onOpened;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -418,23 +472,24 @@ class _BotRows extends ConsumerWidget {
               final chat = await ref
                   .read(groupChatsProvider.notifier)
                   .directChatWith(workspaceId: workspaceId!, botId: bot.id);
-              if (chat != null && context.mounted) {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => GroupChatDetailPage(chatId: chat.id),
-                  ),
-                );
-              }
+              if (chat == null || !context.mounted) return;
+              // A bot's chat is the app's chat page, not a page of its own.
+              showRoom(ref, chat.id);
+              onOpened?.call();
+              context.go(AppRoutes.home);
             },
     );
   }
 }
 
 /// Group rooms of the active workspace with previews and needs-you badges.
-class _RoomRows extends ConsumerWidget {
-  const _RoomRows({required this.workspaceId});
+class RoomChatRows extends ConsumerWidget {
+  const RoomChatRows({super.key, required this.workspaceId, this.onOpened});
 
   final String? workspaceId;
+
+  /// Called after a room opens; the drawer closes itself with it.
+  final VoidCallback? onOpened;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -462,7 +517,7 @@ class _RoomRows extends ConsumerWidget {
             ),
           )
         else
-          for (final chat in rooms.take(8))
+          for (final chat in rooms)
             ListTile(
               dense: true,
               shape: RoundedRectangleBorder(
@@ -488,11 +543,11 @@ class _RoomRows extends ConsumerWidget {
                       '${chat.memberBotIds.length}',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => GroupChatDetailPage(chatId: chat.id),
-                ),
-              ),
+              onTap: () {
+                showRoom(ref, chat.id);
+                onOpened?.call();
+                context.go(AppRoutes.home);
+              },
             ),
       ],
     );
@@ -562,12 +617,18 @@ class _BoardTile extends ConsumerWidget {
   }
 }
 
-/// Section header with an accent-colored "See more" text button on the
-/// right, replacing the old "See all & manage" tiles below each section.
+/// Section header: a create action where a section owns its contents, and
+/// "See more" where a fuller page does.
+///
+/// Bots and rooms are created here because there is no separate roster page to
+/// create them on: the sidebar is the list, and tapping a row opens that chat
+/// on the app's one chat page.
 Widget _sectionHeader(
   BuildContext context, {
   required String label,
-  required VoidCallback onSeeMore,
+  VoidCallback? onSeeMore,
+  VoidCallback? onCreate,
+  String createTooltip = 'New',
 }) {
   final colorScheme = Theme.of(context).colorScheme;
   return Padding(
@@ -584,16 +645,27 @@ Widget _sectionHeader(
             ),
           ),
         ),
-        TextButton(
-          onPressed: onSeeMore,
-          style: TextButton.styleFrom(
-            foregroundColor: colorScheme.primary,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        if (onCreate != null)
+          IconButton(
+            tooltip: createTooltip,
+            onPressed: onCreate,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            color: colorScheme.primary,
           ),
-          child: const Text('See more'),
-        ),
+        if (onSeeMore != null)
+          TextButton(
+            onPressed: onSeeMore,
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('See more'),
+          ),
       ],
     ),
   );

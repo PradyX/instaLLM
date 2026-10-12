@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/presentation/group_chats_page.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pocket_llm/core/navigation/app_router.dart';
+import 'package:pocket_llm/features/group_chat/application/active_room.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
@@ -358,12 +360,10 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
                       );
                       return;
                     }
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            GroupChatDetailPage(chatId: chatId),
-                      ),
-                    );
+                    // The room opens on the app's chat page, like every other
+                    // chat, and the sidebar keeps the board one tap away.
+                    showRoom(ref, chatId);
+                    context.go(AppRoutes.home);
                   },
                   icon: const Icon(Icons.forum_outlined),
                   label: const Text('Discuss in room'),

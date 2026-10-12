@@ -590,7 +590,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             _toolbarIconButton(
               context,
               tooltip: 'New chat',
-              icon: Icons.add_comment_outlined,
+              icon: Icons.add,
               onPressed: isGenerating ? null : _startNewConversation,
             ),
           ],

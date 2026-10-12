@@ -124,8 +124,8 @@ void main() {
       button.style?.foregroundColor?.resolve({WidgetState.disabled}),
       colorScheme.primary.withValues(alpha: 0.35),
     );
-    // And an outlined glyph for what it does.
-    expect(find.byIcon(Icons.add_comment_outlined), findsOneWidget);
+    // The new-chat action uses a simple plus glyph.
+    expect((button.icon as Icon).icon, Icons.add);
   });
 
   testWidgets('the actions keep a margin from each other and the edge', (

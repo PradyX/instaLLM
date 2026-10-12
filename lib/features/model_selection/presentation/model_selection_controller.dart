@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pocket_llm/core/services/hugging_face_model_capability_service.dart';
 import 'package:pocket_llm/core/services/hugging_face_model_discovery_service.dart';
 import 'package:pocket_llm/core/services/hugging_face_repository_service.dart';
@@ -27,6 +28,10 @@ class _ModelDownloadAsset {
 @riverpod
 class ModelSelectionController extends _$ModelSelectionController {
   static const _customModelsStorageKey = 'custom_models_v1';
+
+  /// Where the model the user last chose is kept. The v1 suffix is the format
+  /// of that stored id: changing it needs a migration, not a silent reset.
+  static const selectedModelStorageKey = 'selected_model_id_v1';
   static const _downloadSafetyBytes = 128 * 1024 * 1024;
 
   late final ModelStorageService _storageService = ModelStorageService();
@@ -52,9 +57,24 @@ class ModelSelectionController extends _$ModelSelectionController {
     return state;
   }
 
+  /// Reads the installed models and the model the user last chose.
+  ///
+  /// Every step here touches the device, and a failure in any of them must
+  /// cost the user nothing: the catalog stays the static one and the next
+  /// launch tries again, while an error thrown out of here would become a
+  /// provider error state that hides the selection on the next read.
   Future<void> _init() async {
+    try {
+      await _loadInitialState();
+    } catch (error, stackTrace) {
+      debugPrint('Model catalog load failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _loadInitialState() async {
     final customModels = await _loadCustomModels();
     final cachedDiscovered = await _discoveryService.readCachedModels();
+    final storedSelectedId = await _readStoredSelectedModelId();
 
     final combinedModels = _mergeModelLists(
       staticModels: LlmModel.availableModels,
@@ -72,9 +92,13 @@ class ModelSelectionController extends _$ModelSelectionController {
       updatedModels,
     );
 
-    String? newSelectedId = state.selectedModelId;
+    // The user's last choice wins over anything the app would pick itself,
+    // as long as that model is still installed.
+    String? newSelectedId = state.selectedModelId ?? storedSelectedId;
     if (newSelectedId != null &&
-        !modelsWithCachedCapabilities.any((m) => m.id == newSelectedId)) {
+        !modelsWithCachedCapabilities.any(
+          (m) => m.id == newSelectedId && m.isDownloaded,
+        )) {
       newSelectedId = null;
     }
     if (newSelectedId == null) {
@@ -92,8 +116,25 @@ class ModelSelectionController extends _$ModelSelectionController {
       selectedModelId: newSelectedId,
     );
     await _refreshStorageInfo();
-    unawaited(_refreshModelCapabilities(modelsWithCachedCapabilities));
-    unawaited(_refreshDiscoveredModels());
+    _refreshInBackground(
+      () => _refreshModelCapabilities(modelsWithCachedCapabilities),
+      'capability',
+    );
+    _refreshInBackground(_refreshDiscoveredModels, 'discovery');
+  }
+
+  /// Starts a refresh the user is not waiting for.
+  ///
+  /// These read the network and the device's metadata cache, so they are an
+  /// improvement rather than a requirement: a failure is logged and the
+  /// catalog the app already has stands, instead of becoming an unhandled
+  /// async error nothing can catch.
+  void _refreshInBackground(Future<void> Function() refresh, String what) {
+    unawaited(
+      refresh().catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Model $what refresh failed: $error\n$stackTrace');
+      }),
+    );
   }
 
   Future<void> _refreshDiscoveredModels() async {
@@ -125,7 +166,10 @@ class ModelSelectionController extends _$ModelSelectionController {
       models: withCapabilities,
       selectedModelId: currentSelected,
     );
-    unawaited(_refreshModelCapabilities(withCapabilities));
+    _refreshInBackground(
+      () => _refreshModelCapabilities(withCapabilities),
+      'capability',
+    );
   }
 
   /// Merges static, discovered, and custom model lists, deduplicating by
@@ -162,6 +206,31 @@ class ModelSelectionController extends _$ModelSelectionController {
   void selectModel(LlmModel model) {
     if (model.isDownloaded) {
       state = state.copyWith(selectedModelId: model.id);
+      unawaited(_rememberSelectedModel(model.id));
+    }
+  }
+
+  /// The model the user last chose, so the app opens on their choice rather
+  /// than on whichever model happens to come first in the catalog.
+  Future<String?> _readStoredSelectedModelId() async {
+    try {
+      return await SecureStorage.instance.readPrimitive(
+        selectedModelStorageKey,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _rememberSelectedModel(String? modelId) async {
+    if (modelId == null || modelId.isEmpty) return;
+    try {
+      await SecureStorage.instance.writePrimitive(
+        key: selectedModelStorageKey,
+        value: modelId,
+      );
+    } catch (_) {
+      // Failing to remember the choice must not fail the selection itself.
     }
   }
 
@@ -345,12 +414,16 @@ class ModelSelectionController extends _$ModelSelectionController {
         state.downloadProgress,
       )..remove(model.id);
 
+      final hadSelection = state.selectedModelId != null;
       state = state.copyWith(
         models: updatedModels,
         downloadProgress: updatedProgress,
         selectedModelId:
             state.selectedModelId ?? (isDownloaded ? model.id : null),
       );
+      if (!hadSelection) {
+        unawaited(_rememberSelectedModel(state.selectedModelId));
+      }
       await _persistCustomModels(updatedModels);
       await _refreshStorageInfo();
       try {
@@ -459,7 +532,10 @@ class ModelSelectionController extends _$ModelSelectionController {
     state = state.copyWith(models: updatedModels, error: null);
     await _persistCustomModels(updatedModels);
     if (_capabilityService.canResolveFromUrl(model.downloadUrl)) {
-      unawaited(_refreshModelCapabilities([model]));
+      _refreshInBackground(
+        () => _refreshModelCapabilities([model]),
+        'capability',
+      );
     }
   }
 
@@ -615,11 +691,15 @@ class ModelSelectionController extends _$ModelSelectionController {
 
     final model = _modelFromImport(completed);
     final updatedModels = [...state.models, model];
+    final hadSelection = state.selectedModelId != null;
     state = state.copyWith(
       models: updatedModels,
       error: null,
       selectedModelId: state.selectedModelId ?? model.id,
     );
+    if (!hadSelection) {
+      unawaited(_rememberSelectedModel(state.selectedModelId));
+    }
     await _persistCustomModels(updatedModels);
     await _refreshStorageInfo();
     return model;
@@ -690,12 +770,16 @@ class ModelSelectionController extends _$ModelSelectionController {
     final isDownloaded = await _isModelBundleDownloaded(model);
     final registered = model.copyWith(isDownloaded: isDownloaded);
     final updatedModels = [...state.models, registered];
+    final hadSelection = state.selectedModelId != null;
     state = state.copyWith(
       models: updatedModels,
       error: null,
       selectedModelId:
           state.selectedModelId ?? (isDownloaded ? model.id : null),
     );
+    if (!hadSelection) {
+      unawaited(_rememberSelectedModel(state.selectedModelId));
+    }
     await _persistCustomModels(updatedModels);
     if (!isDownloaded) {
       unawaited(downloadModel(registered));

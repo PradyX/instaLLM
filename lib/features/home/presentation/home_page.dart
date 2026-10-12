@@ -563,7 +563,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           toolbarHeight: 56,
           title: room == null ? null : RoomHeaderTitle(room: room),
           leadingWidth: 42,
-          actionsPadding: const EdgeInsets.only(right: 8),
+          actionsPadding: const EdgeInsets.only(right: 12),
           leading: isWide
               ? null
               : room != null
@@ -595,10 +595,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                 icon: Icons.settings_outlined,
                 onPressed: () => showRoomSettings(context, room.id),
               ),
+            if (room != null) const SizedBox(width: 6),
             _toolbarIconButton(
               context,
               tooltip: 'New chat',
-              icon: Icons.edit_square,
+              icon: Icons.add_comment_outlined,
               onPressed: isGenerating ? null : _startNewConversation,
             ),
           ],
@@ -1147,9 +1148,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  /// One 34px rounded-square toolbar button, shared by menu and new chat so
-  /// the two can never differ in size or shape. The SizedBox pins the size
+  /// One 34px toolbar button, shared by the menu, a room's settings and new
+  /// chat so no two can differ in size or shape. The SizedBox pins the size
   /// instead of trusting button defaults.
+  ///
+  /// The button is an outlined icon in the accent colour with nothing behind
+  /// it: a row of filled grey squares read as buttons competing with the
+  /// composer, and the tint said "pressed" at rest. Hover and press still get
+  /// the ripple, which is enough feedback for an icon that names itself.
   Widget _toolbarIconButton(
     BuildContext context, {
     required String tooltip,
@@ -1163,9 +1169,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         tooltip: tooltip,
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        icon: Icon(icon, size: 18),
+        icon: Icon(icon, size: 20),
         style: IconButton.styleFrom(
-          backgroundColor: colorScheme.surfaceContainerHighest,
+          backgroundColor: Colors.transparent,
+          foregroundColor: colorScheme.primary,
+          disabledForegroundColor: colorScheme.primary.withValues(alpha: 0.35),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),

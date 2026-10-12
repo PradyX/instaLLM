@@ -223,7 +223,7 @@ void main() {
     expect(find.text('Get a model'), findsOneWidget);
   });
 
-  testWidgets('a group room keeps each bot on its own model', (tester) async {
+  testWidgets('a group room switches its own model too', (tester) async {
     container = buildContainer(
       installed: const [_small, _picked],
       selected: _picked,
@@ -238,7 +238,22 @@ void main() {
     await pumpChatPage(tester, room);
 
     expect(find.text('Message the room (@name for a bot)...'), findsOneWidget);
-    expect(find.byType(ComposerModelPill), findsNothing);
+    // A group room has no single bot to answer for it, so the pill names the
+    // room's own choice: the app's model until the room picks one.
+    expect(find.byType(ComposerModelPill), findsOneWidget);
+    expect(pillLabel('Picked · 1.1B'), findsOneWidget);
+    expect(roomModel(), isNull);
+
+    // Picking here is the room's model — what its bots fall back to.
+    await tester.tap(pillLabel('Picked · 1.1B'));
+    await pumpMenu(tester);
+    await tester.tap(
+      find.widgetWithText(CheckedPopupMenuItem<String>, 'Small · 360M'),
+    );
+    await pumpChatPage(tester, room, frames: 5);
+
+    expect(roomModel(), 'm-small');
+    expect(pillLabel('Small · 360M'), findsOneWidget);
   });
 
   testWidgets('a room line is drawn as a bubble, named after the bot', (

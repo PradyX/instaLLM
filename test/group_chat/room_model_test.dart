@@ -55,6 +55,29 @@ void main() {
       expect(model?.id, 'm-bot');
     });
 
+    test('a group room asks the app, having no bot of its own', () {
+      // A group room has no single bot whose preference could speak for it, so
+      // the room's own model — or the app's — is what the composer names.
+      final model = roomAnswerModel(
+        chat: _room(directBotId: null),
+        bot: null,
+        installed: [_model('m-small'), _model('m-app')],
+        selected: _model('m-app'),
+      );
+
+      expect(model?.id, 'm-app');
+
+      // And the room's own pick is what every bot in it falls back to.
+      final picked = roomAnswerModel(
+        chat: _room(modelId: 'm-room', directBotId: null),
+        bot: null,
+        installed: [_model('m-small'), _model('m-room')],
+        selected: _model('m-app'),
+      );
+
+      expect(picked?.id, 'm-room');
+    });
+
     test("then the model the app itself is set to", () {
       // A room is a chat like any other: with nothing of its own it runs on
       // the same model home does, not on a separate one chosen for bots.

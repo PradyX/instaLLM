@@ -158,12 +158,12 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
     final messages = state.snapshot.messagesFor(chat.id);
     final running = state.runningChatIds.contains(chat.id);
     final textTheme = Theme.of(context).textTheme;
-    // A direct room has exactly one bot and so exactly one answer model, and
-    // the pill switches it here: a built-in bot refuses edits, and picking a
-    // model for one room should not move the bot in every other room. It lists
-    // the same models home does — any installed chat model may answer a room.
-    // A group room gets no pill — each bot answers on its own preference, so
-    // one pill would name a model most of the room would not use.
+    // The pill switches the model this room answers with, and every room shows
+    // it: a direct room has exactly one bot and so exactly one answer model,
+    // and a group room's own pick outranks its bots' preferences, which is
+    // what lets a room speak as one. Picking here is what keeps a model choice
+    // for one room from moving a built-in bot in every other room. The pill
+    // lists the same models home does — any installed chat model may answer.
     final directBotId = chat.directBotId;
     final bot = directBotId == null
         ? null
@@ -247,27 +247,24 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
               hintText: chat.isDirect
                   ? 'Message ${chat.name}...'
                   : 'Message the room (@name for a bot)...',
-              leading: bot == null
-                  ? null
-                  : ComposerModelPill(
-                      models: chatModels,
-                      selected: roomAnswerModel(
-                        chat: chat,
-                        bot: bot,
-                        installed: chatModels,
-                        selected: selectedModel,
-                      ),
-                      enabled: !running,
-                      tooltip: 'Switch model',
-                      onSelected: (model) => unawaited(
-                        notifier.updateChat(chat.copyWith(modelId: model.id)),
-                      ),
-                      onCleared: () => unawaited(
-                        notifier.updateChat(chat.copyWith(clearModel: true)),
-                      ),
-                      onEmptyPressed: () =>
-                          context.push(AppRoutes.modelSelection),
-                    ),
+              leading: ComposerModelPill(
+                models: chatModels,
+                selected: roomAnswerModel(
+                  chat: chat,
+                  bot: bot,
+                  installed: chatModels,
+                  selected: selectedModel,
+                ),
+                enabled: !running,
+                tooltip: 'Switch model',
+                onSelected: (model) => unawaited(
+                  notifier.updateChat(chat.copyWith(modelId: model.id)),
+                ),
+                onCleared: () => unawaited(
+                  notifier.updateChat(chat.copyWith(clearModel: true)),
+                ),
+                onEmptyPressed: () => context.push(AppRoutes.modelSelection),
+              ),
               onSend: () => _send(_inputController.text),
               onMicPressed: () => unawaited(
                 ref

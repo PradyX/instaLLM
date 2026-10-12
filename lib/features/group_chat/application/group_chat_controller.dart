@@ -39,11 +39,11 @@ bool roomNeedsUser(GroupChatsSnapshot snapshot, String chatId) {
 /// answer. Null means nothing is installed at all.
 LlmModel? roomAnswerModel({
   required GroupChat chat,
-  required Bot bot,
+  required Bot? bot,
   required List<LlmModel> installed,
   LlmModel? selected,
 }) {
-  for (final id in [chat.modelId, bot.modelId, selected?.id]) {
+  for (final id in [chat.modelId, bot?.modelId, selected?.id]) {
     if (id == null) continue;
     for (final model in installed) {
       if (model.id == id) return model;

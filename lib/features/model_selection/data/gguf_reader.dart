@@ -94,9 +94,10 @@ class GgufReader {
   }) async {
     final raf = await File(path).open(mode: FileMode.read);
     try {
-      final header = await _readHeader(raf);
-      final outcome = await _readMetadataKvs(raf, header);
-      final tensors = await _readTensorInfos(raf, outcome.position, header);
+      final source = _BufferedBytes(raf);
+      final header = await _readHeader(source);
+      final outcome = await _readMetadataKvs(source, header);
+      final tensors = await _readTensorInfos(source, outcome.position, header);
       return _interpretMetadata(
         header: header,
         fileSizeBytes: fileSizeBytes,
@@ -111,16 +112,16 @@ class GgufReader {
     }
   }
 
-  Future<_GgufHeader> _readHeader(RandomAccessFile raf) async {
+  Future<_GgufHeader> _readHeader(_BufferedBytes source) async {
     const magic = [0x47, 0x47, 0x55, 0x46];
-    final magicBytes = await _readBytes(raf, 0, 4);
+    final magicBytes = await _readBytes(source, 0, 4);
     for (var i = 0; i < magic.length; i++) {
       if (magicBytes[i] != magic[i]) {
         throw const GgufNotAModelException();
       }
     }
 
-    final version = await _readUint32(raf, 4);
+    final version = await _readUint32(source, 4);
     if (version == 0 || version == 1) {
       throw const GgufFormatException(
         'GGUF v1 is no longer supported. Use a GGUF v2 or newer file.',
@@ -132,8 +133,8 @@ class GgufReader {
       throw _unsupportedVersion(version);
     }
 
-    final tensorCount = await _readUint64(raf, 8);
-    final kvCount = await _readUint64(raf, 16);
+    final tensorCount = await _readUint64(source, 8);
+    final kvCount = await _readUint64(source, 16);
     if (tensorCount > 1000000) {
       throw GgufFormatException(
         'GGUF file declares $tensorCount tensors, which is not plausible.',
@@ -189,14 +190,20 @@ class GgufReader {
   }
 
   /// Walks a string array (headers plus payload) without decoding entries.
+  ///
+  /// A vocabulary runs to a third of a million entries, so this loop asks for
+  /// a window instead of a value: while the window already holds the entry's
+  /// length the read costs no await at all, and the file is touched only when
+  /// the walk crosses into the next window.
   Future<int> _walkStringArray(
-    RandomAccessFile raf,
+    _BufferedBytes source,
     int position,
     int count,
   ) async {
     var cursor = position;
     for (var i = 0; i < count; i++) {
-      final length = await _readUint64(raf, cursor);
+      if (!source.covers(cursor, 8)) await source.fillAt(cursor, 8);
+      final length = source.uint64At(cursor);
       cursor += 8;
       if (length < 0 || length > _maxStringLength) {
         throw GgufFormatException(
@@ -212,7 +219,7 @@ class GgufReader {
   }
 
   Future<_KvParseOutcome> _readMetadataKvs(
-    RandomAccessFile raf,
+    _BufferedBytes source,
     _GgufHeader header,
   ) async {
     final scalars = <String, Object>{};
@@ -224,18 +231,18 @@ class GgufReader {
 
     for (var i = 0; i < header.kvCount; i++) {
       final exceedsLimit = storedCount >= metadataKvLimit;
-      final keyOutcome = await _readString(raf, position);
+      final keyOutcome = await _readString(source, position);
       final key = keyOutcome.value;
       position = keyOutcome.position;
       if (key.isEmpty) {
         throw const GgufFormatException('GGUF metadata contains an empty key.');
       }
 
-      final valueType = await _readUint32(raf, position);
+      final valueType = await _readUint32(source, position);
       position += 4;
 
       if (valueType == typeArray) {
-        final elementType = await _readUint32(raf, position);
+        final elementType = await _readUint32(source, position);
         position += 4;
         if (elementType == typeArray) {
           throw GgufFormatException(
@@ -243,11 +250,11 @@ class GgufReader {
             'which is not supported.',
           );
         }
-        final elementCount = await _readUint64(raf, position);
+        final elementCount = await _readUint64(source, position);
         position += 8;
         _validateArrayCount(key, elementCount);
         if (elementType == typeString) {
-          position = await _walkStringArray(raf, position, elementCount);
+          position = await _walkStringArray(source, position, elementCount);
         } else if (!_isNumericScalarType(elementType)) {
           throw GgufFormatException(
             'GGUF metadata key "$key" has unsupported array element '
@@ -267,7 +274,7 @@ class GgufReader {
         }
         if (!exceedsLimit) storedCount++;
       } else if (_isScalarValueType(valueType)) {
-        final outcome = await _readScalarValue(raf, valueType, position);
+        final outcome = await _readScalarValue(source, valueType, position);
         position = outcome.position;
         if (!exceedsLimit) {
           scalars[key] = outcome.value;
@@ -293,64 +300,67 @@ class GgufReader {
   }
 
   Future<_ScalarOutcome> _readScalarValue(
-    RandomAccessFile raf,
+    _BufferedBytes source,
     int valueType,
     int position,
   ) async {
     switch (valueType) {
       case typeUint8:
-        final bytes = await _readBytes(raf, position, 1);
+        final bytes = await _readBytes(source, position, 1);
         return _ScalarOutcome(bytes[0], position + 1);
       case typeInt8:
-        final bytes = await _readBytes(raf, position, 1);
+        final bytes = await _readBytes(source, position, 1);
         final value = bytes[0] > 127 ? bytes[0] - 256 : bytes[0];
         return _ScalarOutcome(value, position + 1);
       case typeUint16:
-        final bytes = await _readBytes(raf, position, 2);
+        final bytes = await _readBytes(source, position, 2);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getUint16(0, Endian.little), position + 2);
       case typeInt16:
-        final bytes = await _readBytes(raf, position, 2);
+        final bytes = await _readBytes(source, position, 2);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getInt16(0, Endian.little), position + 2);
       case typeUint32:
-        final bytes = await _readBytes(raf, position, 4);
+        final bytes = await _readBytes(source, position, 4);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getUint32(0, Endian.little), position + 4);
       case typeInt32:
-        final bytes = await _readBytes(raf, position, 4);
+        final bytes = await _readBytes(source, position, 4);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getInt32(0, Endian.little), position + 4);
       case typeFloat32:
-        final bytes = await _readBytes(raf, position, 4);
+        final bytes = await _readBytes(source, position, 4);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getFloat32(0, Endian.little), position + 4);
       case typeBool:
-        final bytes = await _readBytes(raf, position, 1);
+        final bytes = await _readBytes(source, position, 1);
         if (bytes[0] != 0 && bytes[0] != 1) {
           throw const GgufFormatException('Invalid GGUF boolean value.');
         }
         return _ScalarOutcome(bytes[0] == 1, position + 1);
       case typeString:
-        final outcome = await _readString(raf, position);
+        final outcome = await _readString(source, position);
         return _ScalarOutcome(outcome.value, outcome.position);
       case typeUint64:
-        final bytes = await _readBytes(raf, position, 8);
+        final bytes = await _readBytes(source, position, 8);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getUint64(0, Endian.little), position + 8);
       case typeInt64:
-        final bytes = await _readBytes(raf, position, 8);
+        final bytes = await _readBytes(source, position, 8);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getInt64(0, Endian.little), position + 8);
       default:
-        final bytes = await _readBytes(raf, position, 8);
+        final bytes = await _readBytes(source, position, 8);
         final view = ByteData.sublistView(bytes);
         return _ScalarOutcome(view.getFloat64(0, Endian.little), position + 8);
     }
   }
 
-  Future<_StringOutcome> _readString(RandomAccessFile raf, int position) async {
-    final length = await _readUint64(raf, position);
+  Future<_StringOutcome> _readString(
+    _BufferedBytes source,
+    int position,
+  ) async {
+    final length = await _readUint64(source, position);
     var cursor = position + 8;
     if (length < 0 || length > _maxStringLength) {
       throw const GgufFormatException('GGUF string is too long to read.');
@@ -358,7 +368,7 @@ class GgufReader {
     if (length == 0) {
       return _StringOutcome('', cursor);
     }
-    final bytes = await _readBytes(raf, cursor, length);
+    final bytes = await _readBytes(source, cursor, length);
     cursor += length;
     if (cursor > _maxFileScanBytes) {
       throw const GgufTruncatedException();
@@ -370,42 +380,18 @@ class GgufReader {
     }
   }
 
+  /// The bytes at [position] for [length] characters, through [source].
   Future<Uint8List> _readBytes(
-    RandomAccessFile raf,
+    _BufferedBytes source,
     int position,
     int length,
-  ) async {
-    if (length <= 0 || position < 0) {
-      throw const GgufTruncatedException();
-    }
-    if (position + length > _maxFileScanBytes) {
-      throw const GgufTruncatedException();
-    }
-    final buffer = Uint8List(length);
-    var filled = 0;
-    while (filled < length) {
-      final remaining = length - filled;
-      final request = remaining > _readChunkBytes ? _readChunkBytes : remaining;
-      await raf.setPosition(position + filled);
-      final chunk = await raf.read(request);
-      if (chunk.isEmpty) {
-        throw const GgufTruncatedException();
-      }
-      buffer.setRange(filled, filled + chunk.length, chunk);
-      filled += chunk.length;
-    }
-    return buffer;
-  }
+  ) => source.view(position, length);
 
-  Future<int> _readUint32(RandomAccessFile raf, int position) async {
-    final bytes = await _readBytes(raf, position, 4);
-    return ByteData.sublistView(bytes).getUint32(0, Endian.little);
-  }
+  Future<int> _readUint32(_BufferedBytes source, int position) =>
+      source.uint32(position);
 
-  Future<int> _readUint64(RandomAccessFile raf, int position) async {
-    final bytes = await _readBytes(raf, position, 8);
-    return ByteData.sublistView(bytes).getUint64(0, Endian.little);
-  }
+  Future<int> _readUint64(_BufferedBytes source, int position) =>
+      source.uint64(position);
 
   bool _isScalarValueType(int type) {
     return type == typeUint8 ||
@@ -459,17 +445,17 @@ class GgufReader {
   }
 
   Future<List<_RawTensorInfo>> _readTensorInfos(
-    RandomAccessFile raf,
+    _BufferedBytes source,
     int position,
     _GgufHeader header,
   ) async {
     final tensors = <_RawTensorInfo>[];
     var cursor = position;
     for (var i = 0; i < header.tensorCount; i++) {
-      final nameOutcome = await _readString(raf, cursor);
+      final nameOutcome = await _readString(source, cursor);
       cursor = nameOutcome.position;
 
-      final dimCount = await _readUint32(raf, cursor);
+      final dimCount = await _readUint32(source, cursor);
       cursor += 4;
       if (dimCount < 0 || dimCount > 4) {
         throw GgufFormatException(
@@ -478,7 +464,7 @@ class GgufReader {
       }
       final dims = <int>[];
       for (var d = 0; d < dimCount; d++) {
-        final dim = await _readUint64(raf, cursor);
+        final dim = await _readUint64(source, cursor);
         cursor += 8;
         if (dim < 0) {
           throw GgufFormatException(
@@ -488,10 +474,10 @@ class GgufReader {
         dims.add(dim);
       }
 
-      final tensorType = await _readUint32(raf, cursor);
+      final tensorType = await _readUint32(source, cursor);
       cursor += 4;
       // The tensor data offset is not needed for metadata inspection.
-      await _readUint64(raf, cursor);
+      await _readUint64(source, cursor);
       cursor += 8;
 
       tensors.add(
@@ -688,6 +674,129 @@ class GgufReader {
   };
 
   String? _ggmlTypeLabel(int type) => _ggmlTypeLabels[type];
+}
+
+/// The header bytes of one file, read through a window.
+///
+/// A header walk asks for a few bytes at a time and skips over most of what it
+/// passes: a modern tokenizer declares well over 300,000 strings, and asking
+/// the file for each one separately made a single inspection of a Qwen 3 0.6B
+/// file take over twenty seconds — long enough that a surface which draws
+/// nothing until it has an answer (the composer's reasoning chip) looked as if
+/// the model declared no reasoning at all. Holding one window and serving the
+/// walk from memory turns that into a few reads.
+///
+/// A view is valid until the next call: every caller decodes what it asked for
+/// before asking for more.
+class _BufferedBytes {
+  _BufferedBytes(this._raf);
+
+  /// How much of the file is held at once. Large enough that a vocabulary
+  /// walks through a handful of windows, small enough to be nothing beside the
+  /// model it belongs to.
+  static const int _windowBytes = 1024 * 1024;
+
+  final RandomAccessFile _raf;
+  final Uint8List _window = Uint8List(_windowBytes);
+  late final ByteData _windowData = ByteData.sublistView(_window);
+  int _windowStart = 0;
+  int _windowLength = 0;
+
+  /// The bytes at [position] for [length], from the window when it already
+  /// holds them and from the file when it does not.
+  Future<Uint8List> view(int position, int length) async {
+    _validate(position, length);
+
+    // A value larger than the window — a chat template of a few megabytes, for
+    // instance — is read into a buffer of its own rather than displacing the
+    // window for everything that follows it.
+    if (length > _windowBytes) return _readExactly(position, length);
+
+    await _windowAt(position, length);
+    final start = position - _windowStart;
+    return Uint8List.sublistView(_window, start, start + length);
+  }
+
+  /// The little-endian 32-bit value at [position].
+  Future<int> uint32(int position) async {
+    await _windowAt(position, 4);
+    return _windowData.getUint32(position - _windowStart, Endian.little);
+  }
+
+  /// The little-endian 64-bit value at [position].
+  Future<int> uint64(int position) async {
+    await _windowAt(position, 8);
+    return uint64At(position);
+  }
+
+  /// Whether the window already holds [length] bytes from [position].
+  bool covers(int position, int length) =>
+      position >= _windowStart &&
+      position + length <= _windowStart + _windowLength;
+
+  /// Reads a window covering [length] bytes from [position], so that a walk of
+  /// many small values needs one await per window rather than one per value.
+  Future<void> fillAt(int position, int length) => _windowAt(position, length);
+
+  /// The little-endian 64-bit value at [position], which [covers] must hold.
+  int uint64At(int position) =>
+      _windowData.getUint64(position - _windowStart, Endian.little);
+
+  /// Rejects requests that could never be satisfied, keeping the reader's
+  /// guarantees about hostile files.
+  void _validate(int position, int length) {
+    if (length <= 0 || position < 0) {
+      throw const GgufTruncatedException();
+    }
+    if (position + length > GgufReader._maxFileScanBytes) {
+      throw const GgufTruncatedException();
+    }
+  }
+
+  /// Makes sure the window holds [length] bytes from [position].
+  ///
+  /// The walk skips most of what it passes, so the file handle is rarely
+  /// sitting where the next window begins: the seek is not optional.
+  Future<void> _windowAt(int position, int length) async {
+    _validate(position, length);
+
+    final windowEnd = _windowStart + _windowLength;
+    if (position < _windowStart || position + length > windowEnd) {
+      _windowStart = position;
+      _windowLength = 0;
+      await _raf.setPosition(position);
+      while (_windowLength < _windowBytes) {
+        final chunk = await _raf.read(_windowBytes - _windowLength);
+        if (chunk.isEmpty) break;
+        _window.setRange(_windowLength, _windowLength + chunk.length, chunk);
+        _windowLength += chunk.length;
+      }
+      if (position + length > _windowStart + _windowLength) {
+        throw const GgufTruncatedException();
+      }
+    }
+  }
+
+  /// [length] bytes from [position], read in chunks, for values too large to
+  /// serve from the window.
+  Future<Uint8List> _readExactly(int position, int length) async {
+    final buffer = Uint8List(length);
+    var filled = 0;
+    while (filled < length) {
+      final remaining = length - filled;
+      final request = remaining > GgufReader._readChunkBytes
+          ? GgufReader._readChunkBytes
+          : remaining;
+      await _raf.setPosition(position + filled);
+      final chunk = await _raf.read(request);
+      if (chunk.isEmpty) {
+        throw const GgufTruncatedException();
+      }
+      buffer.setRange(filled, filled + chunk.length, chunk);
+      filled += chunk.length;
+    }
+    return buffer;
+  }
 }
 
 class _GgufHeader {

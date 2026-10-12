@@ -144,6 +144,56 @@ void main() {
     );
   });
 
+  test('walks a vocabulary several times larger than its read window', () async {
+    // The walk skips every token's payload, so it asks for the next entry's
+    // length wherever that lands; a vocabulary the size of a real tokenizer
+    // forces that to happen across many window boundaries.
+    final tokens = List.generate(120000, (i) => 'token-$i');
+    final merges = List.generate(120000, (i) => '$i $i');
+    final bytes = GgufTestBuilder(version: 3)
+        .string('general.architecture', 'qwen3')
+        .stringArray('tokenizer.ggml.tokens', tokens)
+        .stringArray('tokenizer.ggml.merges', merges)
+        .string(
+          'tokenizer.chat_template',
+          '{% if enable_thinking %}on{% endif %}',
+        )
+        .tensors(const [
+          GgufTestTensor(
+            name: 'blk.0.attn_q.weight',
+            dims: [8, 8],
+            tensorType: 12,
+          ),
+        ])
+        .build();
+
+    final metadata = await const GgufReader().info(await writeGguf(bytes));
+
+    expect(metadata.vocabSize, 120000);
+    expect(metadata.tokenizerMergesCount, 120000);
+    expect(metadata.tensorCount, 1);
+    // Read after the two arrays, so the walk had to land on the right bytes to
+    // find it at all.
+    expect(metadata.chatTemplate, '{% if enable_thinking %}on{% endif %}');
+  });
+
+  test('reads a value larger than its read window', () async {
+    // A chat template can be bigger than the window the reader holds; it is
+    // then read on its own rather than served from the window.
+    final template = 'x' * (1200 * 1024);
+    final bytes = GgufTestBuilder(version: 3)
+        .string('general.architecture', 'qwen3')
+        .string('tokenizer.chat_template', template)
+        .string('general.name', 'Big Template')
+        .build();
+
+    final metadata = await const GgufReader().info(await writeGguf(bytes));
+
+    expect(metadata.chatTemplate, template);
+    // And the reads after it still land where they should.
+    expect(metadata.name, 'Big Template');
+  });
+
   test('rejects truncated key-value sections', () async {
     final builder = BytesBuilder()
       ..add([0x47, 0x47, 0x55, 0x46])

@@ -33,7 +33,6 @@ import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
@@ -543,20 +542,19 @@ class _HomePageState extends ConsumerState<HomePage> {
     final isGenerating = generationStatus.isGenerating;
     final generationText = generationStatus.statusText;
     final ttsState = ref.watch(ttsControllerProvider);
-    // Option C: dock the sidebar on wide screens, keep the drawer narrow.
-    final isWide = MediaQuery.of(context).size.width >= 900;
+    final isWide = MediaQuery.of(context).size.width >= AppShell.wideBreakpoint;
     // One page, two kinds of chat: a room when one is open, the conversation
     // otherwise. The room's own lines and controls are [RoomChatView]'s; the
     // header, sidebar and composer slots below belong to both.
     final room = ref.watch(activeRoomProvider);
+    final section = room == null
+        ? AppSection.chats
+        : room.isDirect
+        ? AppSection.bots
+        : AppSection.rooms;
 
     return AppShell(
-      section: room == null
-          ? AppSection.chats
-          : room.isDirect
-          ? AppSection.bots
-          : AppSection.rooms,
-      leading: ShellChatLeading(isGenerating: isGenerating),
+      section: section,
       isGenerating: isGenerating,
       child: Scaffold(
         appBar: AppBar(
@@ -568,15 +566,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           actionsPadding: const EdgeInsets.only(right: 12),
           leading: isWide
               ? null
-              : room != null
-              ? Center(
-                  child: _toolbarIconButton(
-                    context,
-                    tooltip: 'Back to chat',
-                    icon: Icons.arrow_back_rounded,
-                    onPressed: () => showConversation(ref),
-                  ),
-                )
               : Builder(
                   builder: (drawerContext) => Center(
                     child: _toolbarIconButton(
@@ -608,7 +597,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
         drawer: isWide
             ? null
-            : _buildDrawer(context, colorScheme, textTheme, selectedModel),
+            : AppNavigationDrawer(section: section, isGenerating: isGenerating),
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 768),
@@ -1288,142 +1277,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   onRemove: () => _removeDraftImage(index),
                 ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// A section name inside the drawer, above the rows it introduces.
-  Widget _drawerLabel(BuildContext context, String label) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        label.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.08,
-          color: colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawer(
-    BuildContext context,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    dynamic selectedModel,
-  ) {
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: colorScheme.primary),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Image.asset(
-                      'assets/icons/pocketllm_new.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Pocket LLM',
-                  style: TextStyle(
-                    color: colorScheme.onPrimary,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'On-device AI Chat',
-                  style: TextStyle(
-                    color: colorScheme.onPrimary.withValues(alpha: 0.8),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.forum_outlined),
-            title: const Text('Conversations'),
-            subtitle: const Text('Search, rename and manage chats'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.conversations);
-            },
-          ),
-          // Narrow screens have no rail, so the drawer carries the same bots
-          // and rooms: each row opens that chat on this page.
-          _drawerLabel(context, 'Bots'),
-          BotChatRows(
-            workspaceId: ref.read(workspacesProvider).active?.id,
-            onOpened: () => Navigator.pop(context),
-          ),
-          _drawerLabel(context, 'Rooms'),
-          RoomChatRows(
-            workspaceId: ref.read(workspacesProvider).active?.id,
-            onOpened: () => Navigator.pop(context),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.smart_toy_outlined),
-            title: const Text('Model Selection'),
-            subtitle: selectedModel != null
-                ? Text(
-                    '${selectedModel.name} · ${selectedModel.parameterSize}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  )
-                : const Text('No model selected'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.modelSelection);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.speed_outlined),
-            title: const Text('Benchmark'),
-            subtitle: const Text('Compare local models and run llmfit'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.benchmark);
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.info_outline_rounded),
-            title: const Text('About'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.about);
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-              context.push(AppRoutes.settings);
-            },
           ),
         ],
       ),

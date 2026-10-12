@@ -171,6 +171,7 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
           Text('Run preferences', style: textTheme.titleSmall),
           const SizedBox(height: 8),
           DropdownButtonFormField<String?>(
+            isExpanded: true,
             initialValue: bot.modelId,
             decoration: const InputDecoration(
               labelText: 'Preferred model',
@@ -195,6 +196,7 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
+            isExpanded: true,
             initialValue: bot.inferenceProfileId,
             decoration: const InputDecoration(
               labelText: 'Inference profile',
@@ -220,6 +222,7 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<BotMemoryScope>(
+            isExpanded: true,
             initialValue: bot.memoryScope,
             decoration: const InputDecoration(
               labelText: 'Memory scope',

@@ -173,6 +173,8 @@ dart run build_runner build --delete-conflicting-outputs
 
 ### Conversations
 
+The same navigation panel stays open beside the chat on wide screens and opens from the hamburger on mobile. Both show the workspace header, New chat, search, recent chats, Bots, Rooms, Board, Models and Settings. Bots and rooms can be created with their section's **+** button in either layout. Benchmark and About are available in Settings.
+
 - Tap the **new chat** icon on Home to start a conversation.
 - Open **Conversations** in the drawer to search, rename, pin, delete, export or import chats.
 - Switching models inside a conversation keeps its history; every assistant reply records the model that generated it.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pocket_llm/i18n/strings.g.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
@@ -261,6 +262,25 @@ class SettingsPage extends ConsumerWidget {
                               .read(attachmentSettingsProvider.notifier)
                               .setStripMetadata(value);
                         },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.speed_outlined),
+                  title: Text(t.navigation.benchmark),
+                  onTap: () => context.push(AppRoutes.benchmark),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.info_outline_rounded),
+                  title: Text(t.navigation.about),
+                  onTap: () => context.push(AppRoutes.about),
                 ),
               ],
             ),

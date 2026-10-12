@@ -55,12 +55,22 @@ class KanbanPage extends ConsumerWidget {
     final state = ref.watch(kanbanProvider);
     final workspaces = ref.watch(workspacesProvider);
     final active = workspaces.active;
+    final isWide = MediaQuery.sizeOf(context).width >= AppShell.wideBreakpoint;
 
     return AppShell(
       section: AppSection.board,
       child: Scaffold(
         appBar: AppBar(
           title: Text(active == null ? 'Board' : '${active.name} board'),
+          leading: isWide
+              ? null
+              : Builder(
+                  builder: (context) => IconButton(
+                    tooltip: 'Menu',
+                    icon: const Icon(Icons.menu_rounded),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                ),
           actions: [
             IconButton(
               tooltip: 'Reload',
@@ -69,6 +79,9 @@ class KanbanPage extends ConsumerWidget {
             ),
           ],
         ),
+        drawer: isWide
+            ? null
+            : const AppNavigationDrawer(section: AppSection.board),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: active == null ? null : () => _create(context, ref),
           icon: const Icon(Icons.add),

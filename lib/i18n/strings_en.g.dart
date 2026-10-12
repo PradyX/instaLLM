@@ -45,6 +45,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$home$en home = Translations$home$en._(_root);
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
+	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 }
 
 // Path: login
@@ -179,6 +180,21 @@ class Translations$profileImages$en {
 	String get useDefault => 'Use default icon';
 }
 
+// Path: navigation
+class Translations$navigation$en {
+	Translations$navigation$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Benchmark'
+	String get benchmark => 'Benchmark';
+
+	/// en: 'About'
+	String get about => 'About';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -219,6 +235,8 @@ extension on Translations {
 			'profileImages.saveError' => 'Could not save the profile image. Check available storage and use the latest app version.',
 			'profileImages.retry' => 'Retry',
 			'profileImages.useDefault' => 'Use default icon',
+			'navigation.benchmark' => 'Benchmark',
+			'navigation.about' => 'About',
 			_ => null,
 		};
 	}

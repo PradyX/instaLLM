@@ -26,9 +26,9 @@ enum AppSection { chats, bots, rooms, board, more }
 /// surface, so bots, rooms and the board live one tap away instead of
 /// buried in Settings.
 ///
-/// Wide screens (>= 900px) dock the rail; narrow screens render [child]
-/// alone and keep their existing drawers. [leading] slots page-specific
-/// controls (home's New chat and search) above the sections.
+/// Wide screens (>= 900px) dock [AppNavigationPanel]; narrow pages use
+/// [AppNavigationDrawer] to present that same panel from their hamburger.
+/// [leading] optionally overrides the shared new-chat and search controls.
 class AppShell extends ConsumerWidget {
   const AppShell({
     super.key,
@@ -53,7 +53,7 @@ class AppShell extends ConsumerWidget {
     if (MediaQuery.of(context).size.width < wideBreakpoint) return child;
     return Row(
       children: [
-        _Sidebar(
+        AppNavigationPanel(
           section: section,
           leading: leading,
           isGenerating: isGenerating,
@@ -64,15 +64,43 @@ class AppShell extends ConsumerWidget {
   }
 }
 
-/// Home's composer controls, reused as the shell's [AppShell.leading].
-class ShellChatLeading extends ConsumerWidget {
-  const ShellChatLeading({super.key, required this.isGenerating});
+/// The shared navigation content presented as a modal drawer on narrow screens.
+class AppNavigationDrawer extends StatelessWidget {
+  const AppNavigationDrawer({
+    super.key,
+    required this.section,
+    this.isGenerating = false,
+  });
 
+  final AppSection section;
   final bool isGenerating;
 
   @override
+  Widget build(BuildContext context) => Drawer(
+    width: AppShell.railWidth,
+    child: AppNavigationPanel(
+      section: section,
+      isGenerating: isGenerating,
+      onNavigate: () {
+        if (context.mounted) Scaffold.maybeOf(context)?.closeDrawer();
+      },
+    ),
+  );
+}
+
+/// New chat and search belong to the shared panel in either presentation.
+class ShellChatLeading extends ConsumerWidget {
+  const ShellChatLeading({
+    super.key,
+    required this.isGenerating,
+    this.onNavigate,
+  });
+
+  final bool isGenerating;
+  final VoidCallback? onNavigate;
+
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -81,14 +109,26 @@ class ShellChatLeading extends ConsumerWidget {
           child: FilledButton.icon(
             onPressed: isGenerating
                 ? null
-                : () async => ref
-                      .read(conversationControllerProvider.notifier)
-                      .createConversation(
-                        activeModelId: ref
-                            .read(modelSelectionControllerProvider)
-                            .selectedModelId,
-                        personaId: ref.read(personasProvider).defaultPersonaId,
-                      ),
+                : () async {
+                    final router = GoRouter.of(context);
+                    final controller = ref.read(
+                      conversationControllerProvider.notifier,
+                    );
+                    final modelId = ref
+                        .read(modelSelectionControllerProvider)
+                        .selectedModelId;
+                    final personaId = ref
+                        .read(personasProvider)
+                        .defaultPersonaId;
+                    showConversation(ref);
+                    controller.setSearchQuery('');
+                    onNavigate?.call();
+                    await controller.createConversation(
+                      activeModelId: modelId,
+                      personaId: personaId,
+                    );
+                    router.go(AppRoutes.home);
+                  },
             icon: const Icon(Icons.add, size: 18),
             label: const Text('New chat'),
             style: FilledButton.styleFrom(
@@ -98,44 +138,100 @@ class ShellChatLeading extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: TextField(
-            onChanged: (value) => ref
-                .read(conversationControllerProvider.notifier)
-                .setSearchQuery(value),
-            decoration: InputDecoration(
-              hintText: 'Search chats',
-              prefixIcon: const Icon(Icons.search, size: 18),
-              isDense: true,
-              filled: true,
-              fillColor: colorScheme.surfaceContainerHighest,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+          child: _ChatSearchField(),
         ),
       ],
     );
   }
 }
 
-class _Sidebar extends ConsumerWidget {
-  const _Sidebar({
+/// The query is shared state, so reopening the drawer or resizing preserves
+/// both the list filter and what the search field displays.
+class _ChatSearchField extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_ChatSearchField> createState() => _ChatSearchFieldState();
+}
+
+class _ChatSearchFieldState extends ConsumerState<_ChatSearchField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: ref.read(conversationControllerProvider).searchQuery,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<String>(
+      conversationControllerProvider.select((state) => state.searchQuery),
+      (_, query) {
+        if (_controller.text != query) {
+          _controller.value = TextEditingValue(
+            text: query,
+            selection: TextSelection.collapsed(offset: query.length),
+          );
+        }
+      },
+    );
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: _controller,
+      onChanged: (value) => ref
+          .read(conversationControllerProvider.notifier)
+          .setSearchQuery(value),
+      decoration: InputDecoration(
+        hintText: 'Search chats',
+        prefixIcon: const Icon(Icons.search, size: 18),
+        isDense: true,
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
+/// One layout and one set of actions for the docked rail and modal drawer.
+class AppNavigationPanel extends ConsumerWidget {
+  const AppNavigationPanel({
+    super.key,
     required this.section,
-    required this.leading,
-    required this.isGenerating,
+    this.leading,
+    this.isGenerating = false,
+    this.onNavigate,
   });
 
   final AppSection section;
   final Widget? leading;
   final bool isGenerating;
+  final VoidCallback? onNavigate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final workspace = ref.watch(workspacesProvider).active;
+    // Drawer content is disposed after closing. Dialogs/routes use the owning
+    // Scaffold's context so their work can finish after the drawer is gone.
+    final actionContext = onNavigate == null
+        ? context
+        : Scaffold.of(context).context;
+    void navigate(String route) {
+      onNavigate?.call();
+      actionContext.push(route);
+    }
 
     // The shell sits above each page's Scaffold, so no page Material covers
     // this rail: this Material paints the background and hosts every ink
@@ -151,105 +247,140 @@ class _Sidebar extends ConsumerWidget {
       ),
       child: Material(
         color: colorScheme.surfaceContainerLow,
-        child: Column(
-          children: [
-            InkWell(
-              onTap: () => context.push(AppRoutes.workspaces),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Image.asset(
-                          'assets/icons/pocketllm_new.png',
-                          fit: BoxFit.contain,
+        child: ListTileTheme.merge(
+          style: ListTileStyle.list,
+          child: SafeArea(
+            minimum: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                InkWell(
+                  onTap: () => navigate(AppRoutes.workspaces),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Image.asset(
+                              'assets/icons/pocketllm_new.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Pocket LLM',
-                            style: textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pocket LLM',
+                                style: textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                workspace?.name ?? 'No workspace',
+                                style: textTheme.labelSmall?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          Text(
-                            workspace?.name ?? 'No workspace',
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const Icon(Icons.swap_horiz_rounded, size: 18),
+                      ],
                     ),
-                    const Icon(Icons.swap_horiz_rounded, size: 18),
-                  ],
+                  ),
                 ),
-              ),
+                leading ??
+                    ShellChatLeading(
+                      isGenerating: isGenerating,
+                      onNavigate: onNavigate,
+                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _sectionHeader(
+                        context,
+                        label: 'Chats',
+                        onSeeMore: () => navigate(AppRoutes.conversations),
+                      ),
+                      _ChatRows(
+                        current: section == AppSection.chats,
+                        isGenerating: isGenerating,
+                        onOpened: onNavigate,
+                      ),
+                      _sectionHeader(
+                        context,
+                        label: 'Bots',
+                        onCreate: () => _createBot(
+                          actionContext,
+                          ref,
+                          onCreated: onNavigate,
+                        ),
+                        createTooltip: 'New bot',
+                      ),
+                      BotChatRows(
+                        workspaceId: workspace?.id,
+                        onOpened: onNavigate,
+                      ),
+                      _sectionHeader(
+                        context,
+                        label: 'Rooms',
+                        onCreate: workspace == null
+                            ? null
+                            : () => _createRoom(
+                                actionContext,
+                                ref,
+                                workspace.id,
+                                onCreated: onNavigate,
+                              ),
+                        createTooltip: 'New room',
+                      ),
+                      RoomChatRows(
+                        workspaceId: workspace?.id,
+                        onOpened: onNavigate,
+                      ),
+                      _sectionLabel(context, 'Board'),
+                      _BoardTile(
+                        current: section == AppSection.board,
+                        onOpened: onNavigate,
+                      ),
+                      _sectionLabel(context, 'More'),
+                      _navTile(
+                        context,
+                        icon: Icons.smart_toy_outlined,
+                        label: 'Models',
+                        route: AppRoutes.modelSelection,
+                        onOpened: onNavigate,
+                      ),
+                      _navTile(
+                        context,
+                        icon: Icons.settings_outlined,
+                        label: 'Settings',
+                        route: AppRoutes.settings,
+                        onOpened: onNavigate,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            if (leading case final Widget widget) widget,
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                children: [
-                  _sectionHeader(
-                    context,
-                    label: 'Chats',
-                    onSeeMore: () => context.push(AppRoutes.conversations),
-                  ),
-                  _ChatRows(
-                    current: section == AppSection.chats,
-                    isGenerating: isGenerating,
-                  ),
-                  _sectionHeader(
-                    context,
-                    label: 'Bots',
-                    onCreate: () => _createBot(context, ref),
-                    createTooltip: 'New bot',
-                  ),
-                  BotChatRows(workspaceId: workspace?.id),
-                  _sectionHeader(
-                    context,
-                    label: 'Rooms',
-                    onCreate: workspace == null
-                        ? null
-                        : () => _createRoom(context, ref, workspace.id),
-                    createTooltip: 'New room',
-                  ),
-                  RoomChatRows(workspaceId: workspace?.id),
-                  _sectionLabel(context, 'Board'),
-                  _BoardTile(current: section == AppSection.board),
-                  _sectionLabel(context, 'More'),
-                  _navTile(
-                    context,
-                    icon: Icons.smart_toy_outlined,
-                    label: 'Models',
-                    route: AppRoutes.modelSelection,
-                  ),
-                  _navTile(
-                    context,
-                    icon: Icons.settings_outlined,
-                    label: 'Settings',
-                    route: AppRoutes.settings,
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -287,10 +418,15 @@ List<ConversationSummary> sidebarChatSummaries(
 /// Pinned chats and the five most recent 1:1 chats; the rest stay behind "See
 /// more", which opens the Conversations page.
 class _ChatRows extends ConsumerWidget {
-  const _ChatRows({required this.current, required this.isGenerating});
+  const _ChatRows({
+    required this.current,
+    required this.isGenerating,
+    this.onOpened,
+  });
 
   final bool current;
   final bool isGenerating;
+  final VoidCallback? onOpened;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -352,6 +488,7 @@ class _ChatRows extends ConsumerWidget {
                           .read(conversationControllerProvider.notifier)
                           .openConversation(summary.conversation.id);
                       if (!current) context.go(AppRoutes.home);
+                      onOpened?.call();
                     },
             ),
       ],
@@ -364,7 +501,12 @@ class _ChatRows extends ConsumerWidget {
 ///
 /// This replaces the roster page that used to own creation — the sidebar is
 /// the bot list now, and a bot's chat is a chat on the app's chat page.
-Future<void> _createBot(BuildContext context, WidgetRef ref) async {
+Future<void> _createBot(
+  BuildContext context,
+  WidgetRef ref, {
+  VoidCallback? onCreated,
+}) async {
+  final bots = ref.read(botsProvider.notifier);
   final name = await NamePromptDialog.show(
     context,
     title: 'New bot',
@@ -372,8 +514,9 @@ Future<void> _createBot(BuildContext context, WidgetRef ref) async {
     confirmLabel: 'Create',
   );
   if (name == null || name.trim().isEmpty || !context.mounted) return;
-  final bot = await ref.read(botsProvider.notifier).createBot(name.trim());
+  final bot = await bots.createBot(name.trim());
   if (bot == null || !context.mounted) return;
+  onCreated?.call();
   await Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (context) => BotEditorPage(botId: bot.id)),
   );
@@ -383,8 +526,11 @@ Future<void> _createBot(BuildContext context, WidgetRef ref) async {
 Future<void> _createRoom(
   BuildContext context,
   WidgetRef ref,
-  String workspaceId,
-) async {
+  String workspaceId, {
+  VoidCallback? onCreated,
+}) async {
+  final rooms = ref.read(groupChatsProvider.notifier);
+  final activeRoom = ref.read(activeRoomIdProvider.notifier);
   final name = await NamePromptDialog.show(
     context,
     title: 'New group chat',
@@ -392,11 +538,13 @@ Future<void> _createRoom(
     confirmLabel: 'Create',
   );
   if (name == null || name.trim().isEmpty || !context.mounted) return;
-  final room = await ref
-      .read(groupChatsProvider.notifier)
-      .createChat(workspaceId: workspaceId, name: name.trim());
+  final room = await rooms.createChat(
+    workspaceId: workspaceId,
+    name: name.trim(),
+  );
   if (room == null || !context.mounted) return;
-  showRoom(ref, room.id);
+  activeRoom.state = room.id;
+  onCreated?.call();
   context.go(AppRoutes.home);
 }
 
@@ -598,9 +746,10 @@ class RoomChatRows extends ConsumerWidget {
 
 /// The board with its open-task count.
 class _BoardTile extends ConsumerWidget {
-  const _BoardTile({required this.current});
+  const _BoardTile({required this.current, this.onOpened});
 
   final bool current;
+  final VoidCallback? onOpened;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -616,7 +765,10 @@ class _BoardTile extends ConsumerWidget {
       leading: const Icon(Icons.view_kanban_outlined, size: 18),
       title: const Text('Board'),
       subtitle: !board.isReady ? null : Text('$open open'),
-      onTap: () => context.push(AppRoutes.kanban),
+      onTap: () {
+        onOpened?.call();
+        context.push(AppRoutes.kanban);
+      },
     );
   }
 }
@@ -637,10 +789,13 @@ Widget _sectionHeader(
   final colorScheme = Theme.of(context).colorScheme;
   return Padding(
     padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
+    child: SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
             label.toUpperCase(),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               fontWeight: FontWeight.bold,
@@ -648,29 +803,29 @@ Widget _sectionHeader(
               color: colorScheme.onSurfaceVariant,
             ),
           ),
-        ),
-        if (onCreate != null)
-          IconButton(
-            tooltip: createTooltip,
-            onPressed: onCreate,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            color: colorScheme.primary,
-          ),
-        if (onSeeMore != null)
-          TextButton(
-            onPressed: onSeeMore,
-            style: TextButton.styleFrom(
-              foregroundColor: colorScheme.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          if (onCreate != null)
+            IconButton(
+              tooltip: createTooltip,
+              onPressed: onCreate,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              color: colorScheme.primary,
             ),
-            child: const Text('See more'),
-          ),
-      ],
+          if (onSeeMore != null)
+            TextButton(
+              onPressed: onSeeMore,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('See more'),
+            ),
+        ],
+      ),
     ),
   );
 }
@@ -694,12 +849,16 @@ Widget _navTile(
   required IconData icon,
   required String label,
   required String route,
+  VoidCallback? onOpened,
 }) {
   return ListTile(
     dense: true,
     leading: Icon(icon, size: 18),
     title: Text(label),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    onTap: () => context.push(route),
+    onTap: () {
+      onOpened?.call();
+      context.push(route);
+    },
   );
 }

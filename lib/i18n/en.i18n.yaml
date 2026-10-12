@@ -39,3 +39,7 @@ profileImages:
   saveError: "Could not save the profile image. Check available storage and use the latest app version."
   retry: "Retry"
   useDefault: "Use default icon"
+
+navigation:
+  benchmark: "Benchmark"
+  about: "About"

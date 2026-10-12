@@ -204,6 +204,8 @@ dart run build_runner build --delete-conflicting-outputs
 
 Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. Custom bots also offer this control in their editor. Built-in bots can have a profile image without creating a copy.
 
+Bots without a chosen image use the same rounded bot mark as the homepage.
+
 Search uses Petdex's public catalog; only images visible in search results or selected as profiles are cached. Selected images are retained, and older search images are limited to 100. **Use default icon** restores the original icon. An unavailable image falls back to that icon without interrupting chat. These requests carry no prompts, conversation text, bot/room names or model/device metadata.
 
 ## Troubleshooting

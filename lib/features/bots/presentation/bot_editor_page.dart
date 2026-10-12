@@ -115,10 +115,7 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
         children: [
-          ProfileImageButton(
-            profileKey: botProfileKey(bot.id),
-            fallback: Text(bot.icon, style: const TextStyle(fontSize: 28)),
-          ),
+          ProfileImageButton(profileKey: botProfileKey(bot.id)),
           const SizedBox(height: 12),
           TextField(
             controller: _name,

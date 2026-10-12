@@ -13,11 +13,11 @@ class ProfileImageButton extends StatelessWidget {
   const ProfileImageButton({
     super.key,
     required this.profileKey,
-    required this.fallback,
+    this.fallback,
   });
 
   final String profileKey;
-  final Widget fallback;
+  final Widget? fallback;
 
   @override
   Widget build(BuildContext context) => ListTile(

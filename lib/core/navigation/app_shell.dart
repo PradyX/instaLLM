@@ -450,10 +450,7 @@ class BotChatRows extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: Stack(
         children: [
-          ProfileAvatar(
-            profileKey: botProfileKey(bot.id),
-            fallback: Text(bot.icon, style: const TextStyle(fontSize: 22)),
-          ),
+          ProfileAvatar(profileKey: botProfileKey(bot.id)),
           if (needsYou)
             Positioned(
               right: 0,
@@ -499,7 +496,6 @@ class RoomChatRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupChatsProvider);
-    final bots = ref.watch(botsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final rooms = [
       for (final chat in state.snapshot.chats)
@@ -530,7 +526,7 @@ class RoomChatRows extends ConsumerWidget {
               ),
               leading: ProfileAvatar(
                 profileKey: roomProfileKey(chat.id),
-                fallback: _memberStack(chat, bots, colorScheme),
+                fallback: _memberStack(chat, colorScheme),
               ),
               title: Text(
                 chat.name,
@@ -561,16 +557,10 @@ class RoomChatRows extends ConsumerWidget {
     );
   }
 
-  Widget _memberStack(GroupChat chat, BotsState bots, ColorScheme colorScheme) {
+  Widget _memberStack(GroupChat chat, ColorScheme colorScheme) {
     final members = chat.memberBotIds.take(2).toList();
-    Widget face(String id, double size) => ProfileAvatar(
-      profileKey: botProfileKey(id),
-      size: size,
-      fallback: Text(
-        bots.botById(id)?.icon ?? '🤖',
-        style: TextStyle(fontSize: size * 0.8),
-      ),
-    );
+    Widget face(String id, double size) =>
+        ProfileAvatar(profileKey: botProfileKey(id), size: size);
     if (members.isEmpty) {
       return const Icon(Icons.forum_outlined, size: 20);
     }

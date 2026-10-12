@@ -21,6 +21,7 @@ import 'package:pocket_llm/core/widgets/chat_bubble.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
 import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
+import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
 import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
@@ -871,19 +872,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Icon(
-                Icons.smart_toy_rounded,
-                size: 32,
-                color: colorScheme.onPrimaryContainer,
-              ),
-            ),
+            const DefaultBotAvatar(size: 64),
             const SizedBox(height: 20),
             Text(
               greeting,

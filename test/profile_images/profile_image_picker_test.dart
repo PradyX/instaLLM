@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
+import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/data/bot_store.dart';
 import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
@@ -88,11 +89,9 @@ void main() {
     'opening picker loads no gallery; search loads only matches, selection persists and can be removed',
     (tester) async {
       final key = botProfileKey(BuiltInBots.coderId);
-      await pump(
-        tester,
-        ProfileImageButton(profileKey: key, fallback: const Text('💻')),
-      );
+      await pump(tester, ProfileImageButton(profileKey: key));
       await tester.pumpAndSettle();
+      expect(find.byType(DefaultBotAvatar), findsOneWidget);
       await tester.tap(find.text('Choose'));
       await tester.pumpAndSettle();
       expect(service.catalogRequests, 0);
@@ -117,7 +116,7 @@ void main() {
       await tester.tap(find.text('Use default icon'));
       await tester.pumpAndSettle();
       expect(service.store.load(), isEmpty);
-      expect(find.text('💻'), findsOneWidget);
+      expect(find.byType(DefaultBotAvatar), findsOneWidget);
     },
   );
 
@@ -163,12 +162,9 @@ void main() {
   ) async {
     service.failImages = true;
     service.store.save({'bot:b': _boba});
-    await pump(
-      tester,
-      const ProfileAvatar(profileKey: 'bot:b', fallback: Text('🤖')),
-    );
+    await pump(tester, const ProfileAvatar(profileKey: 'bot:b'));
     await tester.pumpAndSettle();
-    expect(find.text('🤖'), findsOneWidget);
+    expect(find.byType(DefaultBotAvatar), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

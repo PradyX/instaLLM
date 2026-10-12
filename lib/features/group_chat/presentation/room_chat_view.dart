@@ -8,6 +8,7 @@ import 'package:pocket_llm/core/widgets/chat_bubble.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
 import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
+import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
@@ -389,7 +390,6 @@ class RoomHeaderTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bots = ref.watch(botsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final members = room.memberBotIds.take(3).toList();
@@ -406,10 +406,6 @@ class RoomHeaderTitle extends ConsumerWidget {
                     child: ProfileAvatar(
                       profileKey: botProfileKey(members[index]),
                       size: 24,
-                      fallback: Text(
-                        bots.botById(members[index])?.icon ?? '🤖',
-                        style: const TextStyle(fontSize: 18),
-                      ),
                     ),
                   ),
               ],
@@ -423,7 +419,7 @@ class RoomHeaderTitle extends ConsumerWidget {
               ? botProfileKey(room.directBotId!)
               : roomProfileKey(room.id),
           size: room.isDirect ? 28 : 56,
-          fallback: fallback,
+          fallback: room.isDirect ? const DefaultBotAvatar(size: 28) : fallback,
         ),
         const SizedBox(width: 8),
         Flexible(
@@ -493,12 +489,7 @@ class RoomSettingsSheet extends ConsumerWidget {
               profileKey: room.isDirect
                   ? botProfileKey(room.directBotId!)
                   : roomProfileKey(room.id),
-              fallback: room.isDirect
-                  ? Text(
-                      bot?.icon ?? '🤖',
-                      style: const TextStyle(fontSize: 28),
-                    )
-                  : const Icon(Icons.forum_outlined),
+              fallback: room.isDirect ? null : const Icon(Icons.forum_outlined),
             ),
             const SizedBox(height: 12),
             if (room.isDirect) ...[
@@ -581,10 +572,6 @@ class RoomSettingsSheet extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                   secondary: ProfileAvatar(
                     profileKey: botProfileKey(candidate.id),
-                    fallback: Text(
-                      candidate.icon,
-                      style: const TextStyle(fontSize: 22),
-                    ),
                   ),
                   title: Text(candidate.name),
                   value: room.memberBotIds.contains(candidate.id),

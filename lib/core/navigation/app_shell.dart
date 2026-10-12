@@ -103,12 +103,14 @@ class ShellChatLeading extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: FilledButton.icon(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(
+        children: [
+          Expanded(child: _ChatSearchField()),
+          const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'New chat',
             onPressed: isGenerating
                 ? null
                 : () async {
@@ -132,17 +134,12 @@ class ShellChatLeading extends ConsumerWidget {
                     router.go(AppRoutes.home);
                   },
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('New chat'),
-            style: FilledButton.styleFrom(
-              minimumSize: const Size.fromHeight(40),
+            style: IconButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.primary,
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: _ChatSearchField(),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -192,6 +189,7 @@ class _ChatSearchFieldState extends ConsumerState<_ChatSearchField> {
           .setSearchQuery(value),
       decoration: InputDecoration(
         hintText: 'Search chats',
+        hintMaxLines: 1,
         prefixIcon: const Icon(Icons.search, size: 18),
         isDense: true,
         filled: true,

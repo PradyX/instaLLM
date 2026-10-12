@@ -104,7 +104,10 @@ void main() {
   ) async {
     await pumpHome(tester);
 
-    final newChat = find.byTooltip('New chat');
+    final newChat = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.byTooltip('New chat'),
+    );
     expect(newChat, findsOneWidget);
 
     // The tooltip lives inside the button, so the button is its ancestor.
@@ -141,7 +144,12 @@ void main() {
     );
 
     final settings = tester.getRect(find.byTooltip('Settings'));
-    final newChat = tester.getRect(find.byTooltip('New chat'));
+    final newChat = tester.getRect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byTooltip('New chat'),
+      ),
+    );
     final windowWidth =
         tester.view.physicalSize.width / tester.view.devicePixelRatio;
 

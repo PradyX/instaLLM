@@ -173,6 +173,10 @@ void main() {
     of: find.byType(AppNavigationPanel),
     matching: find.byType(TextField),
   );
+  Finder newChatButton() => find.descendant(
+    of: find.byType(AppNavigationPanel),
+    matching: find.byTooltip('New chat'),
+  );
 
   Future<void> openDrawer(WidgetTester tester) async {
     await tester.tap(find.byTooltip('Menu'));
@@ -209,7 +213,6 @@ void main() {
           'Models',
           'Benchmark',
           'Settings',
-          'New chat',
           'CHATS',
           'Chat A',
           'Chat B',
@@ -226,10 +229,15 @@ void main() {
           'Models',
           'Benchmark',
           'Settings',
-          'New chat',
+          'Search chats',
         ]),
       );
       expect(panelText('MORE'), findsNothing);
+      expect(newChatButton(), findsOneWidget);
+      expect(
+        tester.getCenter(searchField()).dy,
+        closeTo(tester.getCenter(newChatButton()).dy, 1),
+      );
       expect(find.byTooltip('New bot'), findsOneWidget);
       expect(find.byTooltip('New room'), findsOneWidget);
       expect(
@@ -252,6 +260,10 @@ void main() {
           .map((widget) => widget.data)
           .toList();
       expect(drawerLabels, railLabels);
+      expect(
+        tester.getCenter(searchField()).dy,
+        closeTo(tester.getCenter(newChatButton()).dy, 1),
+      );
       expect(
         tester.getSize(find.byType(AppNavigationPanel)).width,
         AppShell.railWidth,
@@ -317,7 +329,9 @@ void main() {
     await pumpHome(tester);
     await openDrawer(tester);
     await tester.enterText(searchField(), 'Chat B');
-    await tapPanel(tester, 'New chat');
+    await tester.ensureVisible(newChatButton());
+    await tester.tap(newChatButton());
+    await tester.pump(const Duration(milliseconds: 400));
     await pumpUntil(
       tester,
       () =>
@@ -511,6 +525,20 @@ void main() {
       expect(
         tester.getRect(panelText('Settings')).bottom,
         lessThanOrEqualTo(300),
+      );
+      await tester.scrollUntilVisible(
+        searchField(),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(AppNavigationPanel),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(
+        tester.getCenter(searchField()).dy,
+        closeTo(tester.getCenter(newChatButton()).dy, 1),
       );
       expect(tester.takeException(), isNull);
     },

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pocket LLM · Four sidebar directions</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: transparent; }
+    body { color: var(--foreground, #eee6ed); font: 14px/1.45 var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid #ffacd4; outline-offset: 3px; }
+    .views { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 22px; }
+    .views span { color: var(--muted-foreground, #a89ca6); font-size: 12px; margin-right: 4px; }
+    .views button, .inspect { color: var(--foreground, #eee6ed); border: 1px solid var(--border, #453b43); background: transparent; padding: 6px 11px; border-radius: 8px; }
+    .views button[aria-pressed="true"] { background: var(--accent-surface, #442737); border-color: var(--accent, #ffacd4); }
+    .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 24px; }
+    .gallery.focused { grid-template-columns: minmax(0, 440px); justify-content: center; }
+    .concept[hidden] { display: none; }
+    .concept-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .number { color: var(--muted-foreground, #a89ca6); font-size: 12px; font-weight: 650; }
+    h2 { margin: 0; flex: 1; font-size: 16px; font-weight: 650; letter-spacing: -.3px; }
+    .inspect { padding: 4px 8px; font-size: 13px; }
+    .description { margin: 0 0 14px; min-height: 42px; color: var(--muted-foreground, #a89ca6); font-size: 12px; line-height: 1.6; }
+    .recommend { color: #ffacd4; font-size: 10px; font-weight: 600; margin-left: 5px; }
+    .mock { --ink: #eadfe7; --sub: #ac9da7; --pink: #ffacd4; --panel: #211b20; --soft: #30272e; --line: #40343d; --selected: #432a3b; color: var(--ink); background: var(--panel); border: 1px solid #46323e; border-radius: var(--radius, 16px); width: 100%; max-width: 320px; height: 720px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 12px 30px #00000020; }
+    .mock button { color: inherit; border: 0; background: transparent; }
+    .icon { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .logo { background: var(--pink); width: 34px; height: 34px; padding: 6px; border-radius: 11px; object-fit: contain; flex: none; }
+    .brand-copy { flex: 1; min-width: 0; }
+    .brand-copy strong { display: block; font-size: 15px; letter-spacing: -.2px; }
+    .brand-copy small { color: var(--sub); font-size: 11px; }
+    .icon-button { width: 32px; height: 32px; border-radius: 9px; display: inline-grid; place-items: center; padding: 0; flex: none; }
+    .icon-button:hover { background: var(--soft); }
+    .mock .icon-button.accent { color: #2e1825; background: var(--pink); }
+    .shortcut-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-bottom: 18px; }
+    .mock .shortcut { background: #2c232a; border: 1px solid #43323e; border-radius: 11px; height: 65px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 7px; padding: 6px 2px; font-size: 10.5px; color: #d4c3ce; }
+    .shortcut .icon { color: var(--pink); width: 20px; height: 20px; }
+    .search { display: flex; align-items: center; gap: 9px; height: 42px; padding: 5px 6px 5px 12px; background: var(--soft); border-radius: 11px; color: var(--sub); flex: none; margin-bottom: 20px; }
+    .search .icon { width: 17px; height: 17px; }
+    .search input { width: 100%; min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--ink); padding: 0; font-size: 12px; }
+    .search input::placeholder { color: var(--sub); opacity: 1; }
+    .search .icon-button { color: var(--pink); width: 29px; height: 29px; background: #ffffff08; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin: 0 0 9px; color: var(--sub); font-size: 10px; font-weight: 650; letter-spacing: .9px; text-transform: uppercase; }
+    .section-title button { color: var(--pink); font-size: 10px; letter-spacing: 0; text-transform: none; padding: 2px 0; }
+    .chat-list { display: grid; gap: 3px; }
+    .mock .chat { text-align: left; display: flex; align-items: center; gap: 10px; padding: 10px 9px; border-radius: 9px; width: 100%; min-width: 0; }
+    .chat .icon { width: 16px; height: 16px; color: var(--sub); }
+    .mock .chat[hidden] { display: none; }
+    .chat-copy { min-width: 0; flex: 1; }
+    .chat-copy strong { display: block; font-size: 12px; font-weight: 450; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .chat-copy small { display: block; margin-top: 3px; font-size: 10px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mock .chat.active { background: var(--selected); color: var(--pink); }
+    .chat.active .icon { color: var(--pink); }
+    .compact .chat.active { box-shadow: inset 3px 0 var(--pink); }
+    .compact .chat { padding-top: 10px; padding-bottom: 10px; }
+    .roster { margin-top: 14px; }
+    .roster .section-title { margin-bottom: 5px; }
+    .roster-row { display: flex; align-items: center; gap: 9px; padding: 4px 8px; color: #d1c1cb; font-size: 11px; }
+    .avatar { width: 24px; height: 24px; display: grid; place-items: center; background: #362831; border-radius: 8px; color: #dca4c0; }
+    .avatar .icon { width: 14px; height: 14px; }
+    .roster-row .count { margin-left: auto; font-size: 10px; color: var(--sub); }
+    .footer { margin-top: auto; padding-top: 10px; }
+    .nav-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 7px; border-radius: 8px; text-align: left; font-size: 12px; }
+    .nav-row .icon { color: var(--sub); width: 17px; height: 17px; }
+    .nav-row .count { margin-left: auto; color: var(--sub); font-size: 10px; }
+    .mock .nav-row:hover, .mock .chat:not(.active):hover { background: #ffffff06; }
+    .chat-first .brand { margin-bottom: 23px; }
+    .chat-first .brand-copy strong { font-size: 17px; }
+    .chat-first .search { background: transparent; border: 1px solid #5b4654; height: 42px; margin-bottom: 22px; }
+    .chat-first .search .icon-button { background: var(--pink); color: #2e1825; }
+    .chat-first .chat { padding: 10px 9px; }
+    .chat-first .chat.active { background: #3a2633; }
+    .chat-first .roster { margin-top: 16px; }
+    .utility-dock { background: #2a2128; padding: 5px; border-radius: 11px; margin-top: 9px; }
+    .utility-dock .nav-row { padding: 7px; font-size: 11px; }
+    .dashboard .brand { margin-bottom: 13px; }
+    .workspace-pill { display: flex; align-items: center; justify-content: space-between; background: #34262f !important; border-radius: 9px; padding: 10px 11px; font-size: 12px; margin-bottom: 12px; }
+    .workspace-pill .icon { width: 14px; height: 14px; color: var(--pink); }
+    .dashboard .utilities { margin-bottom: 15px; }
+    .dashboard .utilities .nav-row { padding: 7px 3px; font-size: 12px; }
+    .dashboard .utilities .nav-row .icon { color: #ceb3c2; }
+    .dashboard .search { margin-bottom: 14px; }
+    .tabs { display: flex; padding: 3px; background: #2e242b; border-radius: 9px; margin-bottom: 14px; }
+    .mock .tabs button { flex: 1; padding: 6px 2px; font-size: 11px; border-radius: 7px; color: var(--sub); }
+    .mock .tabs button[aria-selected="true"] { color: var(--pink); background: #48303f; }
+    .dashboard .chat { padding: 9px 7px; }
+    .tab-panel[hidden] { display: none; }
+    .split { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; padding: 16px; }
+    .icon-rail { display: flex; align-items: center; flex-direction: column; gap: 13px; }
+    .icon-rail .logo { width: 32px; height: 32px; padding: 5px; margin-bottom: 10px; }
+    .icon-rail .icon-button { width: 34px; height: 34px; color: #c3aebb; }
+    .icon-rail .icon-button.is-current { background: #513043; color: var(--pink); }
+    .icon-rail .push-down { margin-top: auto; }
+    .split-main { display: flex; flex-direction: column; min-width: 0; }
+    .split .brand { margin: 4px 0 23px; gap: 4px; }
+    .split .brand-copy strong { font-size: 15px; }
+    .split .brand-copy small { font-size: 10px; }
+    .split .search { padding-left: 9px; gap: 6px; height: 38px; margin-bottom: 23px; }
+    .split .search input { font-size: 11px; }
+    .split .search .icon-button { width: 25px; height: 25px; }
+    .split .search > .icon { width: 15px; height: 15px; }
+    .split .chat { padding: 11px 8px; gap: 8px; }
+    .split .chat-copy strong { font-size: 11.5px; }
+    .split .chat .icon { width: 14px; height: 14px; }
+    .split .roster { margin-top: 23px; }
+    .split .roster-row { padding: 7px 4px; }
+    .split .workspace-hint { color: var(--sub); font-size: 10px; margin-top: auto; padding-top: 12px; }
+    .note { font-size: 12px; line-height: 1.6; color: var(--muted-foreground, #a89ca6); margin: 22px 0 0; }
+    @media (max-width: 610px) { .gallery { grid-template-columns: minmax(0, 1fr); gap: 28px; } .description { min-height: 0; } }
+    @media (prefers-reduced-motion: no-preference) { .mock button { transition: background .12s ease; } }
+  </style>
+</head>
+<body>
+  <nav class="views" aria-label="Mockup view">
+    <span>View</span>
+    <button data-view="all" aria-pressed="true">Compare all</button>
+    <button data-view="1" aria-pressed="false">01</button>
+    <button data-view="2" aria-pressed="false">02</button>
+    <button data-view="3" aria-pressed="false">03</button>
+    <button data-view="4" aria-pressed="false">04</button>
+  </nav>
+  <main class="gallery" id="gallery" aria-label="Four sidebar mockups"></main>
+  <p class="note">Design previews with sample chats. Search and chat selection work inside each preview; option 03 also lets you switch between Chats, Bots and Rooms. Navigation buttons show placement only. No app changes have been made.</p>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 0 1 1 1v12H9l-5 4V5a1 1 0 0 1 1-1Z"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="13" rx="3"/><path d="M12 3v4M2 11v5M22 11v5M9 16h6"/><circle cx="9" cy="12" r=".8"/><circle cx="15" cy="12" r=".8"/></symbol>
+    <symbol id="i-benchmark" viewBox="0 0 24 24"><path d="M4 19a10 10 0 1 1 16 0H4Z"/><path d="m12 14 6-7"/><circle cx="12" cy="14" r="1.3"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="m9 3-1 3-3 1 1 3-2 2 2 2-1 3 3 1 1 3h6l1-3 3-1-1-3 2-2-2-2 1-3-3-1-1-3Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+    <symbol id="i-room" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5v2"/></symbol>
+    <symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16M6 8v5M12 8v8M18 8v3"/></symbol>
+  </defs></svg>
+  <script>
+    const logo = 'data:image/png;base64,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';
+    const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+    const action = (name, label, extra = '') => `<button class="icon-button ${extra}" title="${label}" aria-label="${label}">${icon(name)}</button>`;
+    const brand = (workspaceFirst = false) => `<div class="brand"><img class="logo" src="${logo}" alt=""><div class="brand-copy"><strong>${workspaceFirst ? 'My workspace' : 'Pocket LLM'}</strong><small>${workspaceFirst ? 'Pocket LLM' : 'My workspace'}</small></div>${action('chevron', 'Switch workspace')}</div>`;
+    const search = (placeholder = 'Search chats') => `<div class="search">${icon('search')}<input type="search" placeholder="${placeholder}" aria-label="Search sample chats">${action('plus', 'New chat')}</div>`;
+    const title = (text, link = 'See all') => `<div class="section-title"><span>${text}</span><button>${link}</button></div>`;
+    const nav = (name, label, count = '') => `<button class="nav-row" title="${label}">${icon(name)}<span>${label}</span>${count ? `<span class="count">${count}</span>` : ''}</button>`;
+    const utilities = () => nav('bot', 'Models') + nav('benchmark', 'Benchmark') + nav('settings', 'Settings');
+    const chats = [
+      ['Summarize the file', 'Notes and key takeaways'],
+      ['Weekend plans', 'A few ideas for Saturday'],
+      ['Dart async tips', 'Futures and streams explained'],
+      ['Model comparison', 'Trying a smaller model']
+    ];
+    const chatList = (previews = false, count = 4) => `<div class="chat-list">${chats.slice(0, count).map(([name, preview], index) => `<button class="chat ${index === 0 ? 'active' : ''}" data-chat="${name.toLowerCase()}">${icon('chat')}<span class="chat-copy"><strong>${name}</strong>${previews ? `<small>${preview}</small>` : ''}</span></button>`).join('')}</div>`;
+    const bots = () => `<div class="roster-row"><span class="avatar">${icon('bot')}</span>Researcher</div><div class="roster-row"><span class="avatar">${icon('bot')}</span>Planner</div>`;
+    const room = () => `<div class="roster-row"><span class="avatar">${icon('room')}</span>Project room<span class="count">2 bots</span></div>`;
+    const roster = () => `<div class="roster">${title('Bots', '+')}${bots()}</div><div class="roster">${title('Rooms', '+')}${room()}</div>`;
+    const descriptions = [
+      ['Compact shortcuts', 'Three small tool tiles replace the tall menu. A quiet chat list keeps the sidebar compact.'],
+      ['Chat first', 'Search and conversations lead. Models, Benchmark and Settings live in a tidy dock at the bottom.'],
+      ['Workspace dashboard', 'A clear workspace switcher, compact navigation and tabs for Chats, Bots and Rooms.'],
+      ['Split icon rail', 'Tools get their own slim rail. The rest of the space belongs to conversations; best on desktop.']
+    ];
+    const concepts = [
+      `<div class="mock compact">${brand()}<div class="shortcut-grid">${[['bot','Models'],['benchmark','Benchmark'],['settings','Settings']].map(([name,label]) => `<button class="shortcut">${icon(name)}<span>${label}</span></button>`).join('')}</div>${search()}${title('Chats')}${chatList(false,3)}${roster()}<div class="footer">${nav('board','Board','5 open')}</div></div>`,
+      `<div class="mock chat-first">${brand(true)}${search()}${title('Recent chats')}${chatList(true,3)}<div class="roster">${title('Bots & rooms', '+')}<div class="roster-row"><span class="avatar">${icon('bot')}</span>Researcher<span class="count">Bot</span></div>${room()}</div><div class="footer">${nav('board','Board','5 open')}<div class="utility-dock">${utilities()}</div></div></div>`,
+      `<div class="mock dashboard"><div class="brand"><img class="logo" src="${logo}" alt=""><div class="brand-copy"><strong>Pocket LLM</strong><small>Your local workspace</small></div></div><button class="workspace-pill">My workspace${icon('chevron')}</button><div class="utilities">${utilities()}</div>${search()}<div class="tabs" role="tablist" aria-label="Workspace conversations"><button role="tab" data-tab="chats" aria-selected="true">Chats</button><button role="tab" data-tab="bots" aria-selected="false">Bots</button><button role="tab" data-tab="rooms" aria-selected="false">Rooms</button></div><div class="tab-panel" data-panel="chats" role="tabpanel">${title('Recent', 'See all')}${chatList(true,3)}</div><div class="tab-panel" data-panel="bots" role="tabpanel" hidden>${title('Bots','+')}${bots()}</div><div class="tab-panel" data-panel="rooms" role="tabpanel" hidden>${title('Rooms','+')}${room()}</div><div class="footer">${nav('board','Board','5 open')}</div></div>`,
+      `<div class="mock split"><div class="icon-rail"><img class="logo" src="${logo}" alt="Pocket LLM">${action('chat','Chats','is-current')}${action('bot','Models')}${action('benchmark','Benchmark')}${action('settings','Settings')}<div class="push-down">${action('board','Board')}</div></div><div class="split-main"><div class="brand"><div class="brand-copy"><strong>My workspace</strong><small>Pocket LLM</small></div>${action('chevron','Switch workspace')}</div>${search('Search chats')}${title('Chats')}${chatList()}${roster()}<div class="workspace-hint">My workspace · 5 open board tasks</div></div></div>`
+    ];
+    document.getElementById('gallery').innerHTML = concepts.map((html, index) => `<article class="concept" data-concept="${index + 1}"><div class="concept-head"><span class="number">0${index + 1}</span><h2>${descriptions[index][0]}${index === 0 ? '<span class="recommend">My pick</span>' : ''}</h2><button class="inspect" data-focus="${index + 1}" aria-label="Inspect option ${index + 1}" title="Inspect this option">↗</button></div><p class="description">${descriptions[index][1]}</p>${html}</article>`).join('');
+    function view(id) {
+      document.querySelectorAll('.concept').forEach(card => card.hidden = id !== 'all' && card.dataset.concept !== id);
+      document.getElementById('gallery').classList.toggle('focused', id !== 'all');
+      document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed', button.dataset.view === id));
+    }
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => view(button.dataset.view)));
+    document.querySelectorAll('[data-focus]').forEach(button => button.addEventListener('click', () => view(button.dataset.focus)));
+    document.querySelectorAll('.mock').forEach(mock => {
+      mock.querySelector('input').addEventListener('input', event => {
+        const query = event.target.value.trim().toLowerCase();
+        mock.querySelectorAll('[data-chat]').forEach(chat => chat.hidden = !chat.dataset.chat.includes(query));
+      });
+      mock.querySelectorAll('[data-chat]').forEach(chat => chat.addEventListener('click', () => {
+        mock.querySelectorAll('[data-chat]').forEach(item => item.classList.toggle('active', item === chat));
+      }));
+      mock.querySelectorAll('[data-tab]').forEach(tab => tab.addEventListener('click', () => {
+        mock.querySelectorAll('[data-tab]').forEach(item => item.setAttribute('aria-selected', item === tab));
+        mock.querySelectorAll('[data-panel]').forEach(panel => panel.hidden = panel.dataset.panel !== tab.dataset.tab);
+      }));
+    });
+    const overflow = [...document.querySelectorAll('.mock')].filter(mock => mock.scrollWidth > mock.clientWidth + 1 || mock.scrollHeight > mock.clientHeight + 1);
+    console.log(JSON.stringify({ options: concepts.length, width: window.innerWidth, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth, overflowingPanels: overflow.length }));
+  </script>
+</body>
+</html>

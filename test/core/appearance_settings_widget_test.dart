@@ -14,6 +14,7 @@ import 'package:pocket_llm/core/theme/appearance_store.dart';
 import 'package:pocket_llm/core/theme/theme_provider.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/features/settings/presentation/appearance_settings_section.dart';
+import 'package:pocket_llm/features/settings/presentation/accent_theme_tile.dart';
 
 void main() {
   late Directory directory;
@@ -96,9 +97,23 @@ void main() {
   }
 
   Finder chip(String label) => find.widgetWithText(ChoiceChip, label);
+  Finder tile(String label) => find.widgetWithText(AccentThemeTile, label);
+  Finder slider(String key) => find.descendant(
+    of: find.byKey(ValueKey(key)),
+    matching: find.byType(Slider),
+  );
   Future<void> select(WidgetTester tester, String label) async {
-    await tester.ensureVisible(chip(label));
-    await tester.tap(chip(label));
+    await tester.ensureVisible(find.text(label));
+    await tester.tap(find.text(label));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> slideToMax(WidgetTester tester, String key) async {
+    final control = slider(key);
+    await tester.ensureVisible(control);
+    await tester.pumpAndSettle();
+    final rect = tester.getRect(control);
+    await tester.tapAt(Offset(rect.right - 8, rect.center.dy));
     await tester.pumpAndSettle();
   }
 
@@ -131,7 +146,7 @@ void main() {
       }
       expect(tester.widget<ChoiceChip>(chip('Auto')).selected, isTrue);
       expect(tester.widget<ChoiceChip>(chip('Solid')).selected, isTrue);
-      expect(tester.widget<ChoiceChip>(chip('Green')).selected, isTrue);
+      expect(tester.widget<AccentThemeTile>(tile('Green')).selected, isTrue);
       expect(find.byType(BackdropFilter), findsNothing);
     },
   );
@@ -147,9 +162,11 @@ void main() {
       expect(theme(tester).scaffoldBackgroundColor.a, lessThan(1));
       expect(find.byType(BackdropFilter), findsWidgets);
       expect(jsonDecode(file.readAsStringSync()), {
-        'version': 1,
+        'version': 2,
         'surfaceStyle': 'translucent',
         'accent': 'blue',
+        'contrast': 1.0,
+        'glassOpacity': 0.78,
       });
       await select(tester, 'Dark');
       expect(theme(tester).brightness, Brightness.dark);
@@ -191,7 +208,7 @@ void main() {
     );
     await pump(tester);
     expect(tester.widget<ChoiceChip>(chip('Dark')).selected, isTrue);
-    expect(tester.widget<ChoiceChip>(chip('Pink')).selected, isTrue);
+    expect(tester.widget<AccentThemeTile>(tile('Pink')).selected, isTrue);
     expect(tester.widget<ChoiceChip>(chip('Translucent')).selected, isTrue);
     expect(theme(tester).brightness, Brightness.dark);
     expect(container.read(themeModeNotifierProvider), ThemeMode.dark);
@@ -201,11 +218,19 @@ void main() {
     tester,
   ) async {
     const raw =
-        '{"version":2,"surfaceStyle":"translucent","accent":"pink","future":true}';
+        '{"version":3,"surfaceStyle":"translucent","accent":"pink","future":true}';
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(raw);
     await pump(tester);
-    expect(tester.widget<ChoiceChip>(chip('Blue')).onSelected, isNull);
+    expect(tester.widget<AccentThemeTile>(tile('Blue')).onSelected, isNull);
+    expect(
+      tester.widget<Slider>(slider('appearance-contrast')).onChanged,
+      isNull,
+    );
+    expect(
+      tester.widget<Slider>(slider('appearance-glass-opacity')).onChanged,
+      isNull,
+    );
     expect(tester.widget<ChoiceChip>(chip('Translucent')).onSelected, isNull);
     expect(
       find.text(
@@ -225,10 +250,102 @@ void main() {
     await pump(tester);
     await select(tester, 'Translucent');
     await select(tester, 'Purple');
+    await slideToMax(tester, 'appearance-contrast');
+    await slideToMax(tester, 'appearance-glass-opacity');
     expect(
       container.read(appearanceProvider).preferences.accent,
       AccentColor.purple,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'slider drag commits once on release and updates the real app theme',
+    (tester) async {
+      await pump(tester);
+      final normal = theme(tester).colorScheme.primary;
+      final control = slider('appearance-contrast');
+      await tester.ensureVisible(control);
+      await tester.pumpAndSettle();
+      final rect = tester.getRect(control);
+      final gesture = await tester.startGesture(rect.center);
+      await tester.pump();
+      await gesture.moveTo(Offset(rect.right - 8, rect.center.dy));
+      await tester.pump();
+      expect(file.existsSync(), isFalse);
+      expect(theme(tester).colorScheme.primary, normal);
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(container.read(appearanceProvider).preferences.contrast, 2);
+      expect(theme(tester).colorScheme.primary, isNot(normal));
+      expect(jsonDecode(file.readAsStringSync())['contrast'], 2);
+    },
+  );
+
+  testWidgets(
+    'glass slider enables with translucent, colours the composer, and survives restart',
+    (tester) async {
+      await pump(tester);
+      expect(
+        tester.widget<Slider>(slider('appearance-glass-opacity')).onChanged,
+        isNull,
+      );
+      await select(tester, 'Translucent');
+      await slideToMax(tester, 'appearance-glass-opacity');
+      expect(container.read(appearanceProvider).preferences.glassOpacity, 1);
+      expect(theme(tester).cardTheme.color!.a, 1);
+      final composerBox = tester.widget<Container>(
+        find
+            .descendant(
+              of: find.byType(ChatComposer),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      expect((composerBox.decoration as BoxDecoration).color!.a, 1);
+      expect(AppearanceStore(file).load().glassOpacity, 1);
+      await select(tester, 'Solid');
+      expect(
+        tester.widget<Slider>(slider('appearance-glass-opacity')).onChanged,
+        isNull,
+      );
+      expect(container.read(appearanceProvider).preferences.glassOpacity, 1);
+    },
+  );
+
+  testWidgets('accent tiles resize into columns and expose their selection', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1100, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final semantics = tester.ensureSemantics();
+    await pump(tester);
+    final green = tester.getRect(tile('Green'));
+    final blue = tester.getRect(tile('Blue'));
+    expect(green.top, blue.top);
+    expect(blue.left, greaterThan(green.right));
+    await select(tester, 'Blue');
+    expect(tester.widget<AccentThemeTile>(tile('Blue')).selected, isTrue);
+    expect(
+      tester.getSemantics(tile('Blue')),
+      matchesSemantics(
+        label: 'Blue',
+        isButton: true,
+        isSelected: true,
+        hasSelectedState: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+      ),
+    );
+    tester.view.physicalSize = const Size(320, 900);
+    await tester.pumpAndSettle();
+    final resizedGreen = tester.getRect(tile('Green'));
+    final resizedBlue = tester.getRect(tile('Blue'));
+    expect(resizedGreen.left, resizedBlue.left);
+    expect(resizedBlue.top, greaterThan(resizedGreen.bottom));
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
   });
 }

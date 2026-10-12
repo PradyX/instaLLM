@@ -9,10 +9,14 @@ class AppearanceStore {
   AppearanceStore(File file)
     : _document = VersionedJsonDocument(
         file: file,
-        currentVersion: 1,
+        currentVersion: 2,
         label: 'AppearanceStore',
         isPayloadUsable: (json) =>
-            json['surfaceStyle'] is String || json['accent'] is String,
+            json['surfaceStyle'] is String ||
+            json['accent'] is String ||
+            (json['contrast'] is num && (json['contrast'] as num).isFinite) ||
+            (json['glassOpacity'] is num &&
+                (json['glassOpacity'] as num).isFinite),
       );
 
   final VersionedJsonDocument _document;
@@ -29,5 +33,5 @@ class AppearanceStore {
       AppearancePreferences.fromJson(_document.read() ?? {});
 
   bool save(AppearancePreferences preferences) =>
-      _document.write({'version': 1, ...preferences.toJson()});
+      _document.write({'version': 2, ...preferences.toJson()});
 }

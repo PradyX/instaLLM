@@ -21,22 +21,49 @@ class AppearancePreferences {
   const AppearancePreferences({
     this.surfaceStyle = SurfaceStyle.solid,
     this.accent = AccentColor.green,
+    this.contrast = defaultContrast,
+    this.glassOpacity = defaultGlassOpacity,
   });
+
+  static const defaultContrast = 1.0;
+  static const minContrast = 1.0;
+  static const maxContrast = 2.0;
+  static const defaultGlassOpacity = 0.78;
+  static const minGlassOpacity = 0.5;
+  static const maxGlassOpacity = 1.0;
 
   final SurfaceStyle surfaceStyle;
   final AccentColor accent;
+  final double contrast;
+  final double glassOpacity;
 
   AppearancePreferences copyWith({
     SurfaceStyle? surfaceStyle,
     AccentColor? accent,
+    double? contrast,
+    double? glassOpacity,
   }) => AppearancePreferences(
     surfaceStyle: surfaceStyle ?? this.surfaceStyle,
     accent: accent ?? this.accent,
+    contrast: _boundedNumber(
+      contrast ?? this.contrast,
+      minContrast,
+      maxContrast,
+      defaultContrast,
+    ),
+    glassOpacity: _boundedNumber(
+      glassOpacity ?? this.glassOpacity,
+      minGlassOpacity,
+      maxGlassOpacity,
+      defaultGlassOpacity,
+    ),
   );
 
   Map<String, dynamic> toJson() => {
     'surfaceStyle': surfaceStyle.name,
     'accent': accent.name,
+    'contrast': contrast,
+    'glassOpacity': glassOpacity,
   };
 
   factory AppearancePreferences.fromJson(Map<String, dynamic> json) =>
@@ -49,5 +76,22 @@ class AppearancePreferences {
           (accent) => accent.name == json['accent'],
           orElse: () => AccentColor.green,
         ),
+        contrast: _boundedNumber(
+          json['contrast'],
+          minContrast,
+          maxContrast,
+          defaultContrast,
+        ),
+        glassOpacity: _boundedNumber(
+          json['glassOpacity'],
+          minGlassOpacity,
+          maxGlassOpacity,
+          defaultGlassOpacity,
+        ),
       );
 }
+
+double _boundedNumber(Object? value, double min, double max, double fallback) =>
+    value is num && value.isFinite
+    ? value.toDouble().clamp(min, max)
+    : fallback;

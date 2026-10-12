@@ -9,9 +9,24 @@ class MaterialTheme {
     this.textTheme, {
     this.accent = AccentColor.green,
     this.surfaceStyle = SurfaceStyle.solid,
+    this.contrast = AppearancePreferences.defaultContrast,
+    this.glassOpacity = AppearancePreferences.defaultGlassOpacity,
   });
   final AccentColor accent;
   final SurfaceStyle surfaceStyle;
+  final double contrast;
+  final double glassOpacity;
+
+  ColorScheme scheme(Brightness brightness) {
+    if (accent == AccentColor.green && contrast == 1) {
+      return brightness == Brightness.light ? lightScheme() : darkScheme();
+    }
+    return ColorScheme.fromSeed(
+      seedColor: accent.seed,
+      brightness: brightness,
+      contrastLevel: (contrast - 1).clamp(0.0, 1.0),
+    );
+  }
 
   static ColorScheme lightScheme() {
     return const ColorScheme(
@@ -65,14 +80,7 @@ class MaterialTheme {
   }
 
   ThemeData light() {
-    return theme(
-      accent == AccentColor.green
-          ? lightScheme()
-          : ColorScheme.fromSeed(
-              seedColor: accent.seed,
-              brightness: Brightness.light,
-            ),
-    );
+    return theme(scheme(Brightness.light));
   }
 
   static ColorScheme lightMediumContrastScheme() {
@@ -237,14 +245,7 @@ class MaterialTheme {
   }
 
   ThemeData dark() {
-    return theme(
-      accent == AccentColor.green
-          ? darkScheme()
-          : ColorScheme.fromSeed(
-              seedColor: accent.seed,
-              brightness: Brightness.dark,
-            ),
-    );
+    return theme(scheme(Brightness.dark));
   }
 
   static ColorScheme darkMediumContrastScheme() {
@@ -368,22 +369,41 @@ class MaterialTheme {
       ),
       scaffoldBackgroundColor: colorScheme.surface,
       canvasColor: colorScheme.surface,
-      extensions: [SurfaceAppearance(surfaceStyle)],
+      extensions: [SurfaceAppearance(surfaceStyle, glassOpacity: glassOpacity)],
     );
     if (surfaceStyle == SurfaceStyle.solid) return base;
+    // Preserve the existing scaffold tint at the default opacity, increasing
+    // it with the panels until all surfaces are opaque at 100%.
+    const defaultOpacity = AppearancePreferences.defaultGlassOpacity;
+    final scaffoldOpacity = glassOpacity <= defaultOpacity
+        ? glassOpacity * (0.54 / defaultOpacity)
+        : 0.54 +
+              (glassOpacity - defaultOpacity) * (0.46 / (1 - defaultOpacity));
     return base.copyWith(
-      scaffoldBackgroundColor: colorScheme.surface.withValues(alpha: 0.54),
-      canvasColor: colorScheme.surface.withValues(alpha: 0.78),
+      scaffoldBackgroundColor: colorScheme.surface.withValues(
+        alpha: scaffoldOpacity,
+      ),
+      canvasColor: colorScheme.surface.withValues(alpha: glassOpacity),
       appBarTheme: AppBarThemeData(
-        backgroundColor: colorScheme.surface.withValues(alpha: 0.54),
+        backgroundColor: colorScheme.surface.withValues(alpha: scaffoldOpacity),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainer.withValues(alpha: 0.78),
+        color: colorScheme.surfaceContainer.withValues(alpha: glassOpacity),
         surfaceTintColor: Colors.transparent,
       ),
       drawerTheme: const DrawerThemeData(
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surfaceContainerHigh.withValues(
+          alpha: glassOpacity,
+        ),
+        surfaceTintColor: Colors.transparent,
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: colorScheme.surfaceContainerHigh.withValues(alpha: glassOpacity),
         surfaceTintColor: Colors.transparent,
       ),
     );

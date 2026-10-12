@@ -59,10 +59,15 @@ class AppearanceNotifier extends StateNotifier<AppearanceState> {
   Future<bool> setSurfaceStyle(SurfaceStyle style) =>
       _update(surfaceStyle: style);
   Future<bool> setAccent(AccentColor accent) => _update(accent: accent);
+  Future<bool> setContrast(double contrast) => _update(contrast: contrast);
+  Future<bool> setGlassOpacity(double opacity) =>
+      _update(glassOpacity: opacity);
 
   Future<bool> _update({
     SurfaceStyle? surfaceStyle,
     AccentColor? accent,
+    double? contrast,
+    double? glassOpacity,
   }) async {
     if (!state.isReady || state.isReadOnly) return false;
     try {
@@ -71,6 +76,8 @@ class AppearanceNotifier extends StateNotifier<AppearanceState> {
       final preferences = state.preferences.copyWith(
         surfaceStyle: surfaceStyle,
         accent: accent,
+        contrast: contrast,
+        glassOpacity: glassOpacity,
       );
       if (!store.save(preferences)) {
         state = AppearanceState(

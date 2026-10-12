@@ -45,20 +45,26 @@ void main() {
     final preferences = store.load();
     expect(preferences.surfaceStyle, SurfaceStyle.solid);
     expect(preferences.accent, AccentColor.green);
+    expect(preferences.contrast, 1);
+    expect(preferences.glassOpacity, 0.78);
     expect(file.existsSync(), isFalse);
   });
 
   test(
-    'persists both preferences with a schema version and restores on restart',
+    'persists appearance preferences with a schema version and restores on restart',
     () async {
       final first = await loaded();
       final notifier = first.read(appearanceProvider.notifier);
       expect(await notifier.setSurfaceStyle(SurfaceStyle.translucent), isTrue);
       expect(await notifier.setAccent(AccentColor.purple), isTrue);
+      expect(await notifier.setContrast(1.5), isTrue);
+      expect(await notifier.setGlassOpacity(0.9), isTrue);
       expect(jsonDecode(file.readAsStringSync()), {
-        'version': 1,
+        'version': 2,
         'surfaceStyle': 'translucent',
         'accent': 'purple',
+        'contrast': 1.5,
+        'glassOpacity': 0.9,
       });
       final second = await loaded();
       expect(
@@ -69,22 +75,28 @@ void main() {
         second.read(appearanceProvider).preferences.accent,
         AccentColor.purple,
       );
+      expect(second.read(appearanceProvider).preferences.contrast, 1.5);
+      expect(second.read(appearanceProvider).preferences.glassOpacity, 0.9);
     },
   );
 
-  test('concurrent selections preserve both choices', () async {
+  test('concurrent selections preserve all choices', () async {
     final container = await loaded();
     final notifier = container.read(appearanceProvider.notifier);
     expect(
       await Future.wait([
         notifier.setSurfaceStyle(SurfaceStyle.translucent),
         notifier.setAccent(AccentColor.blue),
+        notifier.setContrast(1.4),
+        notifier.setGlassOpacity(0.7),
       ]),
-      [true, true],
+      [true, true, true, true],
     );
     final restored = store.load();
     expect(restored.surfaceStyle, SurfaceStyle.translucent);
     expect(restored.accent, AccentColor.blue);
+    expect(restored.contrast, 1.4);
+    expect(restored.glassOpacity, 0.7);
   });
 
   test(
@@ -96,7 +108,7 @@ void main() {
       expect(preferences.accent, AccentColor.teal);
       expect(preferences.surfaceStyle, SurfaceStyle.solid);
       expect(store.save(preferences), isTrue);
-      expect(jsonDecode(file.readAsStringSync())['version'], 1);
+      expect(jsonDecode(file.readAsStringSync())['version'], 2);
       expect(store.load().accent, AccentColor.teal);
     },
   );
@@ -142,7 +154,7 @@ void main() {
   test('newer preferences stay read-only and untouched', () async {
     file.parent.createSync(recursive: true);
     const raw =
-        '{"version":2,"accent":"blue","surfaceStyle":"translucent","future":true}';
+        '{"version":3,"accent":"blue","surfaceStyle":"translucent","future":true}';
     file.writeAsStringSync(raw);
     final container = await loaded();
     expect(container.read(appearanceProvider).isReadOnly, isTrue);
@@ -153,6 +165,84 @@ void main() {
       isFalse,
     );
     expect(file.readAsStringSync(), raw);
+    expect(
+      await container.read(appearanceProvider.notifier).setContrast(2),
+      isFalse,
+    );
+    expect(
+      await container.read(appearanceProvider.notifier).setGlassOpacity(1),
+      isFalse,
+    );
+  });
+
+  test(
+    'v1 choices migrate to v2 on a save without changing the saved theme',
+    () async {
+      file.parent.createSync(recursive: true);
+      const raw =
+          '{"version":1,"accent":"orange","surfaceStyle":"translucent"}';
+      file.writeAsStringSync(raw);
+      final container = await loaded();
+      final initial = container.read(appearanceProvider).preferences;
+      expect(initial.accent, AccentColor.orange);
+      expect(initial.surfaceStyle, SurfaceStyle.translucent);
+      expect(initial.contrast, 1);
+      expect(initial.glassOpacity, 0.78);
+      expect(file.readAsStringSync(), raw);
+      await container.read(appearanceProvider.notifier).setContrast(1.5);
+      expect(jsonDecode(file.readAsStringSync()), {
+        'version': 2,
+        'accent': 'orange',
+        'surfaceStyle': 'translucent',
+        'contrast': 1.5,
+        'glassOpacity': 0.78,
+      });
+      expect(
+        file.parent.listSync().where((file) => file.path.contains('.corrupt-')),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'partial v2 data preserves valid numbers and repairs invalid fields',
+    () {
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(
+        '{"version":2,"glassOpacity":0.65,"contrast":"strong"}',
+      );
+      final preferences = store.load();
+      expect(preferences.glassOpacity, 0.65);
+      expect(preferences.contrast, 1);
+      expect(preferences.accent, AccentColor.green);
+      expect(store.save(preferences), isTrue);
+      expect(store.load().glassOpacity, 0.65);
+      final bounded = AppearancePreferences.fromJson({
+        'contrast': 999,
+        'glassOpacity': -1,
+        'accent': 'pink',
+      });
+      expect(bounded.contrast, 2);
+      expect(bounded.glassOpacity, 0.5);
+      expect(bounded.accent, AccentColor.pink);
+      final invalid = AppearancePreferences.fromJson({
+        'contrast': double.nan,
+        'glassOpacity': double.infinity,
+      });
+      expect(invalid.contrast, 1);
+      expect(invalid.glassOpacity, 0.78);
+    },
+  );
+
+  test('invalid slider values are normalized before being written', () async {
+    final container = await loaded();
+    final notifier = container.read(appearanceProvider.notifier);
+    expect(await notifier.setContrast(double.nan), isTrue);
+    expect(await notifier.setGlassOpacity(double.infinity), isTrue);
+    expect(store.load().contrast, 1);
+    expect(store.load().glassOpacity, 0.78);
+    expect(await notifier.setGlassOpacity(10), isTrue);
+    expect(store.load().glassOpacity, 1);
   });
 
   test(
@@ -272,6 +362,84 @@ void main() {
         expect(data.colorScheme.onSurface.a, 1);
         expect(data.colorScheme.primary.a, 1);
       }
+    },
+  );
+
+  test(
+    'contrast increases readable foreground and border contrast for every accent',
+    () {
+      double ratio(Color a, Color b) {
+        final first = a.computeLuminance();
+        final second = b.computeLuminance();
+        return ((first > second ? first : second) + 0.05) /
+            ((first < second ? first : second) + 0.05);
+      }
+
+      for (final accent in AccentColor.values) {
+        final normal = MaterialTheme(const TextTheme(), accent: accent);
+        final strong = MaterialTheme(
+          const TextTheme(),
+          accent: accent,
+          contrast: 2,
+        );
+        for (final brightness in Brightness.values) {
+          final baseline = normal.scheme(brightness);
+          final adjusted = strong.scheme(brightness);
+          expect(adjusted.primary, isNot(baseline.primary));
+          expect(
+            ratio(adjusted.onPrimary, adjusted.primary),
+            greaterThanOrEqualTo(4.5),
+          );
+          expect(
+            ratio(adjusted.onSurface, adjusted.surface),
+            greaterThanOrEqualTo(4.5),
+          );
+          expect(
+            ratio(adjusted.outline, adjusted.surface),
+            greaterThan(ratio(baseline.outline, baseline.surface)),
+          );
+        }
+      }
+    },
+  );
+
+  test(
+    'glass opacity controls panels and becomes fully opaque at 100 percent',
+    () {
+      for (final brightness in Brightness.values) {
+        for (final opacity in [0.5, 0.78, 1.0]) {
+          final theme = MaterialTheme(
+            const TextTheme(),
+            surfaceStyle: SurfaceStyle.translucent,
+            glassOpacity: opacity,
+          );
+          final data = theme.theme(theme.scheme(brightness));
+          expect(data.extension<SurfaceAppearance>()!.glassOpacity, opacity);
+          expect(data.cardTheme.color!.a, closeTo(opacity, 0.001));
+          expect(data.dialogTheme.backgroundColor!.a, closeTo(opacity, 0.001));
+          expect(data.popupMenuTheme.color!.a, closeTo(opacity, 0.001));
+          expect(data.colorScheme.onSurface.a, 1);
+          expect(
+            data.scaffoldBackgroundColor.a,
+            closeTo(
+              opacity == 1
+                  ? 1
+                  : opacity == 0.78
+                  ? 0.54
+                  : 0.346,
+              0.002,
+            ),
+          );
+        }
+      }
+      expect(
+        const MaterialTheme(
+              TextTheme(),
+              glassOpacity: 0.5,
+            ).light().cardTheme.color?.a ??
+            1,
+        1,
+      );
     },
   );
 }

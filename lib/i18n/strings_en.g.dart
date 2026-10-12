@@ -231,6 +231,27 @@ class Translations$appearance$en {
 	/// en: 'Accent colour'
 	String get accentColor => 'Accent colour';
 
+	/// en: 'Choose an accent. Each tile previews its light and dark palette.'
+	String get previewHint => 'Choose an accent. Each tile previews its light and dark palette.';
+
+	/// en: 'Interface'
+	String get interface => 'Interface';
+
+	/// en: 'Contrast'
+	String get contrast => 'Contrast';
+
+	/// en: 'Increase the contrast of colours, text and borders.'
+	String get contrastHint => 'Increase the contrast of colours, text and borders.';
+
+	/// en: 'Glass opacity'
+	String get glassOpacity => 'Glass opacity';
+
+	/// en: 'Higher values make translucent panels more solid.'
+	String get glassOpacityHint => 'Higher values make translucent panels more solid.';
+
+	/// en: 'Choose Translucent to adjust glass opacity.'
+	String get glassOpacitySolidHint => 'Choose Translucent to adjust glass opacity.';
+
 	/// en: 'Green'
 	String get green => 'Green';
 
@@ -319,6 +340,13 @@ extension on Translations {
 			'appearance.translucent' => 'Translucent',
 			'appearance.translucentHint' => 'Translucent uses frosted panels over an in-app background.',
 			'appearance.accentColor' => 'Accent colour',
+			'appearance.previewHint' => 'Choose an accent. Each tile previews its light and dark palette.',
+			'appearance.interface' => 'Interface',
+			'appearance.contrast' => 'Contrast',
+			'appearance.contrastHint' => 'Increase the contrast of colours, text and borders.',
+			'appearance.glassOpacity' => 'Glass opacity',
+			'appearance.glassOpacityHint' => 'Higher values make translucent panels more solid.',
+			'appearance.glassOpacitySolidHint' => 'Choose Translucent to adjust glass opacity.',
 			'appearance.green' => 'Green',
 			'appearance.blue' => 'Blue',
 			'appearance.purple' => 'Purple',

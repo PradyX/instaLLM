@@ -19,6 +19,8 @@ class MyApp extends ConsumerWidget {
       textTheme,
       accent: appearance.accent,
       surfaceStyle: appearance.surfaceStyle,
+      contrast: appearance.contrast,
+      glassOpacity: appearance.glassOpacity,
     );
 
     return MaterialApp.router(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The composer's attach button: a circular `+` that opens the attachment
+/// The composer's attach button: a circular paperclip that opens the attachment
 /// menu.
 ///
 /// The circle is rendered by an [IconButton] kept deliberately
@@ -40,7 +40,7 @@ class ComposerAttachButton extends StatelessWidget {
     return PopupMenuButton<String>(
       tooltip: 'Attach',
       enabled: enabled,
-      // Dark rounded sheet; it opens above the + on its own.
+      // Dark rounded sheet; it opens above the attachment button on its own.
       color: colorScheme.surfaceContainerHigh,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -89,7 +89,7 @@ class ComposerAttachButton extends StatelessWidget {
           ),
         ),
       ],
-      child: _CircleAddButton(enabled: enabled),
+      child: _CircleAttachButton(enabled: enabled),
     );
   }
 
@@ -120,8 +120,8 @@ class ComposerAttachButton extends StatelessWidget {
   }
 }
 
-class _CircleAddButton extends StatelessWidget {
-  const _CircleAddButton({required this.enabled});
+class _CircleAttachButton extends StatelessWidget {
+  const _CircleAttachButton({required this.enabled});
 
   final bool enabled;
 
@@ -135,7 +135,7 @@ class _CircleAddButton extends StatelessWidget {
         // Non-interactive on purpose: the PopupMenuButton above owns the tap.
         onPressed: null,
         padding: EdgeInsets.zero,
-        icon: const Icon(Icons.add_rounded, size: 19),
+        icon: const Icon(Icons.attach_file_rounded, size: 19),
         style: IconButton.styleFrom(
           backgroundColor: background,
           foregroundColor: colorScheme.primary,

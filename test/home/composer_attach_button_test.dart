@@ -37,10 +37,12 @@ PopupMenuItem<String> _itemFor(WidgetTester tester, String label) {
 }
 
 void main() {
-  testWidgets('tapping the + opens the attachment menu', (tester) async {
+  testWidgets('tapping the paperclip opens the attachment menu', (
+    tester,
+  ) async {
     await tester.pumpWidget(_host());
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Upload images'), findsOneWidget);
@@ -50,7 +52,7 @@ void main() {
   testWidgets('the menu has no persona entry', (tester) async {
     await tester.pumpWidget(_host(hasHistoryImages: true));
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Persona'), findsNothing);
@@ -60,7 +62,7 @@ void main() {
     var picked = 0;
     await tester.pumpWidget(_host(onPickImage: () => picked++));
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
     expect(_itemFor(tester, 'Upload images').enabled, isTrue);
     await tester.tap(find.text('Upload images'));
@@ -77,7 +79,7 @@ void main() {
       _host(canAttachImage: false, onPickImage: () => picked++),
     );
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
 
     // The plain label stays; the greyed-out state carries the meaning.
@@ -103,7 +105,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Images from this chat'), findsOneWidget);
@@ -129,13 +131,13 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Images from this chat'));
     await tester.pumpAndSettle();
     expect(history, 1);
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Attach files or folder'));
     await tester.pumpAndSettle();
@@ -145,7 +147,7 @@ void main() {
   testWidgets('a disabled composer does not open the menu', (tester) async {
     await tester.pumpWidget(_host(enabled: false));
 
-    await tester.tap(find.byIcon(Icons.add_rounded));
+    await tester.tap(find.byIcon(Icons.attach_file_rounded));
     await tester.pumpAndSettle();
 
     expect(find.text('Upload images'), findsNothing);

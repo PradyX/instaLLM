@@ -28,6 +28,7 @@ import 'package:pocket_llm/core/navigation/app_shell.dart';
 import 'package:pocket_llm/features/voice/application/tts_controller.dart';
 import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
@@ -525,13 +526,10 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
     final selectionState = ref.watch(modelSelectionControllerProvider);
     final selectedModel = selectionState.selectedModel;
+    // The models a chat can answer with, as every other composer reads them.
     // Embedding models are installed models too, but they cannot answer a
     // chat: they are offered where a collection chooses how it searches.
-    final downloadedModels =
-        selectionState.models
-            .where((model) => model.isDownloaded && !model.isEmbeddingModel)
-            .toList()
-          ..sort(_compareModelsByParamSize);
+    final downloadedModels = ref.watch(chatModelsProvider);
     final hasDownloadedModel = downloadedModels.isNotEmpty;
     final canAttachImage = _isVisionReady(selectedModel);
     final colorScheme = Theme.of(context).colorScheme;
@@ -958,12 +956,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     // context readout below the card.
 
     // The model pill moved down from the toolbar: the composer owns model
-    // switching now.
-    final pillModel =
-        selectedModel != null &&
-            downloadedModels.any((m) => m.id == selectedModel.id)
-        ? selectedModel
-        : (hasDownloadedModel ? downloadedModels.first : null);
+    // switching now, and reads the same "what is selected" answer a room does.
+    final pillModel = ref.watch(selectedChatModelProvider);
     // Dictation errors surface once, where the mic was tapped.
     ref.listen<DictationState>(composerDictationProvider, (previous, next) {
       final error = next.errorMessage;
@@ -1369,32 +1363,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ],
       ),
     );
-  }
-
-  int _compareModelsByParamSize(LlmModel a, LlmModel b) {
-    final aSize = _toNumericParameterSize(a.parameterSize);
-    final bSize = _toNumericParameterSize(b.parameterSize);
-
-    final bySize = aSize.compareTo(bSize);
-    if (bySize != 0) return bySize;
-    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-  }
-
-  double _toNumericParameterSize(String value) {
-    final raw = value.trim().toUpperCase();
-    final match = RegExp(r'^([0-9]*\.?[0-9]+)\s*([KMBT]?)$').firstMatch(raw);
-    if (match == null) return double.infinity;
-
-    final number = double.tryParse(match.group(1) ?? '');
-    if (number == null) return double.infinity;
-    final unit = match.group(2) ?? '';
-    return switch (unit) {
-      'K' => number * 1e3,
-      'M' => number * 1e6,
-      'B' => number * 1e9,
-      'T' => number * 1e12,
-      _ => number,
-    };
   }
 }
 

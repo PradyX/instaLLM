@@ -9,8 +9,9 @@ import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 
-/// An installed, tool-capable model, as `agentRunnableModels` would report
-/// it to a room.
+/// An installed chat model, as `chatModelsProvider` would report it to a
+/// room. Nothing here declares tool support: a room answers on any installed
+/// model, exactly as a normal chat does.
 LlmModel _model(String id) => LlmModel(
   id: id,
   name: 'Model $id',
@@ -36,20 +37,35 @@ void main() {
       final model = roomAnswerModel(
         chat: _room(modelId: 'm-room'),
         bot: _bot(modelId: 'm-bot'),
-        runnable: [_model('m-bot'), _model('m-room')],
+        installed: [_model('m-bot'), _model('m-room')],
+        selected: _model('m-app'),
       );
 
       expect(model?.id, 'm-room');
     });
 
-    test("falls back to the bot's preferred model", () {
+    test("then the bot's preferred model", () {
       final model = roomAnswerModel(
         chat: _room(),
         bot: _bot(modelId: 'm-bot'),
-        runnable: [_model('m-other'), _model('m-bot')],
+        installed: [_model('m-app'), _model('m-bot')],
+        selected: _model('m-app'),
       );
 
       expect(model?.id, 'm-bot');
+    });
+
+    test("then the model the app itself is set to", () {
+      // A room is a chat like any other: with nothing of its own it runs on
+      // the same model home does, not on a separate one chosen for bots.
+      final model = roomAnswerModel(
+        chat: _room(),
+        bot: _bot(),
+        installed: [_model('m-small'), _model('m-app')],
+        selected: _model('m-app'),
+      );
+
+      expect(model?.id, 'm-app');
     });
 
     test('a model that is no longer installed falls through', () {
@@ -58,25 +74,28 @@ void main() {
       final model = roomAnswerModel(
         chat: _room(modelId: 'm-gone'),
         bot: _bot(modelId: 'm-bot'),
-        runnable: [_model('m-bot')],
+        installed: [_model('m-bot')],
       );
 
       expect(model?.id, 'm-bot');
 
-      final neither = roomAnswerModel(
+      // Every named model gone: the smallest installed one answers.
+      final none = roomAnswerModel(
         chat: _room(modelId: 'm-gone'),
         bot: _bot(modelId: 'm-also-gone'),
-        runnable: [_model('m-first'), _model('m-second')],
+        installed: [_model('m-first'), _model('m-second')],
+        selected: _model('m-stale-selection'),
       );
 
-      expect(neither?.id, 'm-first');
+      expect(none?.id, 'm-first');
     });
 
-    test('with nothing runnable a room cannot answer', () {
+    test('with nothing installed a room cannot answer', () {
       final model = roomAnswerModel(
         chat: _room(modelId: 'm-room'),
         bot: _bot(modelId: 'm-bot'),
-        runnable: const [],
+        installed: const [],
+        selected: _model('m-app'),
       );
 
       expect(model, isNull);

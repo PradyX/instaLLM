@@ -71,9 +71,9 @@ class GroupChat {
   /// True for a bot's canonical 1:1 chat.
   bool get isDirect => directBotId != null;
 
-  /// The model this room answers on, chosen in its composer. Null follows
-  /// the bot's own preferred model, then the first tool-capable model that
-  /// is installed.
+  /// The model this room answers on, chosen in its composer. Null follows the
+  /// bot's own preferred model, then the model the app is set to — a room is a
+  /// chat like any other, and its composer is the same one home uses.
   ///
   /// It lives on the room rather than on the bot because a built-in bot is
   /// read-only, and because picking a model for one room should not move

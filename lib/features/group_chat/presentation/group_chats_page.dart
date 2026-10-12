@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
-import 'package:pocket_llm/features/agents/application/agent_controller.dart';
+import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
@@ -276,19 +276,24 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
     final textTheme = Theme.of(context).textTheme;
     // A direct room has exactly one bot and so exactly one answer model, and
     // the pill switches it here: a built-in bot refuses edits, and picking a
-    // model for one room should not move the bot in every other room. A group
-    // room gets no pill — each bot answers on its own preference, so one pill
-    // would name a model most of the room would not use.
+    // model for one room should not move the bot in every other room. It lists
+    // the same models home does — any installed chat model may answer a room.
+    // A group room gets no pill — each bot answers on its own preference, so
+    // one pill would name a model most of the room would not use.
     final directBotId = chat.directBotId;
     final bot = directBotId == null
         ? null
         : ref.watch(botsProvider).botById(directBotId);
-    final runnableModels = agentRunnableModels(
-      ref.watch(installedAgentModelsProvider),
-    );
+    final chatModels = ref.watch(chatModelsProvider);
+    final selectedModel = ref.watch(selectedChatModelProvider);
     final answerModel = bot == null
         ? null
-        : roomAnswerModel(chat: chat, bot: bot, runnable: runnableModels);
+        : roomAnswerModel(
+            chat: chat,
+            bot: bot,
+            installed: chatModels,
+            selected: selectedModel,
+          );
 
     _scrollDown();
 
@@ -368,12 +373,15 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
                 leading: bot == null
                     ? null
                     : ComposerModelPill(
-                        models: runnableModels,
+                        models: chatModels,
                         selected: answerModel,
                         enabled: !running,
                         tooltip: 'Switch model',
                         onSelected: (model) => unawaited(
                           notifier.updateChat(chat.copyWith(modelId: model.id)),
+                        ),
+                        onCleared: () => unawaited(
+                          notifier.updateChat(chat.copyWith(clearModel: true)),
                         ),
                         onEmptyPressed: () =>
                             context.push(AppRoutes.modelSelection),

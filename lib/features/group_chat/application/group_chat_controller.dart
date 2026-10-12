@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/agents/application/agent_controller.dart';
 import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
@@ -12,6 +11,7 @@ import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
 import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
 import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
 import 'package:pocket_llm/features/skills/application/skills_controller.dart';
@@ -31,23 +31,25 @@ bool roomNeedsUser(GroupChatsSnapshot snapshot, String chatId) {
 
 /// The model a bot's answer in [chat] runs on.
 ///
-/// The room's own choice wins, so a composer can switch models without
-/// rewriting the bot: a built-in bot refuses edits, and one room's pick
-/// should not follow the bot into every other room. A model that has since
-/// been removed falls through to the bot's preference and then to the first
-/// installed tool-capable model. Null means nothing installed can answer.
+/// A room is a chat like any other, so with nothing chosen of its own it uses
+/// the model the app is set to ([selected]), exactly as home does. A room's own
+/// pick wins, then the bot's preferred model — the bot editor's "Conversation
+/// model" option means the same thing there (see [Bot.modelId]) — and anything
+/// no longer installed falls through rather than leaving the room unable to
+/// answer. Null means nothing is installed at all.
 LlmModel? roomAnswerModel({
   required GroupChat chat,
   required Bot bot,
-  required List<LlmModel> runnable,
+  required List<LlmModel> installed,
+  LlmModel? selected,
 }) {
-  for (final id in [chat.modelId, bot.modelId]) {
+  for (final id in [chat.modelId, bot.modelId, selected?.id]) {
     if (id == null) continue;
-    for (final model in runnable) {
+    for (final model in installed) {
       if (model.id == id) return model;
     }
   }
-  return runnable.isEmpty ? null : runnable.first;
+  return installed.isEmpty ? null : installed.first;
 }
 
 class GroupChatsState {
@@ -343,14 +345,19 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     }
   }
 
-  /// Runs one bot's answer: the local model when one can, else a pending
-  /// prompt the user (or a pasted reply) completes.
+  /// Runs one bot's answer: the local model the room resolves to, else a
+  /// pending prompt the user (or a pasted reply) completes.
+  ///
+  /// Any installed chat model may answer; a model that cannot call tools simply
+  /// answers without them, the way it does in a normal chat.
   Future<void> _answerAsBot(GroupChat chat, Bot bot) async {
     final prompt = await _assemblePrompt(chat, bot);
-    final runnable = agentRunnableModels(
-      _ref.read(installedAgentModelsProvider),
+    final model = roomAnswerModel(
+      chat: chat,
+      bot: bot,
+      installed: _ref.read(chatModelsProvider),
+      selected: _ref.read(selectedChatModelProvider),
     );
-    final model = roomAnswerModel(chat: chat, bot: bot, runnable: runnable);
     if (model == null) {
       _append(
         GroupMessage.bot(
@@ -358,8 +365,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           botId: bot.id,
           botName: bot.name,
           text:
-              'No tool-capable model is installed, so I cannot answer '
-              'yet. The prompt below is ready — paste my reply to continue.',
+              'No model is installed, so I cannot answer yet. The prompt '
+              'below is ready — paste my reply to continue.',
           pendingPrompt: prompt,
         ),
       );

@@ -50,11 +50,11 @@ class DictationState {
 String platformRefusal(PlatformSpeechStatus status) {
   if (status == PlatformSpeechStatus.unsupported) {
     return 'This device has no speech recognizer Pocket LLM can use. Switch '
-        'the transcription engine to the local model in Settings.';
+        'the transcription engine to Whisper in Settings › Voice.';
   }
   return 'Device recognition is not allowed yet. Allow it in Settings › '
-      'Voice, or switch the transcription engine to the local model — that '
-      'one needs no permission.';
+      'Voice, or switch the transcription engine to Whisper — that '
+      'one needs no speech-recognition permission.';
 }
 
 /// What the composer's mic shows for this dictation.

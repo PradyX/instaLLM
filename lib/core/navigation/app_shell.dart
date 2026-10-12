@@ -19,6 +19,7 @@ import 'package:pocket_llm/features/personas/application/personas_controller.dar
 import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
 import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:pocket_llm/i18n/strings.g.dart';
 
 /// Which top-level surface the sidebar highlights.
 enum AppSection { chats, bots, rooms, board, more }
@@ -378,6 +379,13 @@ class AppNavigationPanel extends ConsumerWidget {
                           icon: Icons.settings_outlined,
                           label: 'Settings',
                           route: AppRoutes.settings,
+                          onOpened: onNavigate,
+                        ),
+                        _navTile(
+                          context,
+                          icon: Icons.speed_outlined,
+                          label: t.navigation.benchmark,
+                          route: AppRoutes.benchmark,
                           onOpened: onNavigate,
                         ),
                       ],

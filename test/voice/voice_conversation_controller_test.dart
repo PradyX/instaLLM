@@ -223,6 +223,11 @@ class _FakeTurnRunner implements VoiceTurnRunner {
 
 /// Settings that stay in memory, so the tests never touch secure storage.
 class _InMemoryVoiceSettings extends VoiceSettingsNotifier {
+  _InMemoryVoiceSettings() {
+    // This harness injects the legacy GGUF runtime explicitly.
+    state = state.copyWith(sttEngine: SttEngine.localModel);
+  }
+
   @override
   Future<void> setTtsVoiceId(String? voiceId) async {
     state = state.copyWith(ttsVoiceId: voiceId);

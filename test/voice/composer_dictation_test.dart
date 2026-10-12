@@ -296,7 +296,7 @@ void main() {
     expect(field.text, isEmpty);
   });
 
-  test('a platform with no recognizer names the local model instead', () async {
+  test('a platform with no recognizer names Whisper instead', () async {
     final container = buildContainer(
       engine: SttEngine.platform,
       listener: _FakeListener(outcome: PlatformSpeechStatus.unsupported),
@@ -310,6 +310,7 @@ void main() {
     final state = container.read(composerDictationProvider);
     expect(state.stage, DictationStage.idle);
     expect(state.errorMessage, contains('no speech recognizer'));
+    expect(state.errorMessage, contains('Whisper'));
   });
 
   test(

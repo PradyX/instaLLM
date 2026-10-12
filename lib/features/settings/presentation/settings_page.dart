@@ -63,21 +63,18 @@ class SettingsPage extends ConsumerWidget {
                   subtitle: Text('Default: $defaultPersonaName'),
                   onTap: () => context.push(AppRoutes.personas),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.tune_rounded),
                   title: const Text('Inference Profiles'),
                   subtitle: Text('Active: $activeProfileName'),
                   onTap: () => context.push(AppRoutes.inferenceProfiles),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.pie_chart_outline),
                   title: const Text('Context'),
                   subtitle: Text('Budget: $contextBudgetSummary'),
                   onTap: () => context.push(AppRoutes.contextBudget),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.folder_copy_outlined),
                   title: const Text('Workspaces'),
@@ -86,21 +83,18 @@ class SettingsPage extends ConsumerWidget {
                   ),
                   onTap: () => context.push(AppRoutes.workspaces),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.extension_outlined),
                   title: const Text('Skills'),
                   subtitle: const Text('Reusable procedures bots can follow'),
                   onTap: () => context.push(AppRoutes.skills),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.hub_outlined),
                   title: const Text('MCP servers'),
                   subtitle: const Text('External tools bots can use'),
                   onTap: () => context.push(AppRoutes.mcp),
                 ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.folder_open),
                   title: const Text('Obsidian vaults'),
@@ -233,12 +227,6 @@ class SettingsPage extends ConsumerWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.speed_outlined),
-                  title: Text(t.navigation.benchmark),
-                  onTap: () => context.push(AppRoutes.benchmark),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.info_outline_rounded),
                   title: Text(t.navigation.about),

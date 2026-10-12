@@ -65,7 +65,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 32),
+              const SizedBox(height: 32),
               _AppearanceGroup(
                 title: t.appearance.surfaceStyle,
                 child: Wrap(
@@ -99,7 +99,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
                   ],
                 ),
               ),
-              const Divider(height: 32),
+              const SizedBox(height: 32),
               _AppearanceGroup(
                 title: t.appearance.accentColor,
                 child: LayoutBuilder(
@@ -139,7 +139,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
                   },
                 ),
               ),
-              const Divider(height: 32),
+              const SizedBox(height: 32),
               _AppearanceGroup(
                 title: t.appearance.interface,
                 child: Column(
@@ -154,7 +154,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
                       divisions: 20,
                       onSaved: editable ? notifier.setContrast : null,
                     ),
-                    const Divider(height: 24),
+                    const SizedBox(height: 24),
                     _AppearanceSlider(
                       key: const ValueKey('appearance-glass-opacity'),
                       title: t.appearance.glassOpacity,

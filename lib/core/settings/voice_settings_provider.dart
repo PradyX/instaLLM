@@ -4,29 +4,28 @@ import 'package:pocket_llm/storage/secure_storage.dart';
 
 /// Which engine turns speech into text in the composer.
 enum SttEngine {
-  /// A local GGUF speech model. Fully offline; needs a model with an
-  /// audio projector.
+  /// Legacy GGUF engine, retained for internal transcription compatibility.
+  /// Saved choices now resolve to [whisper]; Settings no longer offers it.
   localModel('localModel'),
 
   /// The operating system's recognizer. Lightweight, but on some setups
   /// the audio may be processed on the vendor's servers.
   platform('platform'),
 
-  /// whisper.cpp on this device. Fully offline like [localModel], but it runs
-  /// its own GGML speech model, downloaded from Settings instead of picked
-  /// from the app's multimodal model catalog.
+  /// Whisper on this device through sherpa-onnx. Fully offline, with its own
+  /// ONNX speech model downloaded from Settings.
   whisper('whisper');
 
   const SttEngine(this.key);
 
-  /// Storage key; unknown values read back as [localModel].
+  /// Storage key; legacy, missing and unknown values read back as [whisper].
   final String key;
 
   static SttEngine fromKey(Object? key) {
     for (final engine in SttEngine.values) {
-      if (engine.key == key) return engine;
+      if (engine.key == key && engine != SttEngine.localModel) return engine;
     }
-    return SttEngine.localModel;
+    return SttEngine.whisper;
   }
 }
 
@@ -38,7 +37,7 @@ enum SttEngine {
 class VoiceSettingsState {
   const VoiceSettingsState({
     this.sttModelId,
-    this.sttEngine = SttEngine.localModel,
+    this.sttEngine = SttEngine.whisper,
     this.whisperModelId,
     this.ttsVoiceId,
     this.ttsRate,
@@ -48,7 +47,7 @@ class VoiceSettingsState {
   /// Model that transcribes local audio, or null when none is chosen.
   final String? sttModelId;
 
-  /// Engine the composer mic uses. Local model is the default because it
+  /// Engine the composer mic uses. Whisper is the default because it
   /// never sends audio anywhere.
   final SttEngine sttEngine;
 
@@ -109,6 +108,9 @@ final voiceSettingsProvider =
 
 class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
   static const _settingsKey = 'voice_settings';
+  // V2 replaces the old GGUF default with Whisper. Legacy records are resolved
+  // on read and written with this version only after an explicit change.
+  static const _sttEngineVersion = 2;
 
   VoiceSettingsNotifier() : super(const VoiceSettingsState()) {
     _loadSettings();
@@ -208,6 +210,7 @@ class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
       value: {
         'sttModelId': state.sttModelId,
         'sttEngine': state.sttEngine.key,
+        'sttEngineVersion': _sttEngineVersion,
         'whisperModelId': state.whisperModelId,
         'ttsVoiceId': state.ttsVoiceId,
         'ttsRate': state.ttsRate,

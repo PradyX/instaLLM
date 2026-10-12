@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
 import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
 import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
 import 'package:pocket_llm/features/voice/presentation/speech_voice_picker.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_model_picker.dart';
 import 'package:pocket_llm/features/voice/presentation/whisper_model_picker.dart';
 
 /// Why the device engine cannot be picked, in the words the settings show.
@@ -24,17 +19,17 @@ String _platformLimit(
   required bool canAskFromHere,
 }) {
   if (status == PlatformSpeechStatus.unsupported) {
-    return 'This platform has no speech recognizer Pocket LLM can use — the '
-        'local speech model covers it.';
+    return 'This platform has no speech recognizer Pocket LLM can use. '
+        'Whisper runs offline on this device.';
   }
   if (status == PlatformSpeechStatus.notAuthorized) {
     if (!canAskFromHere) {
       return 'macOS only shows this prompt to an app it started itself, and '
           'another program started this one. Open Pocket LLM from Finder or '
-          'the Dock to allow it; the local models need no permission.';
+          'the Dock to allow it; Whisper needs no speech-recognition permission.';
     }
-    return 'Not allowed yet: allow it below, or keep the local model, which '
-        'needs no permission.';
+    return 'Not allowed yet: allow it below, or use Whisper, which '
+        'needs no speech-recognition permission.';
   }
   return 'Checking whether this device can recognize speech...';
 }
@@ -81,8 +76,8 @@ class _AllowDeviceRecognitionButtonState
       PlatformSpeechStatus.unsupported =>
         'This device has no speech recognizer Pocket LLM can use.',
       PlatformSpeechStatus.notAuthorized =>
-        'macOS did not allow speech recognition. The local speech model needs '
-            'no permission.',
+        'macOS did not allow speech recognition. Whisper needs '
+            'no speech-recognition permission.',
     };
   }
 
@@ -114,8 +109,7 @@ class _AllowDeviceRecognitionButtonState
 
 /// Voice settings, living in Settings since the Voice page went away.
 ///
-/// The composer mic transcribes in place with the engine chosen here; the
-/// hands-free conversation loop stays one tap away below.
+/// The composer mic transcribes in place with device recognition or Whisper.
 class VoiceSettingsSection extends ConsumerWidget {
   const VoiceSettingsSection({super.key});
 
@@ -128,8 +122,6 @@ class VoiceSettingsSection extends ConsumerWidget {
     // macOS credits a privacy request to the program that started the app, so
     // a launch another program started cannot be granted device recognition.
     final canAskFromHere = ref.watch(systemPermissionPromptOwnershipProvider);
-    final voiceState = ref.watch(voiceControllerProvider);
-    final selectedModel = voiceState.selectedOption?.model;
     final whisperModels = ref.watch(whisperModelsProvider);
     // The chosen Whisper model when it is installed, otherwise what is there:
     // transcription itself falls back the same way, so the row never claims a
@@ -141,7 +133,6 @@ class VoiceSettingsSection extends ConsumerWidget {
             : whisperModels.installed.first);
     final tts = ref.watch(ttsControllerProvider);
     final ttsController = ref.read(ttsControllerProvider.notifier);
-    final readiness = ref.watch(voiceConversationReadinessProvider);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -154,14 +145,6 @@ class VoiceSettingsSection extends ConsumerWidget {
             },
             child: Column(
               children: [
-                RadioListTile<SttEngine>(
-                  value: SttEngine.localModel,
-                  title: const Text('Local speech model'),
-                  subtitle: const Text(
-                    'Fully offline. Needs a GGUF model with an audio '
-                    'projector; audio never leaves this device.',
-                  ),
-                ),
                 RadioListTile<SttEngine>(
                   value: SttEngine.platform,
                   enabled: platformAvailable,
@@ -181,7 +164,7 @@ class VoiceSettingsSection extends ConsumerWidget {
                   title: const Text('Whisper'),
                   subtitle: Text(
                     whisperModel == null
-                        ? 'Fully offline with a whisper.cpp model. Download '
+                        ? 'Fully offline with a Whisper model. Download '
                               'one from Whisper model below first.'
                         : 'Fully offline, running '
                               '${whisperModel.option.name} '
@@ -195,22 +178,7 @@ class VoiceSettingsSection extends ConsumerWidget {
           if (platformStatus == PlatformSpeechStatus.notAuthorized &&
               canAskFromHere)
             const _AllowDeviceRecognitionButton(),
-          if (settings.sttEngine == SttEngine.localModel) ...[
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.graphic_eq_rounded),
-              title: const Text('Speech model'),
-              subtitle: Text(
-                selectedModel == null
-                    ? 'Choose the model that hears audio'
-                    : selectedModel.name,
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => showVoiceModelPicker(context),
-            ),
-          ],
           if (settings.sttEngine == SttEngine.whisper) ...[
-            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.graphic_eq_rounded),
               title: const Text('Whisper model'),
@@ -225,7 +193,6 @@ class VoiceSettingsSection extends ConsumerWidget {
               onTap: () => showWhisperModelPicker(context),
             ),
           ],
-          const Divider(height: 1),
           SwitchListTile(
             title: const Text('Read new replies aloud'),
             subtitle: const Text(
@@ -235,7 +202,6 @@ class VoiceSettingsSection extends ConsumerWidget {
             value: settings.readRepliesAloud,
             onChanged: (value) => settingsController.setReadRepliesAloud(value),
           ),
-          const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.record_voice_over_outlined),
             title: const Text('Voice'),
@@ -275,22 +241,6 @@ class VoiceSettingsSection extends ConsumerWidget {
                 ),
                 Text(tts.rate.toStringAsFixed(2)),
               ],
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.record_voice_over_rounded),
-            title: const Text('Voice conversation'),
-            subtitle: Text(
-              readiness.canStart
-                  ? 'Hands-free: speak, hear the answer, speak again'
-                  : (readiness.blocker ?? 'Not ready yet'),
-            ),
-            trailing: FilledButton.tonal(
-              onPressed: readiness.canStart
-                  ? () => context.push(AppRoutes.voiceConversation)
-                  : null,
-              child: const Text('Start'),
             ),
           ),
         ],

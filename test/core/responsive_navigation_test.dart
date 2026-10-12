@@ -217,6 +217,7 @@ void main() {
           'MORE',
           'Models',
           'Settings',
+          'Benchmark',
         ]),
       );
       expect(find.byTooltip('New bot'), findsOneWidget);
@@ -388,6 +389,7 @@ void main() {
   for (final (label, route) in [
     ('See more', AppRoutes.conversations),
     ('Models', AppRoutes.modelSelection),
+    ('Benchmark', AppRoutes.benchmark),
     ('Pocket LLM', AppRoutes.workspaces),
   ]) {
     testWidgets('$label closes the drawer and navigates to its page', (
@@ -429,7 +431,7 @@ void main() {
   });
 
   testWidgets(
-    'Settings preserves the old drawer Benchmark and About destinations',
+    'Settings keeps About after Benchmark moves to the navigation panel',
     (tester) async {
       await pumpHome(tester);
       await openDrawer(tester);
@@ -439,27 +441,21 @@ void main() {
         () => find.byType(SettingsPage).evaluate().isNotEmpty,
       );
       expect(find.byType(SettingsPage), findsOneWidget);
-      for (final (label, route) in [
-        ('Benchmark', AppRoutes.benchmark),
-        ('About', AppRoutes.about),
-      ]) {
-        await tester.scrollUntilVisible(
-          find.text(label),
-          400,
-          scrollable: find
-              .descendant(
-                of: find.byType(SettingsPage),
-                matching: find.byType(Scrollable),
-              )
-              .first,
-        );
-        await tester.tap(find.text(label));
-        await tester.pump();
-        await tester.pumpAndSettle();
-        expect(find.text('Destination $route'), findsOneWidget);
-        router.pop();
-        await tester.pumpAndSettle();
-      }
+      await tester.scrollUntilVisible(
+        find.text('About'),
+        400,
+        scrollable: find
+            .descendant(
+              of: find.byType(SettingsPage),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text('Benchmark'), findsNothing);
+      await tester.tap(find.text('About'));
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Destination ${AppRoutes.about}'), findsOneWidget);
     },
   );
 

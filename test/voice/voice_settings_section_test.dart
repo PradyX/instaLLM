@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocket_llm/core/services/model_storage_service.dart';
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
 import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
 import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
 import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
@@ -89,13 +88,6 @@ Future<_FakePlatformSpeech> _pumpSettings(
         platformSpeechProvider.overrideWithValue(speech),
         systemPermissionPromptOwnershipProvider.overrideWithValue(canAsk),
         whisperModelServiceProvider.overrideWithValue(_NoWhisperModels()),
-        voiceConversationReadinessProvider.overrideWithValue(
-          const VoiceConversationReadiness(
-            speechModelName: null,
-            chatModelName: null,
-            speechEngineSupported: true,
-          ),
-        ),
       ],
       child: const MaterialApp(home: Scaffold(body: VoiceSettingsSection())),
     ),
@@ -157,6 +149,25 @@ void main() {
     );
 
     expect(find.text('Allow device recognition'), findsNothing);
+    expect(speech.asks, 0);
+    expect(find.text('Local speech model'), findsNothing);
+    expect(find.text('Speech model'), findsNothing);
+    expect(find.text('Voice conversation'), findsNothing);
+    expect(find.text('Whisper model'), findsOneWidget);
+
+    final context = tester.element(find.byType(VoiceSettingsSection));
+    final container = ProviderScope.containerOf(context);
+    expect(container.read(voiceSettingsProvider).sttEngine, SttEngine.whisper);
+
+    await tester.tap(find.text('Device recognition'));
+    await tester.pumpAndSettle();
+    expect(container.read(voiceSettingsProvider).sttEngine, SttEngine.platform);
+    expect(find.text('Whisper model'), findsNothing);
+
+    await tester.tap(find.text('Whisper'));
+    await tester.pumpAndSettle();
+    expect(container.read(voiceSettingsProvider).sttEngine, SttEngine.whisper);
+    expect(find.text('Whisper model'), findsOneWidget);
     expect(speech.asks, 0);
   });
 }

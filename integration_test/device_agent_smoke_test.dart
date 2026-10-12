@@ -87,7 +87,8 @@ void main() {
 
     expect(run, isNotNull);
     // ignore: avoid_print
-    print(        'agent run: ${run.status.label} · ${run.iterations} iteration(s) · '
+    print(
+      'agent run: ${run.status.label} · ${run.iterations} iteration(s) · '
       '${run.toolCallCount} tool call(s)',
     );
     for (final step in run.steps) {

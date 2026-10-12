@@ -103,4 +103,34 @@ void main() {
 
     expect(taps, 0);
   });
+
+  testWidgets('leading sits on the left and middle right-aligns before the '
+      'mic and send', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ChatComposer(
+            controller: TextEditingController(),
+            enabled: true,
+            hintText: 'Ask anything',
+            onSend: () async {},
+            leading: const Text('model pill'),
+            middle: const Text('attach'),
+            onMicPressed: () {},
+          ),
+        ),
+      ),
+    );
+
+    final pillX = tester.getCenter(find.text('model pill')).dx;
+    final attachX = tester.getCenter(find.text('attach')).dx;
+    final sendX = tester.getCenter(find.byIcon(Icons.arrow_upward_rounded)).dx;
+    final micX = tester.getCenter(find.byIcon(Icons.mic_none_rounded)).dx;
+
+    // Home's slots: the model pill opens the row, the attach button closes it
+    // beside the mic and send.
+    expect(pillX, lessThan(attachX));
+    expect(attachX, lessThan(micX));
+    expect(micX, lessThan(sendX));
+  });
 }

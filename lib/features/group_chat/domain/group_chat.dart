@@ -24,6 +24,7 @@ class GroupChat {
     required this.name,
     this.memberBotIds = const [],
     this.directBotId,
+    this.modelId,
     this.mode = SpeakerMode.manual,
     this.maxRounds = defaultMaxRounds,
     required this.createdAt,
@@ -42,6 +43,7 @@ class GroupChat {
     required String name,
     List<String> memberBotIds = const [],
     String? directBotId,
+    String? modelId,
     DateTime? now,
   }) {
     final timestamp = now ?? DateTime.now();
@@ -51,6 +53,7 @@ class GroupChat {
       name: name.trim().isEmpty ? 'Group chat' : name.trim(),
       memberBotIds: memberBotIds,
       directBotId: directBotId,
+      modelId: modelId,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -68,6 +71,16 @@ class GroupChat {
   /// True for a bot's canonical 1:1 chat.
   bool get isDirect => directBotId != null;
 
+  /// The model this room answers on, chosen in its composer. Null follows
+  /// the bot's own preferred model, then the first tool-capable model that
+  /// is installed.
+  ///
+  /// It lives on the room rather than on the bot because a built-in bot is
+  /// read-only, and because picking a model for one room should not move
+  /// the bot in every other room it answers in. Old documents without the
+  /// key read as null.
+  final String? modelId;
+
   final SpeakerMode mode;
   final int maxRounds;
   final DateTime createdAt;
@@ -77,6 +90,8 @@ class GroupChat {
     String? name,
     List<String>? memberBotIds,
     String? directBotId,
+    String? modelId,
+    bool clearModel = false,
     SpeakerMode? mode,
     int? maxRounds,
     DateTime? updatedAt,
@@ -89,6 +104,7 @@ class GroupChat {
           : (name ?? this.name).trim(),
       memberBotIds: memberBotIds ?? this.memberBotIds,
       directBotId: directBotId ?? this.directBotId,
+      modelId: clearModel ? null : (modelId ?? this.modelId),
       mode: mode ?? this.mode,
       maxRounds: (maxRounds ?? this.maxRounds).clamp(
         minMaxRounds,
@@ -106,6 +122,7 @@ class GroupChat {
       'name': name,
       'memberBotIds': memberBotIds,
       'directBotId': directBotId,
+      'modelId': modelId,
       'mode': mode.name,
       'maxRounds': maxRounds,
       'createdAt': createdAt.toIso8601String(),
@@ -140,6 +157,7 @@ class GroupChat {
       name: name,
       memberBotIds: readStrings(json['memberBotIds']),
       directBotId: readOpt(json['directBotId']),
+      modelId: readOpt(json['modelId']),
       mode: SpeakerMode.values.firstWhere(
         (candidate) => candidate.name == json['mode'],
         orElse: () => SpeakerMode.manual,

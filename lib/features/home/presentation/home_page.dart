@@ -19,6 +19,7 @@ import 'package:pocket_llm/features/conversations/presentation/conversation_cont
 import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
 import 'package:pocket_llm/features/documents/application/documents_controller.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
+import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
 import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
@@ -1067,7 +1068,16 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   )
                 : null,
-            leading: hasDownloadedModel
+            leading: ComposerModelPill(
+              models: downloadedModels,
+              selected: pillModel,
+              enabled: !isGenerating,
+              onSelected: (next) => ref
+                  .read(modelSelectionControllerProvider.notifier)
+                  .selectModel(next),
+              onEmptyPressed: () => context.push(AppRoutes.modelSelection),
+            ),
+            middle: hasDownloadedModel
                 ? ComposerAttachButton(
                     enabled: canCompose,
                     canAttachImage: canAttachImage,
@@ -1077,73 +1087,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                     onAttachFiles: () => unawaited(_attachDocuments()),
                   )
                 : null,
-            middle: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 190),
-              child: pillModel == null
-                  ? TextButton(
-                      onPressed: () => context.push(AppRoutes.modelSelection),
-                      child: const Text('Get a model'),
-                    )
-                  : PopupMenuButton<String>(
-                      tooltip: 'Switch model',
-                      enabled: !isGenerating,
-                      onSelected: (modelId) {
-                        final next = downloadedModels.firstWhere(
-                          (model) => model.id == modelId,
-                        );
-                        ref
-                            .read(modelSelectionControllerProvider.notifier)
-                            .selectModel(next);
-                      },
-                      itemBuilder: (context) => [
-                        for (final model in downloadedModels)
-                          CheckedPopupMenuItem<String>(
-                            value: model.id,
-                            checked: model.id == pillModel.id,
-                            child: Text(
-                              '${model.name} · ${model.parameterSize}',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                      ],
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 9,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: colorScheme.outlineVariant.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.memory_outlined,
-                              size: 16,
-                              color: colorScheme.primary,
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                '${pillModel.name} · ${pillModel.parameterSize}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: textTheme.labelMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-            ),
             onMicPressed: () => unawaited(
               ref
                   .read(composerDictationProvider.notifier)

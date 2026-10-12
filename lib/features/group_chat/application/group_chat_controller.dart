@@ -11,6 +11,7 @@ import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
+import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
 import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
 import 'package:pocket_llm/features/skills/application/skills_controller.dart';
@@ -26,6 +27,27 @@ final groupChatStoreProvider = FutureProvider<GroupChatStore>(
 /// pasting in. Shared by the roster badge and the room itself.
 bool roomNeedsUser(GroupChatsSnapshot snapshot, String chatId) {
   return snapshot.messagesFor(chatId).any((message) => message.isPending);
+}
+
+/// The model a bot's answer in [chat] runs on.
+///
+/// The room's own choice wins, so a composer can switch models without
+/// rewriting the bot: a built-in bot refuses edits, and one room's pick
+/// should not follow the bot into every other room. A model that has since
+/// been removed falls through to the bot's preference and then to the first
+/// installed tool-capable model. Null means nothing installed can answer.
+LlmModel? roomAnswerModel({
+  required GroupChat chat,
+  required Bot bot,
+  required List<LlmModel> runnable,
+}) {
+  for (final id in [chat.modelId, bot.modelId]) {
+    if (id == null) continue;
+    for (final model in runnable) {
+      if (model.id == id) return model;
+    }
+  }
+  return runnable.isEmpty ? null : runnable.first;
 }
 
 class GroupChatsState {
@@ -328,14 +350,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     final runnable = agentRunnableModels(
       _ref.read(installedAgentModelsProvider),
     );
-    final preferred = bot.modelId == null
-        ? null
-        : runnable.where((model) => model.id == bot.modelId);
-    final model = (preferred != null && preferred.isNotEmpty
-        ? preferred.first
-        : runnable.isNotEmpty
-        ? runnable.first
-        : null);
+    final model = roomAnswerModel(chat: chat, bot: bot, runnable: runnable);
     if (model == null) {
       _append(
         GroupMessage.bot(

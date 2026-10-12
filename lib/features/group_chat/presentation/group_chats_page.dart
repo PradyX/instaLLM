@@ -2,7 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/widgets/chat_composer.dart';
+import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
+import 'package:pocket_llm/features/agents/application/agent_controller.dart';
 import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
@@ -270,6 +274,21 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
     final messages = state.snapshot.messagesFor(chat.id);
     final running = state.runningChatIds.contains(chat.id);
     final textTheme = Theme.of(context).textTheme;
+    // A direct room has exactly one bot and so exactly one answer model, and
+    // the pill switches it here: a built-in bot refuses edits, and picking a
+    // model for one room should not move the bot in every other room. A group
+    // room gets no pill — each bot answers on its own preference, so one pill
+    // would name a model most of the room would not use.
+    final directBotId = chat.directBotId;
+    final bot = directBotId == null
+        ? null
+        : ref.watch(botsProvider).botById(directBotId);
+    final runnableModels = agentRunnableModels(
+      ref.watch(installedAgentModelsProvider),
+    );
+    final answerModel = bot == null
+        ? null
+        : roomAnswerModel(chat: chat, bot: bot, runnable: runnableModels);
 
     _scrollDown();
 
@@ -346,6 +365,19 @@ class _GroupChatDetailPageState extends ConsumerState<GroupChatDetailPage> {
                 hintText: chat.isDirect
                     ? 'Message ${chat.name}...'
                     : 'Message the room (@name for a bot)...',
+                leading: bot == null
+                    ? null
+                    : ComposerModelPill(
+                        models: runnableModels,
+                        selected: answerModel,
+                        enabled: !running,
+                        tooltip: 'Switch model',
+                        onSelected: (model) => unawaited(
+                          notifier.updateChat(chat.copyWith(modelId: model.id)),
+                        ),
+                        onEmptyPressed: () =>
+                            context.push(AppRoutes.modelSelection),
+                      ),
                 onSend: () => _send(_inputController.text),
                 onMicPressed: () => unawaited(
                   ref

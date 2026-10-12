@@ -21,8 +21,8 @@ enum ComposerMicState {
 /// never drift apart again.
 ///
 /// Slots keep each surface's extras: [header] is home's generating row and
-/// draft-image preview, [leading] its attach button, [middle] its model
-/// pill. A room passes none of those and gets the same field, mic and send
+/// draft-image preview, [leading] its model pill, [middle] its attach
+/// button. A room passes none of those and gets the same field, mic and send
 /// controls. [onMicPressed] null hides the mic — rooms had nowhere to send
 /// a clip until inline transcription landed, so they hid it first.
 class ChatComposer extends StatelessWidget {
@@ -58,10 +58,10 @@ class ChatComposer extends StatelessWidget {
   /// Extra rows above the field (home's generating row, draft preview).
   final Widget? header;
 
-  /// First action in the bottom row (home's attach button).
+  /// First action in the bottom row (home's model pill).
   final Widget? leading;
 
-  /// Right-aligned action next to mic/send (home's model pill).
+  /// Right-aligned action next to mic/send (home's attach button).
   final Widget? middle;
 
   /// Inline voice input. Null hides the mic button.

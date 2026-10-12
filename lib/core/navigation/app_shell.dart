@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
+import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
@@ -247,7 +248,36 @@ class _Sidebar extends ConsumerWidget {
   }
 }
 
-/// Recent 1:1 chats; full management stays on the Conversations page.
+/// How many recent chats the sidebar lists before "See more".
+///
+/// Pinned chats are not counted against it: they are listed because the user
+/// pinned them, and this caps only the chats underneath. The sidebar is for the
+/// chats in play, not the whole archive — "See more" opens the Conversations
+/// page, which owns the full list and its management.
+const int sidebarRecentChatCount = 5;
+
+/// The chats the sidebar lists: every pinned chat, then the most recent
+/// [sidebarRecentChatCount] of the rest, keeping the order [ordered] already
+/// has — pinned first, each group newest first, as
+/// [ConversationListState.visibleSummaries] returns it.
+List<ConversationSummary> sidebarChatSummaries(
+  List<ConversationSummary> ordered,
+) {
+  final shown = <ConversationSummary>[];
+  var recent = 0;
+  for (final summary in ordered) {
+    if (summary.conversation.isPinned) {
+      shown.add(summary);
+    } else if (recent < sidebarRecentChatCount) {
+      shown.add(summary);
+      recent++;
+    }
+  }
+  return shown;
+}
+
+/// Pinned chats and the five most recent 1:1 chats; the rest stay behind "See
+/// more", which opens the Conversations page.
 class _ChatRows extends ConsumerWidget {
   const _ChatRows({required this.current, required this.isGenerating});
 
@@ -257,7 +287,7 @@ class _ChatRows extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(conversationControllerProvider);
-    final summaries = state.visibleSummaries.take(8).toList();
+    final summaries = sidebarChatSummaries(state.visibleSummaries);
     final activeId = state.activeConversationId;
     return Column(
       mainAxisSize: MainAxisSize.min,

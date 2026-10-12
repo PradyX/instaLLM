@@ -310,6 +310,35 @@ class AppNavigationPanel extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _navTile(
+                          context,
+                          icon: Icons.smart_toy_outlined,
+                          label: 'Models',
+                          route: AppRoutes.modelSelection,
+                          onOpened: onNavigate,
+                        ),
+                        _navTile(
+                          context,
+                          icon: Icons.speed_outlined,
+                          label: t.navigation.benchmark,
+                          route: AppRoutes.benchmark,
+                          onOpened: onNavigate,
+                        ),
+                        _navTile(
+                          context,
+                          icon: Icons.settings_outlined,
+                          label: 'Settings',
+                          route: AppRoutes.settings,
+                          onOpened: onNavigate,
+                        ),
+                      ],
+                    ),
+                  ),
                   leading ??
                       ShellChatLeading(
                         isGenerating: isGenerating,
@@ -364,28 +393,6 @@ class AppNavigationPanel extends ConsumerWidget {
                         _sectionLabel(context, 'Board'),
                         _BoardTile(
                           current: section == AppSection.board,
-                          onOpened: onNavigate,
-                        ),
-                        _sectionLabel(context, 'More'),
-                        _navTile(
-                          context,
-                          icon: Icons.smart_toy_outlined,
-                          label: 'Models',
-                          route: AppRoutes.modelSelection,
-                          onOpened: onNavigate,
-                        ),
-                        _navTile(
-                          context,
-                          icon: Icons.settings_outlined,
-                          label: 'Settings',
-                          route: AppRoutes.settings,
-                          onOpened: onNavigate,
-                        ),
-                        _navTile(
-                          context,
-                          icon: Icons.speed_outlined,
-                          label: t.navigation.benchmark,
-                          route: AppRoutes.benchmark,
                           onOpened: onNavigate,
                         ),
                       ],

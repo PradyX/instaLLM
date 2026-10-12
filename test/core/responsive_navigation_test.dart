@@ -206,6 +206,9 @@ void main() {
         containsAll([
           'Pocket LLM',
           'My workspace',
+          'Models',
+          'Benchmark',
+          'Settings',
           'New chat',
           'CHATS',
           'Chat A',
@@ -214,12 +217,19 @@ void main() {
           'ROOMS',
           'Dev',
           'BOARD',
-          'MORE',
-          'Models',
-          'Settings',
-          'Benchmark',
         ]),
       );
+      expect(
+        railLabels,
+        containsAllInOrder([
+          'My workspace',
+          'Models',
+          'Benchmark',
+          'Settings',
+          'New chat',
+        ]),
+      );
+      expect(panelText('MORE'), findsNothing);
       expect(find.byTooltip('New bot'), findsOneWidget);
       expect(find.byTooltip('New room'), findsOneWidget);
       expect(

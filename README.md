@@ -177,7 +177,7 @@ Settings offers independent **Auto / Light / Dark**, **Solid / Translucent**, an
 
 ### Conversations
 
-The same navigation panel stays open beside the chat on wide screens and opens from the hamburger on mobile. Both show the workspace header, New chat, search, recent chats, Bots, Rooms, Board, Models, Settings and Benchmark at the bottom. Bots and rooms can be created with their section's **+** button in either layout. About is available in Settings.
+The same navigation panel stays open beside the chat on wide screens and opens from the hamburger on mobile. Both show Models, Benchmark and Settings directly below the workspace header, followed by New chat, search, recent chats, Bots, Rooms and Board. Bots and rooms can be created with their section's **+** button in either layout. About is available in Settings.
 
 Settings uses spacing between its controls without divider lines. Settings → Voice offers Device recognition and offline Whisper for composer dictation. Whisper is the default; older GGUF speech-engine selections resolve to Whisper while preserving saved model and read-aloud choices. Device recognition remains an explicit choice because the OS may process audio on its vendor's servers.
 

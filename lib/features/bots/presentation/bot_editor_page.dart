@@ -6,6 +6,8 @@ import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
 import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
 import 'package:pocket_llm/features/mcp/application/mcp_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:pocket_llm/features/profile_images/presentation/profile_image_picker.dart';
 import 'package:pocket_llm/features/skills/application/skills_controller.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
 
@@ -113,6 +115,11 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
         children: [
+          ProfileImageButton(
+            profileKey: botProfileKey(bot.id),
+            fallback: Text(bot.icon, style: const TextStyle(fontSize: 28)),
+          ),
+          const SizedBox(height: 12),
           TextField(
             controller: _name,
             textCapitalization: TextCapitalization.words,

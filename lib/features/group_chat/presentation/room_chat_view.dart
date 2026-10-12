@@ -16,6 +16,9 @@ import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
 import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:pocket_llm/features/profile_images/presentation/profile_image_picker.dart';
 import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
 import 'package:pocket_llm/features/tools/presentation/tool_approval_dialog.dart';
@@ -389,32 +392,40 @@ class RoomHeaderTitle extends ConsumerWidget {
     final bots = ref.watch(botsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final faces = [
-      for (final id in room.memberBotIds.take(3))
-        bots.botById(id)?.icon ?? '🤖',
-    ];
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (faces.isNotEmpty) ...[
-          SizedBox(
-            width: faces.length == 1 ? 24 : 40,
+    final members = room.memberBotIds.take(3).toList();
+    final fallback = members.isEmpty
+        ? const Icon(Icons.forum_outlined, size: 20)
+        : SizedBox(
+            width: members.length == 1 ? 24 : 56,
             height: 24,
             child: Stack(
               children: [
-                for (var index = 0; index < faces.length; index++)
+                for (var index = 0; index < members.length; index++)
                   Positioned(
                     left: index * 16.0,
-                    child: Text(
-                      faces[index],
-                      style: const TextStyle(fontSize: 18),
+                    child: ProfileAvatar(
+                      profileKey: botProfileKey(members[index]),
+                      size: 24,
+                      fallback: Text(
+                        bots.botById(members[index])?.icon ?? '🤖',
+                        style: const TextStyle(fontSize: 18),
+                      ),
                     ),
                   ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-        ],
+          );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ProfileAvatar(
+          profileKey: room.isDirect
+              ? botProfileKey(room.directBotId!)
+              : roomProfileKey(room.id),
+          size: room.isDirect ? 28 : 56,
+          fallback: fallback,
+        ),
+        const SizedBox(width: 8),
         Flexible(
           child: Text(
             room.name,
@@ -476,6 +487,18 @@ class RoomSettingsSheet extends ConsumerWidget {
             Text(
               'Room settings',
               style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            ProfileImageButton(
+              profileKey: room.isDirect
+                  ? botProfileKey(room.directBotId!)
+                  : roomProfileKey(room.id),
+              fallback: room.isDirect
+                  ? Text(
+                      bot?.icon ?? '🤖',
+                      style: const TextStyle(fontSize: 28),
+                    )
+                  : const Icon(Icons.forum_outlined),
             ),
             const SizedBox(height: 12),
             if (room.isDirect) ...[
@@ -556,7 +579,14 @@ class RoomSettingsSheet extends ConsumerWidget {
               for (final candidate in bots.bots)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('${candidate.icon} ${candidate.name}'),
+                  secondary: ProfileAvatar(
+                    profileKey: botProfileKey(candidate.id),
+                    fallback: Text(
+                      candidate.icon,
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                  ),
+                  title: Text(candidate.name),
                   value: room.memberBotIds.contains(candidate.id),
                   onChanged: (selected) {
                     final ids = room.memberBotIds.toSet();

@@ -200,6 +200,12 @@ dart run build_runner build --delete-conflicting-outputs
 - Each conversation remembers its persona, so switching voice never touches history. Conversations from older versions keep working and use the current default persona.
 - Personas are stored locally as versioned JSON (`personas/` under the app support directory), and a persona can be copied to the clipboard and imported back as a custom copy.
 
+### Bot and room profile images
+
+Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. Custom bots also offer this control in their editor. Built-in bots can have a profile image without creating a copy.
+
+Search uses Petdex's public catalog; only images visible in search results or selected as profiles are cached. Selected images are retained, and older search images are limited to 100. **Use default icon** restores the original icon. An unavailable image falls back to that icon without interrupting chat. These requests carry no prompts, conversation text, bot/room names or model/device metadata.
+
 ## Troubleshooting
 
 ### `HTTP 401/403` while downloading model

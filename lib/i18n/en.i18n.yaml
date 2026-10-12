@@ -25,3 +25,17 @@ common:
   ok: "OK"
   yes: "Yes"
   no: "No"
+
+profileImages:
+  title: "Profile image"
+  choose: "Choose"
+  pickerTitle: "Choose a Petdex profile image"
+  search: "Search pets by name"
+  networkHint: "Search loads images from Petdex. Only selected images and visible search results are cached."
+  startSearch: "Search for a pet to see profile images."
+  noResults: "No pets found. Try another name."
+  catalogError: "Could not load Petdex. Check your connection and retry."
+  imageError: "Could not load this image. Check your connection and try again."
+  saveError: "Could not save the profile image. Check available storage and use the latest app version."
+  retry: "Retry"
+  useDefault: "Use default icon"

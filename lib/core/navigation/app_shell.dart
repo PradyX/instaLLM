@@ -15,6 +15,8 @@ import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
+import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
 
 /// Which top-level surface the sidebar highlights.
@@ -448,7 +450,10 @@ class BotChatRows extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: Stack(
         children: [
-          Text(bot.icon, style: const TextStyle(fontSize: 22)),
+          ProfileAvatar(
+            profileKey: botProfileKey(bot.id),
+            fallback: Text(bot.icon, style: const TextStyle(fontSize: 22)),
+          ),
           if (needsYou)
             Positioned(
               right: 0,
@@ -523,7 +528,10 @@ class RoomChatRows extends ConsumerWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              leading: _memberStack(chat, bots, colorScheme),
+              leading: ProfileAvatar(
+                profileKey: roomProfileKey(chat.id),
+                fallback: _memberStack(chat, bots, colorScheme),
+              ),
               title: Text(
                 chat.name,
                 maxLines: 1,
@@ -554,21 +562,27 @@ class RoomChatRows extends ConsumerWidget {
   }
 
   Widget _memberStack(GroupChat chat, BotsState bots, ColorScheme colorScheme) {
-    final icons = [
-      for (final id in chat.memberBotIds.take(2))
+    final members = chat.memberBotIds.take(2).toList();
+    Widget face(String id, double size) => ProfileAvatar(
+      profileKey: botProfileKey(id),
+      size: size,
+      fallback: Text(
         bots.botById(id)?.icon ?? '🤖',
-    ];
-    if (icons.isEmpty) {
+        style: TextStyle(fontSize: size * 0.8),
+      ),
+    );
+    if (members.isEmpty) {
       return const Icon(Icons.forum_outlined, size: 20);
     }
-    if (icons.length == 1) {
-      return Text(icons.first, style: const TextStyle(fontSize: 22));
+    if (members.length == 1) {
+      return face(members.first, 28);
     }
     return SizedBox(
       width: 32,
+      height: 32,
       child: Stack(
         children: [
-          Text(icons[0], style: const TextStyle(fontSize: 18)),
+          face(members[0], 24),
           Positioned(
             right: 0,
             bottom: 0,
@@ -577,7 +591,7 @@ class RoomChatRows extends ConsumerWidget {
                 color: colorScheme.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: Text(icons[1], style: const TextStyle(fontSize: 14)),
+              child: face(members[1], 20),
             ),
           ),
         ],

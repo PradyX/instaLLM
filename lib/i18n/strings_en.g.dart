@@ -20,34 +20,36 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	/// Constructing via the enum [AppLocale.build] is preferred.
 	Translations({Map<String, Node>? overrides, PluralResolver? cardinalResolver, PluralResolver? ordinalResolver, TranslationMetadata<AppLocale, Translations>? meta})
 		: assert(overrides == null, 'Set "translation_overrides: true" in order to enable this feature.'),
-		  $meta = meta ?? TranslationMetadata(
+		  _meta = meta ?? TranslationMetadata(
 		    locale: AppLocale.en,
 		    overrides: overrides ?? {},
 		    cardinalResolver: cardinalResolver,
 		    ordinalResolver: ordinalResolver,
 		  ) {
-		$meta.setFlatMapFunction(_flatMapFunction);
+		_meta.setFlatMapFunction(_flatMapFunction);
 	}
 
 	/// Metadata for the translations of <en>.
-	@override final TranslationMetadata<AppLocale, Translations> $meta;
+	final TranslationMetadata<AppLocale, Translations> _meta;
+	@override TranslationMetadata<AppLocale, Translations> get $meta => _meta;
 
 	/// Access flat map
-	dynamic operator[](String key) => $meta.getTranslation(key);
+	dynamic operator[](String key) => _meta.getTranslation(key);
 
 	late final Translations _root = this; // ignore: unused_field
 
 	Translations $copyWith({TranslationMetadata<AppLocale, Translations>? meta}) => Translations(meta: meta ?? this.$meta);
 
 	// Translations
-	late final TranslationsLoginEn login = TranslationsLoginEn._(_root);
-	late final TranslationsHomeEn home = TranslationsHomeEn._(_root);
-	late final TranslationsCommonEn common = TranslationsCommonEn._(_root);
+	late final Translations$login$en login = Translations$login$en._(_root);
+	late final Translations$home$en home = Translations$home$en._(_root);
+	late final Translations$common$en common = Translations$common$en._(_root);
+	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 }
 
 // Path: login
-class TranslationsLoginEn {
-	TranslationsLoginEn._(this._root);
+class Translations$login$en {
+	Translations$login$en._(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -88,8 +90,8 @@ class TranslationsLoginEn {
 }
 
 // Path: home
-class TranslationsHomeEn {
-	TranslationsHomeEn._(this._root);
+class Translations$home$en {
+	Translations$home$en._(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -106,8 +108,8 @@ class TranslationsHomeEn {
 }
 
 // Path: common
-class TranslationsCommonEn {
-	TranslationsCommonEn._(this._root);
+class Translations$common$en {
+	Translations$common$en._(this._root);
 
 	final Translations _root; // ignore: unused_field
 
@@ -130,6 +132,51 @@ class TranslationsCommonEn {
 
 	/// en: 'No'
 	String get no => 'No';
+}
+
+// Path: profileImages
+class Translations$profileImages$en {
+	Translations$profileImages$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Profile image'
+	String get title => 'Profile image';
+
+	/// en: 'Choose'
+	String get choose => 'Choose';
+
+	/// en: 'Choose a Petdex profile image'
+	String get pickerTitle => 'Choose a Petdex profile image';
+
+	/// en: 'Search pets by name'
+	String get search => 'Search pets by name';
+
+	/// en: 'Search loads images from Petdex. Only selected images and visible search results are cached.'
+	String get networkHint => 'Search loads images from Petdex. Only selected images and visible search results are cached.';
+
+	/// en: 'Search for a pet to see profile images.'
+	String get startSearch => 'Search for a pet to see profile images.';
+
+	/// en: 'No pets found. Try another name.'
+	String get noResults => 'No pets found. Try another name.';
+
+	/// en: 'Could not load Petdex. Check your connection and retry.'
+	String get catalogError => 'Could not load Petdex. Check your connection and retry.';
+
+	/// en: 'Could not load this image. Check your connection and try again.'
+	String get imageError => 'Could not load this image. Check your connection and try again.';
+
+	/// en: 'Could not save the profile image. Check available storage and use the latest app version.'
+	String get saveError => 'Could not save the profile image. Check available storage and use the latest app version.';
+
+	/// en: 'Retry'
+	String get retry => 'Retry';
+
+	/// en: 'Use default icon'
+	String get useDefault => 'Use default icon';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -160,6 +207,18 @@ extension on Translations {
 			'common.ok' => 'OK',
 			'common.yes' => 'Yes',
 			'common.no' => 'No',
+			'profileImages.title' => 'Profile image',
+			'profileImages.choose' => 'Choose',
+			'profileImages.pickerTitle' => 'Choose a Petdex profile image',
+			'profileImages.search' => 'Search pets by name',
+			'profileImages.networkHint' => 'Search loads images from Petdex. Only selected images and visible search results are cached.',
+			'profileImages.startSearch' => 'Search for a pet to see profile images.',
+			'profileImages.noResults' => 'No pets found. Try another name.',
+			'profileImages.catalogError' => 'Could not load Petdex. Check your connection and retry.',
+			'profileImages.imageError' => 'Could not load this image. Check your connection and try again.',
+			'profileImages.saveError' => 'Could not save the profile image. Check available storage and use the latest app version.',
+			'profileImages.retry' => 'Retry',
+			'profileImages.useDefault' => 'Use default icon',
 			_ => null,
 		};
 	}

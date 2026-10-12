@@ -10,7 +10,8 @@ enum AccentColor {
   pink(Color(0xffb74786)),
   orange(Color(0xffbd651c)),
   red(Color(0xffbf4040)),
-  amber(Color(0xffa47716));
+  amber(Color(0xffa47716)),
+  grey(Color(0xff60636a));
 
   const AccentColor(this.seed);
   final Color seed;

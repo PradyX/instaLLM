@@ -24,6 +24,9 @@ class MaterialTheme {
     return ColorScheme.fromSeed(
       seedColor: accent.seed,
       brightness: brightness,
+      dynamicSchemeVariant: accent == AccentColor.grey
+          ? DynamicSchemeVariant.neutral
+          : DynamicSchemeVariant.tonalSpot,
       contrastLevel: (contrast - 1).clamp(0.0, 1.0),
     );
   }

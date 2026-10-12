@@ -141,6 +141,7 @@ void main() {
         'Orange',
         'Red',
         'Amber',
+        'Grey',
       ]) {
         expect(find.text(text), findsOneWidget);
       }
@@ -156,7 +157,7 @@ void main() {
     (tester) async {
       await pump(tester);
       final green = theme(tester).colorScheme.primary;
-      await select(tester, 'Blue');
+      await select(tester, 'Grey');
       await select(tester, 'Translucent');
       expect(theme(tester).colorScheme.primary, isNot(green));
       expect(theme(tester).scaffoldBackgroundColor.a, lessThan(1));
@@ -164,7 +165,7 @@ void main() {
       expect(jsonDecode(file.readAsStringSync()), {
         'version': 2,
         'surfaceStyle': 'translucent',
-        'accent': 'blue',
+        'accent': 'grey',
         'contrast': 1.0,
         'glassOpacity': 0.78,
       });
@@ -172,7 +173,7 @@ void main() {
       expect(theme(tester).brightness, Brightness.dark);
       expect(
         container.read(appearanceProvider).preferences.accent,
-        AccentColor.blue,
+        AccentColor.grey,
       );
       expect(
         container.read(appearanceProvider).preferences.surfaceStyle,

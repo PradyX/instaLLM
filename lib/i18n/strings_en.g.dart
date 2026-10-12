@@ -225,14 +225,8 @@ class Translations$appearance$en {
 	/// en: 'Translucent'
 	String get translucent => 'Translucent';
 
-	/// en: 'Translucent uses frosted panels over an in-app background.'
-	String get translucentHint => 'Translucent uses frosted panels over an in-app background.';
-
 	/// en: 'Accent colour'
 	String get accentColor => 'Accent colour';
-
-	/// en: 'Choose an accent. Each tile previews its light and dark palette.'
-	String get previewHint => 'Choose an accent. Each tile previews its light and dark palette.';
 
 	/// en: 'Interface'
 	String get interface => 'Interface';
@@ -275,6 +269,9 @@ class Translations$appearance$en {
 
 	/// en: 'Amber'
 	String get amber => 'Amber';
+
+	/// en: 'Grey'
+	String get grey => 'Grey';
 
 	/// en: 'Could not save the theme mode. Check available storage and try again.'
 	String get modeSaveError => 'Could not save the theme mode. Check available storage and try again.';
@@ -338,9 +335,7 @@ extension on Translations {
 			'appearance.surfaceStyle' => 'Surface style',
 			'appearance.solid' => 'Solid',
 			'appearance.translucent' => 'Translucent',
-			'appearance.translucentHint' => 'Translucent uses frosted panels over an in-app background.',
 			'appearance.accentColor' => 'Accent colour',
-			'appearance.previewHint' => 'Choose an accent. Each tile previews its light and dark palette.',
 			'appearance.interface' => 'Interface',
 			'appearance.contrast' => 'Contrast',
 			'appearance.contrastHint' => 'Increase the contrast of colours, text and borders.',
@@ -355,6 +350,7 @@ extension on Translations {
 			'appearance.orange' => 'Orange',
 			'appearance.red' => 'Red',
 			'appearance.amber' => 'Amber',
+			'appearance.grey' => 'Grey',
 			'appearance.modeSaveError' => 'Could not save the theme mode. Check available storage and try again.',
 			'appearance.loadError' => 'Could not load appearance preferences. Try restarting the app.',
 			'appearance.saveError' => 'Could not save appearance preferences. Check available storage and try again.',

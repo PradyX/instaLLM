@@ -56,13 +56,13 @@ void main() {
       final first = await loaded();
       final notifier = first.read(appearanceProvider.notifier);
       expect(await notifier.setSurfaceStyle(SurfaceStyle.translucent), isTrue);
-      expect(await notifier.setAccent(AccentColor.purple), isTrue);
+      expect(await notifier.setAccent(AccentColor.grey), isTrue);
       expect(await notifier.setContrast(1.5), isTrue);
       expect(await notifier.setGlassOpacity(0.9), isTrue);
       expect(jsonDecode(file.readAsStringSync()), {
         'version': 2,
         'surfaceStyle': 'translucent',
-        'accent': 'purple',
+        'accent': 'grey',
         'contrast': 1.5,
         'glassOpacity': 0.9,
       });
@@ -73,7 +73,7 @@ void main() {
       );
       expect(
         second.read(appearanceProvider).preferences.accent,
-        AccentColor.purple,
+        AccentColor.grey,
       );
       expect(second.read(appearanceProvider).preferences.contrast, 1.5);
       expect(second.read(appearanceProvider).preferences.glassOpacity, 0.9);

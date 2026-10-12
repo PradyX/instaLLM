@@ -68,95 +68,75 @@ class AppearanceSettingsSection extends ConsumerWidget {
               const Divider(height: 32),
               _AppearanceGroup(
                 title: t.appearance.surfaceStyle,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final (value, label, icon) in [
-                          (
-                            SurfaceStyle.solid,
-                            t.appearance.solid,
-                            Icons.rectangle_outlined,
-                          ),
-                          (
-                            SurfaceStyle.translucent,
-                            t.appearance.translucent,
-                            Icons.blur_on_rounded,
-                          ),
-                        ])
-                          ChoiceChip(
-                            label: Text(label),
-                            avatar: Icon(icon, size: 18),
-                            selected: preferences.surfaceStyle == value,
-                            onSelected: !editable
-                                ? null
-                                : (selected) {
-                                    if (selected) {
-                                      notifier.setSurfaceStyle(value);
-                                    }
-                                  },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      t.appearance.translucentHint,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                    for (final (value, label, icon) in [
+                      (
+                        SurfaceStyle.solid,
+                        t.appearance.solid,
+                        Icons.rectangle_outlined,
+                      ),
+                      (
+                        SurfaceStyle.translucent,
+                        t.appearance.translucent,
+                        Icons.blur_on_rounded,
+                      ),
+                    ])
+                      ChoiceChip(
+                        label: Text(label),
+                        avatar: Icon(icon, size: 18),
+                        selected: preferences.surfaceStyle == value,
+                        onSelected: !editable
+                            ? null
+                            : (selected) {
+                                if (selected) {
+                                  notifier.setSurfaceStyle(value);
+                                }
+                              },
+                      ),
                   ],
                 ),
               ),
               const Divider(height: 32),
               _AppearanceGroup(
                 title: t.appearance.accentColor,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      t.appearance.previewHint,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 16),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        const gap = 12.0;
-                        final textScale =
-                            (MediaQuery.textScalerOf(context).scale(14) / 14)
-                                .clamp(1.0, 1.5);
-                        final columns =
-                            ((constraints.maxWidth + gap) /
-                                    (220 * textScale + gap))
-                                .floor()
-                                .clamp(1, 3);
-                        final width =
-                            (constraints.maxWidth - gap * (columns - 1)) /
-                            columns;
-                        return Wrap(
-                          spacing: gap,
-                          runSpacing: gap,
-                          children: [
-                            for (final accent in AccentColor.values)
-                              SizedBox(
-                                width: width,
-                                child: AccentThemeTile(
-                                  key: ValueKey('accent-${accent.name}'),
-                                  accent: accent,
-                                  label: _accentLabel(accent),
-                                  contrast: preferences.contrast,
-                                  selected: preferences.accent == accent,
-                                  onSelected: !editable
-                                      ? null
-                                      : () => notifier.setAccent(accent),
-                                ),
-                              ),
-                          ],
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    const gap = 12.0;
+                    final textScale =
+                        (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+                          1.0,
+                          1.5,
                         );
-                      },
-                    ),
-                  ],
+                    final columns =
+                        ((constraints.maxWidth + gap) / (220 * textScale + gap))
+                            .floor()
+                            .clamp(1, 3);
+                    final width =
+                        (constraints.maxWidth - gap * (columns - 1)) / columns;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: [
+                        for (final accent in AccentColor.values)
+                          SizedBox(
+                            width: width,
+                            child: AccentThemeTile(
+                              key: ValueKey('accent-${accent.name}'),
+                              accent: accent,
+                              label: _accentLabel(accent),
+                              contrast: preferences.contrast,
+                              selected: preferences.accent == accent,
+                              onSelected: !editable
+                                  ? null
+                                  : () => notifier.setAccent(accent),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
               const Divider(height: 32),
@@ -227,6 +207,7 @@ String _accentLabel(AccentColor accent) => switch (accent) {
   AccentColor.orange => t.appearance.orange,
   AccentColor.red => t.appearance.red,
   AccentColor.amber => t.appearance.amber,
+  AccentColor.grey => t.appearance.grey,
 };
 
 class _AppearanceGroup extends StatelessWidget {

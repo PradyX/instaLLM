@@ -171,6 +171,10 @@ dart run build_runner build --delete-conflicting-outputs
 4. Start chatting on Home.
 5. Use `Stop`, `Regenerate`, or `Edit & Resend` for quick iteration.
 
+### Appearance
+
+Settings offers independent **Auto / Light / Dark**, **Solid / Translucent**, and **Accent colour** controls. Translucent uses frosted panels over an in-app background. Green is the default accent; Blue, Purple, Teal, Pink, Orange, Red and Amber are also available. Surface and accent choices are stored locally and restored on restart.
+
 ### Conversations
 
 The same navigation panel stays open beside the chat on wide screens and opens from the hamburger on mobile. Both show the workspace header, New chat, search, recent chats, Bots, Rooms, Board, Models and Settings. Bots and rooms can be created with their section's **+** button in either layout. Benchmark and About are available in Settings.

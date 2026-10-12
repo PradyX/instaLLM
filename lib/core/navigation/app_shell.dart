@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
+import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
@@ -236,149 +237,154 @@ class AppNavigationPanel extends ConsumerWidget {
     // The shell sits above each page's Scaffold, so no page Material covers
     // this rail: this Material paints the background and hosts every ink
     // response (header, tiles) below it.
-    return Container(
-      width: AppShell.railWidth,
-      decoration: BoxDecoration(
-        border: Border(
-          right: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+    return FrostedPanel(
+      child: Container(
+        width: AppShell.railWidth,
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
           ),
         ),
-      ),
-      child: Material(
-        color: colorScheme.surfaceContainerLow,
-        child: ListTileTheme.merge(
-          style: ListTileStyle.list,
-          child: SafeArea(
-            minimum: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                InkWell(
-                  onTap: () => navigate(AppRoutes.workspaces),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(6),
-                            child: Image.asset(
-                              'assets/icons/pocketllm_new.png',
-                              fit: BoxFit.contain,
+        child: Material(
+          color: appearanceSurfaceColor(
+            context,
+            colorScheme.surfaceContainerLow,
+          ),
+          child: ListTileTheme.merge(
+            style: ListTileStyle.list,
+            child: SafeArea(
+              minimum: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  InkWell(
+                    onTap: () => navigate(AppRoutes.workspaces),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Image.asset(
+                                'assets/icons/pocketllm_new.png',
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Pocket LLM',
-                                style: textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pocket LLM',
+                                  style: textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                workspace?.name ?? 'No workspace',
-                                style: textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
+                                Text(
+                                  workspace?.name ?? 'No workspace',
+                                  style: textTheme.labelSmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          const Icon(Icons.swap_horiz_rounded, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  leading ??
+                      ShellChatLeading(
+                        isGenerating: isGenerating,
+                        onNavigate: onNavigate,
+                      ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _sectionHeader(
+                          context,
+                          label: 'Chats',
+                          onSeeMore: () => navigate(AppRoutes.conversations),
                         ),
-                        const Icon(Icons.swap_horiz_rounded, size: 18),
+                        _ChatRows(
+                          current: section == AppSection.chats,
+                          isGenerating: isGenerating,
+                          onOpened: onNavigate,
+                        ),
+                        _sectionHeader(
+                          context,
+                          label: 'Bots',
+                          onCreate: () => _createBot(
+                            actionContext,
+                            ref,
+                            onCreated: onNavigate,
+                          ),
+                          createTooltip: 'New bot',
+                        ),
+                        BotChatRows(
+                          workspaceId: workspace?.id,
+                          onOpened: onNavigate,
+                        ),
+                        _sectionHeader(
+                          context,
+                          label: 'Rooms',
+                          onCreate: workspace == null
+                              ? null
+                              : () => _createRoom(
+                                  actionContext,
+                                  ref,
+                                  workspace.id,
+                                  onCreated: onNavigate,
+                                ),
+                          createTooltip: 'New room',
+                        ),
+                        RoomChatRows(
+                          workspaceId: workspace?.id,
+                          onOpened: onNavigate,
+                        ),
+                        _sectionLabel(context, 'Board'),
+                        _BoardTile(
+                          current: section == AppSection.board,
+                          onOpened: onNavigate,
+                        ),
+                        _sectionLabel(context, 'More'),
+                        _navTile(
+                          context,
+                          icon: Icons.smart_toy_outlined,
+                          label: 'Models',
+                          route: AppRoutes.modelSelection,
+                          onOpened: onNavigate,
+                        ),
+                        _navTile(
+                          context,
+                          icon: Icons.settings_outlined,
+                          label: 'Settings',
+                          route: AppRoutes.settings,
+                          onOpened: onNavigate,
+                        ),
                       ],
                     ),
                   ),
-                ),
-                leading ??
-                    ShellChatLeading(
-                      isGenerating: isGenerating,
-                      onNavigate: onNavigate,
-                    ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _sectionHeader(
-                        context,
-                        label: 'Chats',
-                        onSeeMore: () => navigate(AppRoutes.conversations),
-                      ),
-                      _ChatRows(
-                        current: section == AppSection.chats,
-                        isGenerating: isGenerating,
-                        onOpened: onNavigate,
-                      ),
-                      _sectionHeader(
-                        context,
-                        label: 'Bots',
-                        onCreate: () => _createBot(
-                          actionContext,
-                          ref,
-                          onCreated: onNavigate,
-                        ),
-                        createTooltip: 'New bot',
-                      ),
-                      BotChatRows(
-                        workspaceId: workspace?.id,
-                        onOpened: onNavigate,
-                      ),
-                      _sectionHeader(
-                        context,
-                        label: 'Rooms',
-                        onCreate: workspace == null
-                            ? null
-                            : () => _createRoom(
-                                actionContext,
-                                ref,
-                                workspace.id,
-                                onCreated: onNavigate,
-                              ),
-                        createTooltip: 'New room',
-                      ),
-                      RoomChatRows(
-                        workspaceId: workspace?.id,
-                        onOpened: onNavigate,
-                      ),
-                      _sectionLabel(context, 'Board'),
-                      _BoardTile(
-                        current: section == AppSection.board,
-                        onOpened: onNavigate,
-                      ),
-                      _sectionLabel(context, 'More'),
-                      _navTile(
-                        context,
-                        icon: Icons.smart_toy_outlined,
-                        label: 'Models',
-                        route: AppRoutes.modelSelection,
-                        onOpened: onNavigate,
-                      ),
-                      _navTile(
-                        context,
-                        icon: Icons.settings_outlined,
-                        label: 'Settings',
-                        route: AppRoutes.settings,
-                        onOpened: onNavigate,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

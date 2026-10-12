@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/theme/theme.dart';
 import 'package:pocket_llm/core/theme/theme_provider.dart';
+import 'package:pocket_llm/core/theme/appearance_provider.dart';
+import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MyApp extends ConsumerWidget {
@@ -12,7 +14,12 @@ class MyApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeNotifierProvider);
     final textTheme = Theme.of(context).textTheme;
-    final theme = MaterialTheme(textTheme);
+    final appearance = ref.watch(appearanceProvider).preferences;
+    final theme = MaterialTheme(
+      textTheme,
+      accent: appearance.accent,
+      surfaceStyle: appearance.surfaceStyle,
+    );
 
     return MaterialApp.router(
       title: 'Pocket LLM',
@@ -21,6 +28,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: theme.dark(),
       themeMode: themeMode,
       routerConfig: router,
+      builder: (context, child) => AppearanceBackground(child: child!),
     );
   }
 }

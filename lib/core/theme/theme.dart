@@ -1,9 +1,17 @@
 import "package:flutter/material.dart";
+import 'package:pocket_llm/core/theme/appearance_preferences.dart';
+import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 
 class MaterialTheme {
   final TextTheme textTheme;
 
-  const MaterialTheme(this.textTheme);
+  const MaterialTheme(
+    this.textTheme, {
+    this.accent = AccentColor.green,
+    this.surfaceStyle = SurfaceStyle.solid,
+  });
+  final AccentColor accent;
+  final SurfaceStyle surfaceStyle;
 
   static ColorScheme lightScheme() {
     return const ColorScheme(
@@ -57,7 +65,14 @@ class MaterialTheme {
   }
 
   ThemeData light() {
-    return theme(lightScheme());
+    return theme(
+      accent == AccentColor.green
+          ? lightScheme()
+          : ColorScheme.fromSeed(
+              seedColor: accent.seed,
+              brightness: Brightness.light,
+            ),
+    );
   }
 
   static ColorScheme lightMediumContrastScheme() {
@@ -222,7 +237,14 @@ class MaterialTheme {
   }
 
   ThemeData dark() {
-    return theme(darkScheme());
+    return theme(
+      accent == AccentColor.green
+          ? darkScheme()
+          : ColorScheme.fromSeed(
+              seedColor: accent.seed,
+              brightness: Brightness.dark,
+            ),
+    );
   }
 
   static ColorScheme darkMediumContrastScheme() {
@@ -335,17 +357,37 @@ class MaterialTheme {
     return theme(darkHighContrastScheme());
   }
 
-  ThemeData theme(ColorScheme colorScheme) => ThemeData(
-    useMaterial3: true,
-    brightness: colorScheme.brightness,
-    colorScheme: colorScheme,
-    textTheme: textTheme.apply(
-      bodyColor: colorScheme.onSurface,
-      displayColor: colorScheme.onSurface,
-    ),
-    scaffoldBackgroundColor: colorScheme.surface,
-    canvasColor: colorScheme.surface,
-  );
+  ThemeData theme(ColorScheme colorScheme) {
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: colorScheme.brightness,
+      colorScheme: colorScheme,
+      textTheme: textTheme.apply(
+        bodyColor: colorScheme.onSurface,
+        displayColor: colorScheme.onSurface,
+      ),
+      scaffoldBackgroundColor: colorScheme.surface,
+      canvasColor: colorScheme.surface,
+      extensions: [SurfaceAppearance(surfaceStyle)],
+    );
+    if (surfaceStyle == SurfaceStyle.solid) return base;
+    return base.copyWith(
+      scaffoldBackgroundColor: colorScheme.surface.withValues(alpha: 0.54),
+      canvasColor: colorScheme.surface.withValues(alpha: 0.78),
+      appBarTheme: AppBarThemeData(
+        backgroundColor: colorScheme.surface.withValues(alpha: 0.54),
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: CardThemeData(
+        color: colorScheme.surfaceContainer.withValues(alpha: 0.78),
+        surfaceTintColor: Colors.transparent,
+      ),
+      drawerTheme: const DrawerThemeData(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+      ),
+    );
+  }
 
   List<ExtendedColor> get extendedColors => [];
 }

@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/settings/attachment_settings_provider.dart';
 import 'package:pocket_llm/core/services/attachment_image_service.dart';
-import 'package:pocket_llm/core/theme/theme_provider.dart';
+import 'package:pocket_llm/features/settings/presentation/appearance_settings_section.dart';
 import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
 import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
     show formatTokens;
@@ -18,7 +18,6 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeNotifierProvider);
     final attachmentSettings = ref.watch(attachmentSettingsProvider);
     final defaultPersonaName = ref.watch(personasProvider).defaultPersona.name;
     final activeProfileName = ref
@@ -44,44 +43,7 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('Theme Mode'),
-                  const SizedBox(height: 16),
-                  SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(
-                        value: ThemeMode.system,
-                        label: Text('System'),
-                        icon: Icon(Icons.brightness_auto),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.light,
-                        label: Text('Light'),
-                        icon: Icon(Icons.light_mode),
-                      ),
-                      ButtonSegment(
-                        value: ThemeMode.dark,
-                        label: Text('Dark'),
-                        icon: Icon(Icons.dark_mode),
-                      ),
-                    ],
-                    selected: {themeMode},
-                    onSelectionChanged: (Set<ThemeMode> newSelection) {
-                      ref
-                          .read(themeModeNotifierProvider.notifier)
-                          .setThemeMode(newSelection.first);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const AppearanceSettingsSection(),
           const SizedBox(height: 24),
           Text(
             'Chat',

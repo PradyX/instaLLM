@@ -46,6 +46,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
+	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
 }
 
 // Path: login
@@ -195,6 +196,78 @@ class Translations$navigation$en {
 	String get about => 'About';
 }
 
+// Path: appearance
+class Translations$appearance$en {
+	Translations$appearance$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Theme mode'
+	String get themeMode => 'Theme mode';
+
+	/// en: 'Auto'
+	String get auto => 'Auto';
+
+	/// en: 'Light'
+	String get light => 'Light';
+
+	/// en: 'Dark'
+	String get dark => 'Dark';
+
+	/// en: 'Surface style'
+	String get surfaceStyle => 'Surface style';
+
+	/// en: 'Solid'
+	String get solid => 'Solid';
+
+	/// en: 'Translucent'
+	String get translucent => 'Translucent';
+
+	/// en: 'Translucent uses frosted panels over an in-app background.'
+	String get translucentHint => 'Translucent uses frosted panels over an in-app background.';
+
+	/// en: 'Accent colour'
+	String get accentColor => 'Accent colour';
+
+	/// en: 'Green'
+	String get green => 'Green';
+
+	/// en: 'Blue'
+	String get blue => 'Blue';
+
+	/// en: 'Purple'
+	String get purple => 'Purple';
+
+	/// en: 'Teal'
+	String get teal => 'Teal';
+
+	/// en: 'Pink'
+	String get pink => 'Pink';
+
+	/// en: 'Orange'
+	String get orange => 'Orange';
+
+	/// en: 'Red'
+	String get red => 'Red';
+
+	/// en: 'Amber'
+	String get amber => 'Amber';
+
+	/// en: 'Could not save the theme mode. Check available storage and try again.'
+	String get modeSaveError => 'Could not save the theme mode. Check available storage and try again.';
+
+	/// en: 'Could not load appearance preferences. Try restarting the app.'
+	String get loadError => 'Could not load appearance preferences. Try restarting the app.';
+
+	/// en: 'Could not save appearance preferences. Check available storage and try again.'
+	String get saveError => 'Could not save appearance preferences. Check available storage and try again.';
+
+	/// en: 'These appearance preferences need a newer app version. Update the app to change them.'
+	String get newerVersion => 'These appearance preferences need a newer app version. Update the app to change them.';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -237,6 +310,27 @@ extension on Translations {
 			'profileImages.useDefault' => 'Use default icon',
 			'navigation.benchmark' => 'Benchmark',
 			'navigation.about' => 'About',
+			'appearance.themeMode' => 'Theme mode',
+			'appearance.auto' => 'Auto',
+			'appearance.light' => 'Light',
+			'appearance.dark' => 'Dark',
+			'appearance.surfaceStyle' => 'Surface style',
+			'appearance.solid' => 'Solid',
+			'appearance.translucent' => 'Translucent',
+			'appearance.translucentHint' => 'Translucent uses frosted panels over an in-app background.',
+			'appearance.accentColor' => 'Accent colour',
+			'appearance.green' => 'Green',
+			'appearance.blue' => 'Blue',
+			'appearance.purple' => 'Purple',
+			'appearance.teal' => 'Teal',
+			'appearance.pink' => 'Pink',
+			'appearance.orange' => 'Orange',
+			'appearance.red' => 'Red',
+			'appearance.amber' => 'Amber',
+			'appearance.modeSaveError' => 'Could not save the theme mode. Check available storage and try again.',
+			'appearance.loadError' => 'Could not load appearance preferences. Try restarting the app.',
+			'appearance.saveError' => 'Could not save appearance preferences. Check available storage and try again.',
+			'appearance.newerVersion' => 'These appearance preferences need a newer app version. Update the app to change them.',
 			_ => null,
 		};
 	}

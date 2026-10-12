@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
 
 /// What the composer's mic is doing.
@@ -80,107 +81,113 @@ class ChatComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final micHandler = onMicPressed;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+    return FrostedPanel(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: appearanceSurfaceColor(
+            context,
+            colorScheme.surfaceContainerHigh,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (header case final Widget widget) widget,
-          // Desktop: Return sends, Shift+Return adds a line. Mobile
-          // keyboards keep their own send action and Return as a line
-          // break, which is what the shortcut wrapper checks. No Expanded
-          // here: this column shrink-wraps, so the field sizes itself.
-          ComposerSendOnEnter(
-            sendsOnEnter: enabled && sendsOnEnter,
-            onSend: onSend,
-            child: TextField(
-              controller: controller,
-              enabled: enabled,
-              readOnly: !enabled,
-              maxLines: 5,
-              minLines: 1,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                hintText: hintText,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                filled: false,
-                contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
-              ),
-              onSubmitted: enabled ? (_) => onSend() : null,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Row(
-              children: [
-                if (leading case final Widget widget) widget,
-                if (reasoning case final Widget widget) widget,
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: middle ?? const SizedBox(),
-                  ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (header case final Widget widget) widget,
+            // Desktop: Return sends, Shift+Return adds a line. Mobile
+            // keyboards keep their own send action and Return as a line
+            // break, which is what the shortcut wrapper checks. No Expanded
+            // here: this column shrink-wraps, so the field sizes itself.
+            ComposerSendOnEnter(
+              sendsOnEnter: enabled && sendsOnEnter,
+              onSend: onSend,
+              child: TextField(
+                controller: controller,
+                enabled: enabled,
+                readOnly: !enabled,
+                maxLines: 5,
+                minLines: 1,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: hintText,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
                 ),
-                const SizedBox(width: 4),
-                if (micHandler != null)
-                  SizedBox.square(
-                    dimension: 40,
-                    child: switch (micState) {
-                      // Only work the user cannot finish by tapping hides the
-                      // control; listening and recording keep a tappable mic,
-                      // because the tap is what ends them.
-                      ComposerMicState.transcribing => const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      ComposerMicState.active => IconButton.filledTonal(
-                        tooltip: 'Finish dictation',
-                        onPressed: enabled ? micHandler : null,
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.mic_rounded, size: 20),
-                      ),
-                      ComposerMicState.idle => IconButton(
-                        tooltip: 'Voice input',
-                        onPressed: enabled ? micHandler : null,
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.mic_none_rounded, size: 20),
-                      ),
-                    },
-                  ),
-                if (micHandler != null) const SizedBox(width: 4),
-                SizedBox.square(
-                  dimension: 40,
-                  child: IconButton.filled(
-                    tooltip: 'Send',
-                    onPressed: enabled ? onSend : null,
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(Icons.arrow_upward_rounded, size: 20),
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.primary,
-                      foregroundColor: colorScheme.onPrimary,
+                onSubmitted: enabled ? (_) => onSend() : null,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  if (leading case final Widget widget) widget,
+                  if (reasoning case final Widget widget) widget,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: middle ?? const SizedBox(),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  if (micHandler != null)
+                    SizedBox.square(
+                      dimension: 40,
+                      child: switch (micState) {
+                        // Only work the user cannot finish by tapping hides the
+                        // control; listening and recording keep a tappable mic,
+                        // because the tap is what ends them.
+                        ComposerMicState.transcribing => const Padding(
+                          padding: EdgeInsets.all(10),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        ComposerMicState.active => IconButton.filledTonal(
+                          tooltip: 'Finish dictation',
+                          onPressed: enabled ? micHandler : null,
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.mic_rounded, size: 20),
+                        ),
+                        ComposerMicState.idle => IconButton(
+                          tooltip: 'Voice input',
+                          onPressed: enabled ? micHandler : null,
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.mic_none_rounded, size: 20),
+                        ),
+                      },
+                    ),
+                  if (micHandler != null) const SizedBox(width: 4),
+                  SizedBox.square(
+                    dimension: 40,
+                    child: IconButton.filled(
+                      tooltip: 'Send',
+                      onPressed: enabled ? onSend : null,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+                      style: IconButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

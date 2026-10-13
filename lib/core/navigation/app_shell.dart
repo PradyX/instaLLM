@@ -284,20 +284,11 @@ class AppNavigationPanel extends ConsumerWidget {
                           enabled: !isGenerating,
                           child: Row(
                             children: [
-                              Container(
+                              Image.asset(
+                                'assets/icons/installm.png',
                                 width: 34,
                                 height: 34,
-                                decoration: BoxDecoration(
-                                  color: colorScheme.primary,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Image.asset(
-                                    'assets/icons/installm.png',
-                                    fit: BoxFit.contain,
-                                  ),
-                                ),
+                                fit: BoxFit.contain,
                               ),
                               const SizedBox(width: 10),
                               Expanded(

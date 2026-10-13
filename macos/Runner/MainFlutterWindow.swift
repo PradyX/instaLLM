@@ -4,9 +4,7 @@ import FlutterMacOS
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
-    let windowFrame = self.frame
     self.contentViewController = flutterViewController
-    self.setFrame(windowFrame, display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     
@@ -45,5 +43,32 @@ class MainFlutterWindow: NSWindow {
     }
 
     super.awakeFromNib()
+    configureWindowFrame()
+  }
+
+  private func configureWindowFrame() {
+    let autosaveName = NSWindow.FrameAutosaveName("PocketLLMMainWindow.v1")
+    let restored = setFrameUsingName(autosaveName)
+
+    if !restored {
+      // Start wide enough for the desktop sidebar and a comfortable chat area.
+      setContentSize(NSSize(width: 1200, height: 800))
+      center()
+    }
+
+    // A saved frame can belong to a larger or disconnected display. Keep the
+    // whole window visible while retaining user-selected sizes and positions.
+    if let visibleFrame = (screen ?? NSScreen.main)?.visibleFrame {
+      var fittedFrame = frame
+      fittedFrame.size.width = min(fittedFrame.width, visibleFrame.width)
+      fittedFrame.size.height = min(fittedFrame.height, visibleFrame.height)
+      fittedFrame.origin.x = min(max(fittedFrame.minX, visibleFrame.minX),
+                                visibleFrame.maxX - fittedFrame.width)
+      fittedFrame.origin.y = min(max(fittedFrame.minY, visibleFrame.minY),
+                                visibleFrame.maxY - fittedFrame.height)
+      setFrame(fittedFrame, display: true)
+    }
+
+    setFrameAutosaveName(autosaveName)
   }
 }

@@ -1,3 +1,5 @@
+> **Development has moved:** Active development continues as **InstaLLM** at [PradyX/instaLLM](https://github.com/PradyX/instaLLM). This repository is retained for historical reference and receives no further development.
+
 <p align="center">
   <img src="assets/icons/pocketllm_new.png" width="120" alt="Pocket LLM Logo">
 </p>

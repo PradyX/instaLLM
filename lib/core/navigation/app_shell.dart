@@ -7,6 +7,7 @@ import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
+import 'package:pocket_llm/features/bots/presentation/create_bot_dialog.dart';
 import 'package:pocket_llm/features/bots/domain/bot.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
@@ -18,6 +19,7 @@ import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:pocket_llm/features/personas/application/personas_controller.dart';
 import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
 import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
 import 'package:pocket_llm/i18n/strings.g.dart';
@@ -630,15 +632,24 @@ Future<void> _createBot(
   VoidCallback? onCreated,
 }) async {
   final bots = ref.read(botsProvider.notifier);
-  final name = await NamePromptDialog.show(
-    context,
-    title: 'New bot',
-    hintText: 'Bot name',
-    confirmLabel: 'Create',
+  final draft = await showDialog<BotDraft>(
+    context: context,
+    builder: (_) => const CreateBotDialog(),
   );
-  if (name == null || name.trim().isEmpty || !context.mounted) return;
-  final bot = await bots.createBot(name.trim());
+  if (draft == null || !context.mounted) return;
+  final bot = await bots.createBot(draft.name);
   if (bot == null || !context.mounted) return;
+  if (draft.portrait != null) {
+    final saved = await ref
+        .read(profileImagesProvider.notifier)
+        .select(botProfileKey(bot.id), draft.portrait);
+    if (!context.mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.profileImages.saveError)));
+    }
+  }
   onCreated?.call();
   await Navigator.of(context).push(
     MaterialPageRoute<void>(builder: (context) => BotEditorPage(botId: bot.id)),

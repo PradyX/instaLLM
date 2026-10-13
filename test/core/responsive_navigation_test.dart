@@ -11,6 +11,7 @@ import 'package:pocket_llm/core/navigation/navigation_panel_widgets.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
+import 'package:pocket_llm/features/bots/presentation/create_bot_dialog.dart';
 import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
 import 'package:pocket_llm/features/conversations/domain/conversation.dart';
 import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
@@ -514,11 +515,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(
       find.descendant(
-        of: find.byType(NamePromptDialog),
+        of: find.byType(CreateBotDialog),
         matching: find.byType(TextField),
       ),
       'Mobile bot',
     );
+    await tester.pump();
     await tester.tap(find.text('Create'));
     await pumpUntil(
       tester,

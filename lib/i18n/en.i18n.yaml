@@ -19,12 +19,18 @@ home:
   logout: "Logout"
 
 common:
+  cancel: Cancel
   error: "Error"
   success: "Success"
   close: "Close"
   ok: "OK"
   yes: "Yes"
   no: "No"
+
+botCreation:
+  title: New bot
+  name: Bot name
+  create: Create
 
 profileImages:
   title: "Profile image"

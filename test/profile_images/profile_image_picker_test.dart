@@ -9,6 +9,7 @@ import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/data/bot_store.dart';
 import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
+import 'package:pocket_llm/features/bots/presentation/create_bot_dialog.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
 import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
@@ -84,6 +85,65 @@ void main() {
           ),
         ),
       );
+
+  testWidgets(
+    'new bot portrait is a draft; create returns it and cancel saves nothing',
+    (tester) async {
+      BotDraft? draft;
+      await pump(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              draft = await showDialog<BotDraft>(
+                context: context,
+                builder: (_) => const CreateBotDialog(),
+              );
+            },
+            child: const Text('New bot'),
+          ),
+        ),
+      );
+      await tester.tap(find.text('New bot'));
+      await tester.pumpAndSettle();
+      expect(service.catalogRequests, 0);
+      await tester.enterText(find.byType(TextField), 'My bot');
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Boba');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(of: find.byType(Card), matching: find.text('Boba')),
+      );
+      await tester.pumpAndSettle();
+      expect(service.store.load(), isEmpty);
+      expect(find.byType(PetdexAvatar), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(draft, isNull);
+      expect(service.store.load(), isEmpty);
+
+      await tester.tap(find.text('New bot'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Portrait bot');
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Boba');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(of: find.byType(Card), matching: find.text('Boba')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create'));
+      await tester.pumpAndSettle();
+      expect(draft?.name, 'Portrait bot');
+      expect(draft?.portrait, _boba);
+      expect(service.store.load(), isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'opening picker loads no gallery; search loads only matches, selection persists and can be removed',

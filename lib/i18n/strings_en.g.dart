@@ -44,6 +44,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$login$en login = Translations$login$en._(_root);
 	late final Translations$home$en home = Translations$home$en._(_root);
 	late final Translations$common$en common = Translations$common$en._(_root);
+	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
@@ -117,6 +118,9 @@ class Translations$common$en {
 
 	// Translations
 
+	/// en: 'Cancel'
+	String get cancel => 'Cancel';
+
 	/// en: 'Error'
 	String get error => 'Error';
 
@@ -134,6 +138,24 @@ class Translations$common$en {
 
 	/// en: 'No'
 	String get no => 'No';
+}
+
+// Path: botCreation
+class Translations$botCreation$en {
+	Translations$botCreation$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'New bot'
+	String get title => 'New bot';
+
+	/// en: 'Bot name'
+	String get name => 'Bot name';
+
+	/// en: 'Create'
+	String get create => 'Create';
 }
 
 // Path: profileImages
@@ -338,12 +360,16 @@ extension on Translations {
 			'home.title' => 'Home',
 			'home.settings' => 'Settings',
 			'home.logout' => 'Logout',
+			'common.cancel' => 'Cancel',
 			'common.error' => 'Error',
 			'common.success' => 'Success',
 			'common.close' => 'Close',
 			'common.ok' => 'OK',
 			'common.yes' => 'Yes',
 			'common.no' => 'No',
+			'botCreation.title' => 'New bot',
+			'botCreation.name' => 'Bot name',
+			'botCreation.create' => 'Create',
 			'profileImages.title' => 'Profile image',
 			'profileImages.choose' => 'Choose',
 			'profileImages.pickerTitle' => 'Choose a Petdex profile image',

@@ -39,9 +39,16 @@ class ProfileImageButton extends StatelessWidget {
 }
 
 class ProfileImagePicker extends ConsumerStatefulWidget {
-  const ProfileImagePicker({super.key, required this.profileKey});
+  const ProfileImagePicker({super.key, required this.profileKey})
+    : initialSelection = null;
 
-  final String profileKey;
+  /// Returns a draft without saving an override. Null means cancellation;
+  /// a selection with a null pet means the user chose the default icon.
+  const ProfileImagePicker.draft({super.key, this.initialSelection})
+    : profileKey = null;
+
+  final String? profileKey;
+  final PetdexPet? initialSelection;
 
   @override
   ConsumerState<ProfileImagePicker> createState() => _ProfileImagePickerState();
@@ -73,9 +80,14 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
         await ref.read(provider.future);
       }
       if (!mounted) return;
+      final key = widget.profileKey;
+      if (key == null) {
+        Navigator.of(context).pop(ProfileImageSelection(pet));
+        return;
+      }
       final saved = await ref
           .read(profileImagesProvider.notifier)
-          .select(widget.profileKey, pet);
+          .select(key, pet);
       if (!mounted) return;
       if (saved) {
         Navigator.of(context).pop();
@@ -91,9 +103,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = ref
-        .watch(profileImagesProvider)
-        .valueOrNull?[widget.profileKey];
+    final selected = widget.profileKey == null
+        ? widget.initialSelection
+        : ref.watch(profileImagesProvider).valueOrNull?[widget.profileKey];
     // No catalog request and no thumbnail requests until the user searches.
     final catalog = _query.isEmpty ? null : ref.watch(petdexCatalogProvider);
     return AlertDialog(
@@ -248,4 +260,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
       ],
     );
   }
+}
+
+class ProfileImageSelection {
+  const ProfileImageSelection(this.pet);
+  final PetdexPet? pet;
 }

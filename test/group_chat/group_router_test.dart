@@ -21,6 +21,30 @@ void main() {
   }
 
   group('GroupRouter', () {
+    test(
+      'mentions follow text order, avoid partial names/emails, and prefer full spaced names',
+      () {
+        final senior = bot('senior', 'Coder Pro');
+        expect(
+          GroupRouter.mentions(
+            text: '@Coder Pro, then @Planner then @Coder.',
+            members: [...members, senior],
+          ),
+          ['senior', 'planner', 'coder'],
+        );
+        expect(
+          GroupRouter.mentions(
+            text: 'email@coder @coders @plannerExtra',
+            members: members,
+          ),
+          isEmpty,
+        );
+        expect(
+          GroupRouter.mentions(text: '(@CODER) @Coder', members: members),
+          ['coder'],
+        );
+      },
+    );
     test('mentions win in every mode', () {
       for (final mode in SpeakerMode.values) {
         expect(

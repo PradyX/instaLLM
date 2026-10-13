@@ -45,6 +45,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$home$en home = Translations$home$en._(_root);
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
+	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
@@ -156,6 +157,18 @@ class Translations$botCreation$en {
 
 	/// en: 'Create'
 	String get create => 'Create';
+}
+
+// Path: roomMentions
+class Translations$roomMentions$en {
+	Translations$roomMentions$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Mention a room member'
+	String get title => 'Mention a room member';
 }
 
 // Path: profileImages
@@ -370,6 +383,7 @@ extension on Translations {
 			'botCreation.title' => 'New bot',
 			'botCreation.name' => 'Bot name',
 			'botCreation.create' => 'Create',
+			'roomMentions.title' => 'Mention a room member',
 			'profileImages.title' => 'Profile image',
 			'profileImages.choose' => 'Choose',
 			'profileImages.pickerTitle' => 'Choose a Petdex profile image',

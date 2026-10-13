@@ -32,6 +32,9 @@ botCreation:
   name: Bot name
   create: Create
 
+roomMentions:
+  title: Mention a room member
+
 profileImages:
   title: "Profile image"
   choose: "Choose"

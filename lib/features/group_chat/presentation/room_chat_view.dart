@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/widgets/chat_bubble.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart';
 import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
 import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
 import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
@@ -14,6 +13,7 @@ import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
+import 'package:pocket_llm/features/group_chat/presentation/room_mention_composer.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
 import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
@@ -254,7 +254,11 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            child: ChatComposer(
+            child: RoomMentionComposer(
+              members: [
+                for (final id in chat.memberBotIds)
+                  ?ref.watch(botsProvider).botById(id),
+              ],
               controller: _inputController,
               enabled: !running,
               hintText: chat.isDirect

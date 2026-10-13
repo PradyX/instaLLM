@@ -13,13 +13,27 @@ abstract final class GroupRouter {
     required String text,
     required List<Bot> members,
   }) {
-    final lower = text.toLowerCase();
-    final found = <String>[];
+    final matches = <({int offset, Bot bot})>[];
     for (final bot in members) {
-      final handle = '@${bot.name.toLowerCase()}';
-      if (lower.contains(handle) && !found.contains(bot.id)) {
-        found.add(bot.id);
+      final pattern = RegExp(
+        '(^|[\\s(\\[{])@${RegExp.escape(bot.name)}(?=\$|[\\s.,!?;:)\\]}])',
+        caseSensitive: false,
+      );
+      for (final match in pattern.allMatches(text)) {
+        matches.add((offset: match.end - bot.name.length - 1, bot: bot));
       }
+    }
+    matches.sort((a, b) {
+      final position = a.offset.compareTo(b.offset);
+      return position != 0
+          ? position
+          : b.bot.name.length.compareTo(a.bot.name.length);
+    });
+    final found = <String>[];
+    final offsets = <int>{};
+    for (final match in matches) {
+      if (!offsets.add(match.offset)) continue;
+      if (!found.contains(match.bot.id)) found.add(match.bot.id);
     }
     return found;
   }

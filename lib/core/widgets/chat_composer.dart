@@ -40,6 +40,8 @@ class ChatComposer extends StatelessWidget {
     this.middle,
     this.onMicPressed,
     this.micState = ComposerMicState.idle,
+    this.focusNode,
+    this.onKeyEvent,
   });
 
   /// Text being composed; owned by the hosting page.
@@ -77,6 +79,9 @@ class ChatComposer extends StatelessWidget {
   /// What the mic shows; see [ComposerMicState].
   final ComposerMicState micState;
 
+  final FocusNode? focusNode;
+  final KeyEventResult Function(FocusNode, KeyEvent)? onKeyEvent;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -113,22 +118,26 @@ class ChatComposer extends StatelessWidget {
             ComposerSendOnEnter(
               sendsOnEnter: enabled && sendsOnEnter,
               onSend: onSend,
-              child: TextField(
-                controller: controller,
-                enabled: enabled,
-                readOnly: !enabled,
-                maxLines: 5,
-                minLines: 1,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: hintText,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+              child: Focus(
+                onKeyEvent: onKeyEvent,
+                child: TextField(
+                  focusNode: focusNode,
+                  controller: controller,
+                  enabled: enabled,
+                  readOnly: !enabled,
+                  maxLines: 5,
+                  minLines: 1,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    filled: false,
+                    contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
+                  ),
+                  onSubmitted: enabled ? (_) => onSend() : null,
                 ),
-                onSubmitted: enabled ? (_) => onSend() : null,
               ),
             ),
             Padding(

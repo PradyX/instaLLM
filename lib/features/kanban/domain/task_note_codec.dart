@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 
 /// Converts tasks to and from Obsidian-friendly Markdown notes (§9.2).
@@ -21,6 +23,19 @@ import 'package:pocket_llm/features/kanban/domain/task.dart';
 /// constructed from these notes. Unknown keys are ignored and missing keys
 /// fall back, so a hand-written note still boards.
 abstract final class TaskNoteCodec {
+  static const currentVersion = 2;
+
+  static bool isSupported(String text) {
+    if (!text.startsWith('---')) return true;
+    final end = text.indexOf('\n---', 3);
+    if (end < 0) return true;
+    final match = RegExp(
+      r'^schema_version:\s*(\d+)\s*$',
+      multiLine: true,
+    ).firstMatch(text.substring(0, end));
+    return match == null || int.parse(match.group(1)!) <= currentVersion;
+  }
+
   /// File name for [task]: `PL-001-short-slug.md`.
   static String fileName(ProjectTask task) {
     final slug = task.title
@@ -33,6 +48,7 @@ abstract final class TaskNoteCodec {
 
   static String encode(ProjectTask task) {
     final buffer = StringBuffer('---\n');
+    buffer.writeln('schema_version: $currentVersion');
     buffer.writeln('id: ${task.id}');
     buffer.writeln('status: ${task.status.key}');
     buffer.writeln('priority: ${task.priority.name}');
@@ -54,13 +70,28 @@ abstract final class TaskNoteCodec {
         buffer.writeln('  - $document');
       }
     }
-    buffer.writeln(
-      'created: ${task.createdAt.toIso8601String().substring(0, 10)}',
-    );
-    if (task.completedAt != null) {
+    for (final entry in {
+      'rooms': task.relatedRoomIds,
+      'messages': task.relatedMessages,
+    }.entries) {
+      if (entry.value.isEmpty) continue;
+      buffer.writeln('${entry.key}:');
+      for (final id in entry.value) {
+        buffer.writeln('  - ${jsonEncode(id)}');
+      }
+    }
+    if (task.createdBy != null) {
+      buffer.writeln('created_by: ${jsonEncode(task.createdBy)}');
+    }
+    if (task.comments.isNotEmpty) {
       buffer.writeln(
-        'completed: ${task.completedAt!.toIso8601String().substring(0, 10)}',
+        'activity_json: ${jsonEncode(task.comments.map((comment) => comment.toJson()).toList())}',
       );
+    }
+    buffer.writeln('created: ${task.createdAt.toIso8601String()}');
+    buffer.writeln('updated: ${task.updatedAt.toIso8601String()}');
+    if (task.completedAt != null) {
+      buffer.writeln('completed: ${task.completedAt!.toIso8601String()}');
     }
     buffer.writeln('---');
     buffer.writeln();
@@ -87,6 +118,7 @@ abstract final class TaskNoteCodec {
   /// Parses a note written by [encode] (or by hand) into a task scoped to
   /// [workspaceId]. Returns null when the note carries no usable id.
   static ProjectTask? decode(String text, {required String workspaceId}) {
+    if (!isSupported(text)) return null;
     var body = text;
     final frontmatter = <String, Object>{};
     if (text.startsWith('---')) {
@@ -110,19 +142,23 @@ abstract final class TaskNoteCodec {
 
     var title = '';
     final description = StringBuffer();
-    var inActivity = false;
+    final activityLines = <String>[];
+    final activityStart = body.lastIndexOf('\n## Activity\n');
+    final hasActivity =
+        frontmatter['schema_version'] != '$currentVersion' ||
+        frontmatter.containsKey('activity_json');
+    if (hasActivity && activityStart >= 0) {
+      activityLines.addAll(
+        body.substring(activityStart + '\n## Activity\n'.length).split('\n'),
+      );
+      body = body.substring(0, activityStart);
+    }
     for (final line in body.split('\n')) {
       if (line.startsWith('# ') && title.isEmpty) {
         title = line.substring(2).trim();
         continue;
       }
-      if (line.trim() == '## Activity') {
-        inActivity = true;
-        continue;
-      }
-      if (!inActivity && !line.startsWith('#')) {
-        description.writeln(line);
-      }
+      description.writeln(line);
     }
 
     List<String> readList(Object? value) {
@@ -133,6 +169,51 @@ abstract final class TaskNoteCodec {
 
     String? readOpt(Object? value) =>
         value is String && value.trim().isNotEmpty ? value.trim() : null;
+
+    final comments = <TaskComment>[];
+    final rawActivity = readOpt(frontmatter['activity_json']);
+    if (rawActivity != null) {
+      try {
+        final decoded = jsonDecode(rawActivity);
+        if (decoded is List) {
+          for (final entry in decoded.whereType<Map<String, dynamic>>()) {
+            final comment = TaskComment.fromJson(entry);
+            if (comment != null) comments.add(comment);
+          }
+        }
+      } catch (_) {
+        /* Keep readable legacy activity below. */
+      }
+    }
+    if (comments.isEmpty) {
+      final pattern = RegExp(r'^- \*\*(.*?)\*\* \((.*?)\): (.*)$');
+      for (final line in activityLines) {
+        final match = pattern.firstMatch(line);
+        if (match != null) {
+          comments.add(
+            TaskComment(
+              author: match.group(1)!,
+              text: match.group(3)!,
+              createdAt:
+                  DateTime.tryParse(match.group(2)!) ??
+                  DateTime.fromMillisecondsSinceEpoch(0),
+            ),
+          );
+        } else if (comments.isNotEmpty && line.trim().isNotEmpty) {
+          final previous = comments.removeLast();
+          comments.add(
+            TaskComment(
+              author: previous.author,
+              text: '${previous.text}\n$line',
+              createdAt: previous.createdAt,
+            ),
+          );
+        }
+      }
+    }
+    DateTime? date(String key) =>
+        DateTime.tryParse(readOpt(frontmatter[key]) ?? '');
+    final created = date('created') ?? DateTime.fromMillisecondsSinceEpoch(0);
 
     return ProjectTask(
       id: id,
@@ -145,8 +226,13 @@ abstract final class TaskNoteCodec {
       parentTaskId: readOpt(frontmatter['parent']),
       dependencies: readList(frontmatter['depends_on']),
       relatedDocuments: readList(frontmatter['documents']),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      relatedMessages: readList(frontmatter['messages']),
+      relatedRoomIds: readList(frontmatter['rooms']),
+      createdBy: readOpt(frontmatter['created_by']),
+      comments: comments,
+      createdAt: created,
+      updatedAt: date('updated') ?? created,
+      completedAt: date('completed'),
     );
   }
 
@@ -154,6 +240,18 @@ abstract final class TaskNoteCodec {
     final result = <String, Object>{};
     String? listKey;
     final items = <String>[];
+    String scalar(String value) {
+      if (value.startsWith('"')) {
+        try {
+          final decoded = jsonDecode(value);
+          if (decoded is String) return decoded;
+        } catch (_) {
+          /* Legacy raw value. */
+        }
+      }
+      return value;
+    }
+
     void flush() {
       if (listKey != null) {
         result[listKey!] = List<String>.unmodifiable(items);
@@ -166,7 +264,7 @@ abstract final class TaskNoteCodec {
       final trimmed = rawLine.trim();
       if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
       if (trimmed.startsWith('- ')) {
-        if (listKey != null) items.add(trimmed.substring(2).trim());
+        if (listKey != null) items.add(scalar(trimmed.substring(2).trim()));
         continue;
       }
       flush();
@@ -179,7 +277,7 @@ abstract final class TaskNoteCodec {
         listKey = key;
         continue;
       }
-      result[key] = value;
+      result[key] = scalar(value);
     }
     flush();
     return result;

@@ -59,6 +59,7 @@ class ProjectTask {
     this.dependencies = const [],
     this.relatedDocuments = const [],
     this.relatedMessages = const [],
+    this.relatedRoomIds = const [],
     this.comments = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -105,6 +106,9 @@ class ProjectTask {
   final List<String> dependencies;
   final List<String> relatedDocuments;
   final List<String> relatedMessages;
+
+  /// Durable links, independent of the room's capped message history.
+  final List<String> relatedRoomIds;
   final List<TaskComment> comments;
 
   final DateTime createdAt;
@@ -134,6 +138,7 @@ class ProjectTask {
     List<String>? dependencies,
     List<String>? relatedDocuments,
     List<String>? relatedMessages,
+    List<String>? relatedRoomIds,
     List<TaskComment>? comments,
     DateTime? completedAt,
     bool clearCompletedAt = false,
@@ -157,6 +162,7 @@ class ProjectTask {
       dependencies: dependencies ?? this.dependencies,
       relatedDocuments: relatedDocuments ?? this.relatedDocuments,
       relatedMessages: relatedMessages ?? this.relatedMessages,
+      relatedRoomIds: relatedRoomIds ?? this.relatedRoomIds,
       comments: comments ?? this.comments,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
@@ -183,6 +189,7 @@ class ProjectTask {
       'dependencies': dependencies,
       'relatedDocuments': relatedDocuments,
       'relatedMessages': relatedMessages,
+      'relatedRoomIds': relatedRoomIds,
       'comments': comments.map((comment) => comment.toJson()).toList(),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -238,14 +245,15 @@ class ProjectTask {
       workspaceId: workspaceId,
       title: title,
       description: readOpt(json['description']) ?? '',
-      status: TaskStatus.fromKey(json['status'] as String?),
-      priority: TaskPriority.fromName(json['priority'] as String?),
+      status: TaskStatus.fromKey(readOpt(json['status'])),
+      priority: TaskPriority.fromName(readOpt(json['priority'])),
       assignedBotId: readOpt(json['assignedBotId']),
       createdBy: readOpt(json['createdBy']),
       parentTaskId: readOpt(json['parentTaskId']),
       dependencies: readStrings(json['dependencies']),
       relatedDocuments: readStrings(json['relatedDocuments']),
       relatedMessages: readStrings(json['relatedMessages']),
+      relatedRoomIds: readStrings(json['relatedRoomIds']),
       comments: comments,
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),

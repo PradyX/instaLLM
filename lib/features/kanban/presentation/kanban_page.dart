@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
+import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
+import 'package:pocket_llm/i18n/strings.g.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
 import 'package:go_router/go_router.dart';
@@ -19,32 +21,13 @@ class KanbanPage extends ConsumerWidget {
   const KanbanPage({super.key});
 
   Future<void> _create(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    final title = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New task'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(hintText: 'What needs doing?'),
-          onSubmitted: (value) => Navigator.of(context).pop(value),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Create'),
-          ),
-        ],
-      ),
+    final title = await NamePromptDialog.show(
+      context,
+      title: 'New task',
+      hintText: 'What needs doing?',
+      confirmLabel: 'Create',
     );
-    controller.dispose();
-    if (title == null || title.trim().isEmpty) return;
+    if (title == null || title.trim().isEmpty || !context.mounted) return;
     await ref
         .read(kanbanProvider.notifier)
         .createTask(title: title.trim(), createdBy: 'user');
@@ -208,14 +191,28 @@ class _Card extends ConsumerWidget {
           TaskPriority.low => const Icon(Icons.arrow_downward),
           TaskPriority.medium => null,
         },
-        onTap: () => showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          builder: (context) => _TaskSheet(taskId: task.id),
-        ),
+        onTap: () => showBoardTaskDetails(context, ref, task.id),
       ),
     );
   }
+}
+
+/// Navigation happens using the owning page after the sheet is removed.
+Future<void> showBoardTaskDetails(
+  BuildContext context,
+  WidgetRef ref,
+  String taskId,
+) async {
+  final roomSelection = ref.read(activeRoomIdProvider.notifier);
+  final router = GoRouter.of(context);
+  final roomId = await showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => _TaskSheet(taskId: taskId),
+  );
+  if (!context.mounted || roomId == null) return;
+  roomSelection.state = roomId;
+  router.go(AppRoutes.home);
 }
 
 class _TaskSheet extends ConsumerStatefulWidget {
@@ -229,6 +226,27 @@ class _TaskSheet extends ConsumerStatefulWidget {
 
 class _TaskSheetState extends ConsumerState<_TaskSheet> {
   final _commentController = TextEditingController();
+  var _openingRoom = false;
+
+  Future<void> _discuss(ProjectTask task) async {
+    setState(() => _openingRoom = true);
+    try {
+      final id = await ref
+          .read(groupChatsProvider.notifier)
+          .discussTaskInRoom(task);
+      if (!mounted) return;
+      if (id == null) throw StateError(t.roomBoard.openError);
+      Navigator.of(context).pop(id);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${t.roomBoard.openError}: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _openingRoom = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -249,6 +267,11 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
     final notifier = ref.read(kanbanProvider.notifier);
     final bots = ref.watch(botsProvider);
     final textTheme = Theme.of(context).textTheme;
+    final linkedRooms = ref
+        .watch(groupChatsProvider)
+        .chatsFor(task.workspaceId)
+        .where((room) => task.relatedRoomIds.contains(room.id))
+        .toList();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -273,6 +296,7 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
             ],
             const SizedBox(height: 12),
             DropdownButtonFormField<TaskStatus>(
+              key: ValueKey('${task.id}:${task.status.key}'),
               initialValue: task.status,
               decoration: const InputDecoration(
                 labelText: 'Status',
@@ -321,6 +345,20 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
               ),
             ],
             const SizedBox(height: 12),
+            if (linkedRooms.isNotEmpty) ...[
+              Text(t.roomBoard.linkedRooms, style: textTheme.titleSmall),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final room in linkedRooms)
+                    TextButton.icon(
+                      onPressed: () => Navigator.of(context).pop(room.id),
+                      icon: const Icon(Icons.forum_outlined),
+                      label: Text(room.name),
+                    ),
+                ],
+              ),
+            ],
             Text('Activity', style: textTheme.titleSmall),
             for (final comment in task.comments)
               Padding(
@@ -355,31 +393,17 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
                 ),
               ],
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 12,
               children: [
                 FilledButton.tonalIcon(
-                  onPressed: () async {
-                    final chatId = await ref
-                        .read(groupChatsProvider.notifier)
-                        .discussTaskInRoom(task);
-                    if (!context.mounted) return;
-                    Navigator.of(context).pop();
-                    if (chatId == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Could not open a room for the task.'),
-                        ),
-                      );
-                      return;
-                    }
-                    // The room opens on the app's chat page, like every other
-                    // chat, and the sidebar keeps the board one tap away.
-                    showRoom(ref, chatId);
-                    context.go(AppRoutes.home);
-                  },
+                  onPressed: _openingRoom ? null : () => _discuss(task),
                   icon: const Icon(Icons.forum_outlined),
-                  label: const Text('Discuss in room'),
+                  label: Text(
+                    linkedRooms.isEmpty
+                        ? t.roomBoard.discuss
+                        : t.roomBoard.openRoom,
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: () {

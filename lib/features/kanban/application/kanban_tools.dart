@@ -1,5 +1,8 @@
 import 'package:pocket_llm/features/kanban/data/task_repository.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
+import 'package:pocket_llm/features/kanban/application/board_task_operations.dart';
+export 'package:pocket_llm/features/kanban/application/board_task_operations.dart'
+    show createBoardTask;
 import 'package:pocket_llm/features/tools/application/tool_registry.dart';
 import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
 
@@ -11,9 +14,11 @@ class KanbanToolContext {
     required this.repositoryFor,
     this.actorName = 'bot',
     this.onBoardChanged,
+    this.roomId,
   });
 
   final String workspaceId;
+  final String? roomId;
 
   /// Opens the task repository the workspace currently boards from (vault
   /// notes when linked, the local store otherwise).
@@ -124,38 +129,6 @@ Future<String> _listTasks(KanbanToolContext context) async {
   ].join('\n');
 }
 
-/// Creates one board task with the next free `PL-<n>` id and saves it.
-///
-/// Shared by the `kanban_create_task` tool and the room's message-to-task
-/// action, so bots and taps number tasks the same way.
-Future<ProjectTask> createBoardTask({
-  required TaskRepository repository,
-  required String workspaceId,
-  required String title,
-  String description = '',
-  List<String> relatedMessages = const [],
-  String? createdBy,
-}) async {
-  final tasks = await repository.load(workspaceId);
-  final number = await repository.nextNumber(workspaceId) ?? 1;
-  var candidate = 'PL-${number.toString().padLeft(3, '0')}';
-  final taken = {for (final task in tasks) task.id};
-  while (taken.contains(candidate)) {
-    final match = RegExp(r'^PL-(\d+)$').firstMatch(candidate);
-    final next = (match == null ? 0 : int.parse(match.group(1)!)) + 1;
-    candidate = 'PL-${next.toString().padLeft(3, '0')}';
-  }
-  final task = ProjectTask.create(
-    id: candidate,
-    workspaceId: workspaceId,
-    title: title,
-    description: description,
-    createdBy: createdBy,
-  ).copyWith(relatedMessages: relatedMessages);
-  await repository.save(workspaceId, [...tasks, task]);
-  return task;
-}
-
 Future<String> _createTask(
   KanbanToolContext context, {
   required String title,
@@ -168,6 +141,7 @@ Future<String> _createTask(
     title: title,
     description: description,
     createdBy: context.actorName,
+    relatedRoomIds: context.roomId == null ? const [] : [context.roomId!],
   );
   await context.onBoardChanged?.call();
   return 'Created ${task.id}: ${task.title}';
@@ -179,12 +153,12 @@ Future<String> _moveTask(
   required TaskStatus status,
 }) async {
   final repository = await context.repositoryFor(context.workspaceId);
-  final tasks = await repository.load(context.workspaceId);
-  final index = tasks.indexWhere((task) => task.id == taskId);
-  if (index < 0) throw Exception('There is no task $taskId on the board.');
-  final updated = tasks[index].copyWith(status: status);
-  final next = [...tasks]..[index] = updated;
-  await repository.save(context.workspaceId, next);
+  await updateBoardTask(
+    repository: repository,
+    workspaceId: context.workspaceId,
+    taskId: taskId,
+    update: (task) => task.copyWith(status: status),
+  );
   await context.onBoardChanged?.call();
   return 'Moved $taskId to ${status.label}.';
 }

@@ -12,10 +12,10 @@ import 'package:pocket_llm/features/bots/application/bots_controller.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
 import 'package:pocket_llm/features/conversations/domain/message.dart';
 import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
+import 'package:pocket_llm/features/group_chat/application/room_board_service.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/group_chat/presentation/room_mention_composer.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
+import 'package:pocket_llm/features/group_chat/presentation/room_tasks_panel.dart';
 import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
 import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
@@ -103,27 +103,14 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
   /// chat-to-board half of the Hermes loop, one tap.
   Future<void> _createTaskFromMessage(
     GroupMessage message,
-    String workspaceId,
+    GroupChat room,
   ) async {
     final text = message.text.trim();
     if (text.isEmpty) return;
-    final firstLine = text.split('\n').first.trim();
-    final title = firstLine.length > 160
-        ? '${firstLine.substring(0, 157)}...'
-        : firstLine;
     try {
-      final repository = await resolveTaskRepository(ref.read, workspaceId);
-      final task = await createBoardTask(
-        repository: repository,
-        workspaceId: workspaceId,
-        title: title.isEmpty ? 'From the room' : title,
-        description: text,
-        relatedMessages: [message.id],
-        createdBy: 'user',
-      );
-      if (ref.read(activeWorkspaceIdProvider) == workspaceId) {
-        await ref.read(kanbanProvider.notifier).reload();
-      }
+      final task = await ref
+          .read(roomBoardServiceProvider)
+          .createFromMessage(room, message);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Created ${task.id} on the board.')),
@@ -188,6 +175,7 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
 
     return Column(
       children: [
+        RoomTasksPanel(room: chat),
         Expanded(
           child: messages.isEmpty
               ? Center(
@@ -215,10 +203,8 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                         extraActions: [
                           if (message.text.trim().isNotEmpty)
                             OutlinedButton.icon(
-                              onPressed: () => _createTaskFromMessage(
-                                message,
-                                chat.workspaceId,
-                              ),
+                              onPressed: () =>
+                                  _createTaskFromMessage(message, chat),
                               icon: const Icon(
                                 Icons.playlist_add_check_rounded,
                                 size: 16,

@@ -35,6 +35,19 @@ botCreation:
 roomMentions:
   title: Mention a room member
 
+roomBoard:
+  linkedTasks: Linked tasks
+  linkedRooms: Linked rooms
+  linkTask: Link task
+  openBoard: Open board
+  changeStatus: Change task status
+  noTasks: No unlinked tasks in this workspace. Create one on the Board or from a room message.
+  loadError: Could not load linked tasks.
+  saveError: Could not save the task change
+  openError: Could not open a room for the task
+  discuss: Discuss in room
+  openRoom: Open room
+
 profileImages:
   title: "Profile image"
   choose: "Choose"

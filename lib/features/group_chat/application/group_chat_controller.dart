@@ -8,6 +8,7 @@ import 'package:pocket_llm/features/bots/domain/bot_prompt.dart';
 import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
 import 'package:pocket_llm/features/group_chat/domain/group_router.dart';
+import 'package:pocket_llm/features/group_chat/application/room_board_service.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/home/presentation/home_controller.dart';
 import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
@@ -211,13 +212,53 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     } catch (_) {}
   }
 
-  /// Opens a room for [task] and starts the turn: the assignee when one is
-  /// set, otherwise whoever the user adds. This is the board-to-chat half
-  /// of the Hermes loop — a card becomes a working conversation, and the
-  /// bots' moves land back on the board through their board tools.
-  ///
-  /// Returns the room id, so the board can navigate straight into it.
-  Future<String?> discussTaskInRoom(ProjectTask task) async {
+  final _openingTaskRooms = <String, Future<String?>>{};
+
+  /// Reopens a linked room; seeds a new discussion once without starting an
+  /// inference turn. Double clicks share the same opening operation.
+  Future<String?> discussTaskInRoom(ProjectTask task) {
+    final key = '${task.workspaceId}/${task.id}';
+    return _openingTaskRooms.putIfAbsent(
+      key,
+      () => _openTaskRoom(task).whenComplete(() {
+        _openingTaskRooms.remove(key);
+      }),
+    );
+  }
+
+  Future<String?> _openTaskRoom(ProjectTask requested) async {
+    final repository = await resolveTaskRepository(
+      _ref.read,
+      requested.workspaceId,
+    );
+    final tasks = await repository.load(requested.workspaceId);
+    final task = tasks
+        .where((candidate) => candidate.id == requested.id)
+        .firstOrNull;
+    if (task == null) {
+      throw StateError('This task no longer exists. Reload the board.');
+    }
+    final candidates = state.chatsFor(task.workspaceId);
+    for (final id in task.relatedRoomIds) {
+      final room = candidates.where((chat) => chat.id == id).firstOrNull;
+      if (room != null) return room.id;
+    }
+    // Adopt v1 message links or a discussion created by the old Board action.
+    final legacy = candidates
+        .where(
+          (chat) =>
+              state.snapshot
+                  .messagesFor(chat.id)
+                  .any(
+                    (message) => task.relatedMessages.contains(message.id),
+                  ) ||
+              (!chat.isDirect && chat.name == '${task.id} ${task.title}'),
+        )
+        .firstOrNull;
+    if (legacy != null) {
+      await _ref.read(roomBoardServiceProvider).linkTask(legacy, task.id);
+      return legacy.id;
+    }
     final members =
         task.assignedBotId != null && _botById(task.assignedBotId!) != null
         ? [task.assignedBotId!]
@@ -228,14 +269,11 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       memberBotIds: members,
     );
     if (chat == null) return null;
-    if (_ref.read(activeWorkspaceIdProvider) == task.workspaceId) {
-      await _ref
-          .read(kanbanProvider.notifier)
-          .addComment(task.id, 'room', 'Opened ${chat.name} to work this.');
-    }
     final brief = StringBuffer('Working ${task.id}: ${task.title}');
     if (task.description.isNotEmpty) brief.write('\n${task.description}');
-    await sendUserMessage(chat.id, brief.toString());
+    _append(GroupMessage.user(chatId: chat.id, text: brief.toString()));
+    if (!await _persist()) return null;
+    await _ref.read(roomBoardServiceProvider).linkTask(chat, task.id);
     return chat.id;
   }
 
@@ -384,6 +422,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           buildKanbanTools(
             KanbanToolContext(
               workspaceId: chat.workspaceId,
+              roomId: chat.id,
               repositoryFor: (workspaceId) =>
                   resolveTaskRepository(_ref.read, workspaceId),
               actorName: bot.name,
@@ -391,6 +430,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
                 if (_ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
                   await _ref.read(kanbanProvider.notifier).reload();
                 }
+                _ref.invalidate(workspaceTasksProvider(chat.workspaceId));
               },
             ),
           ),
@@ -501,20 +541,36 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       } catch (_) {}
     }
 
-    final kanban = _ref.read(kanbanProvider);
+    List<ProjectTask> boardTasks = const [];
+    try {
+      final repository = await resolveTaskRepository(
+        _ref.read,
+        chat.workspaceId,
+      );
+      boardTasks = await repository.load(chat.workspaceId);
+    } catch (_) {
+      /* An unavailable board must not prevent local chat. */
+    }
     final assigned = [
-      for (final task in kanban.tasks)
+      for (final task in boardTasks)
         if (task.assignedBotId == bot.id && !task.isDone) task,
     ];
     final taskLine = assigned.isEmpty
         ? ''
         : 'Assigned tasks: ${assigned.map((t) => '${t.id} ${t.title}').join('; ')}';
+    final linked = boardTasks
+        .where((task) => task.relatedRoomIds.contains(chat.id))
+        .take(12);
+    final linkedLine = linked
+        .map((task) => '${task.id} [${task.status.key}] ${task.title}')
+        .join('; ');
 
     final parts = [
       'You are ${bot.name} in the group chat "${chat.name}". '
           'Answer as ${bot.name}, briefly and in character. '
           'Mention another bot as @name to hand them the floor.',
       if (taskLine.isNotEmpty) taskLine,
+      if (linkedLine.isNotEmpty) 'Tasks linked to this room: $linkedLine',
       'Board tools for this workspace: kanban_list_tasks, '
           'kanban_create_task, kanban_move_task. When the room agrees on '
           'work, create the task; when you finish a step, move it. '

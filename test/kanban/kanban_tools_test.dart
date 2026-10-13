@@ -49,6 +49,7 @@ void main() {
       tools: buildKanbanTools(
         KanbanToolContext(
           workspaceId: 'w1',
+          roomId: 'dev',
           repositoryFor: (_) async => board,
           actorName: 'tester',
         ),
@@ -111,6 +112,7 @@ void main() {
       expect(result.output, 'Created PL-007: Track the launch');
       expect(board.tasks.single.id, 'PL-007');
       expect(board.tasks.single.createdBy, 'tester');
+      expect(board.tasks.single.relatedRoomIds, ['dev']);
     });
 
     test('skips numbers already on the board', () async {

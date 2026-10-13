@@ -19,7 +19,7 @@ abstract class TaskRepository {
   Future<int?> nextNumber(String workspaceId);
 }
 
-/// Local JSON fallback: `kanban/<workspace>/tasks.json` (version 1).
+/// Local JSON fallback: `kanban/<workspace>/tasks.json` (version 2).
 ///
 /// Used until a workspace links its vault folder; the vault then becomes
 /// the readable side and this file stops receiving writes.
@@ -32,6 +32,15 @@ class LocalTaskRepository implements TaskRepository {
   }
 
   final Directory _baseDir;
+  static const currentVersion = 2;
+
+  VersionedJsonDocument _documentFor(String workspaceId) =>
+      VersionedJsonDocument(
+        file: _fileFor(workspaceId),
+        currentVersion: currentVersion,
+        label: 'TaskStore',
+        isPayloadUsable: (payload) => payload['tasks'] is List,
+      );
 
   File _fileFor(String workspaceId) {
     final safe = workspaceId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
@@ -40,12 +49,13 @@ class LocalTaskRepository implements TaskRepository {
 
   @override
   Future<List<ProjectTask>> load(String workspaceId) async {
-    final document = VersionedJsonDocument(
-      file: _fileFor(workspaceId),
-      currentVersion: 1,
-      label: 'TaskStore',
-    );
+    final document = _documentFor(workspaceId);
     final decoded = document.read();
+    if (document.isReadOnly) {
+      throw const FileSystemException(
+        'Tasks were written by a newer app version. Update the app to edit this board.',
+      );
+    }
     if (decoded == null) return const [];
     final raw = decoded['tasks'];
     if (raw is! List) return const [];
@@ -58,23 +68,26 @@ class LocalTaskRepository implements TaskRepository {
           : null;
       if (map == null) continue;
       final task = ProjectTask.fromJson(map);
-      if (task != null) tasks.add(task);
+      if (task != null && task.workspaceId == workspaceId) tasks.add(task);
     }
     return tasks;
   }
 
   @override
   Future<void> save(String workspaceId, List<ProjectTask> tasks) async {
-    final document = VersionedJsonDocument(
-      file: _fileFor(workspaceId),
-      currentVersion: 1,
-      label: 'TaskStore',
-    );
+    final document = _documentFor(workspaceId);
+    document
+        .read(); // Protect newer data even when save is the first operation.
     await _fileFor(workspaceId).parent.create(recursive: true);
-    document.write({
-      'version': 1,
+    final saved = document.write({
+      'version': currentVersion,
       'tasks': tasks.map((task) => task.toJson()).toList(),
     });
+    if (!saved) {
+      throw const FileSystemException(
+        'Could not save tasks. Check storage access or update the app for newer task data.',
+      );
+    }
   }
 
   @override
@@ -129,6 +142,11 @@ class VaultTaskRepository implements TaskRepository {
         relativePath: name,
       );
       if (note == null) continue;
+      if (!TaskNoteCodec.isSupported(note.content)) {
+        throw const FormatException(
+          'A task note was written by a newer app version. Update the app to edit this board.',
+        );
+      }
       final task = TaskNoteCodec.decode(note.content, workspaceId: workspaceId);
       if (task != null) tasks.add(task);
     }
@@ -139,12 +157,25 @@ class VaultTaskRepository implements TaskRepository {
   @override
   Future<void> save(String workspaceId, List<ProjectTask> tasks) async {
     for (final task in tasks) {
-      await notes.writeNote(
+      final (existing, readError) = await notes.readNote(
+        paths: paths,
+        permissions: permissions,
+        relativePath: _notePath(task),
+      );
+      if (readError != null && readError != VaultNoteError.notFound) {
+        throw FileSystemException(readError.message);
+      }
+      if (existing != null && !TaskNoteCodec.isSupported(existing.content)) {
+        throw const FormatException('Refusing to overwrite a newer task note.');
+      }
+      final error = await notes.writeNote(
         paths: paths,
         permissions: permissions,
         relativePath: _notePath(task),
         content: TaskNoteCodec.encode(task),
+        expectedModified: existing?.modified,
       );
+      if (error != null) throw FileSystemException(error.message);
     }
   }
 

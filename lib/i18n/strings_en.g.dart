@@ -46,6 +46,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
 	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
+	late final Translations$roomBoard$en roomBoard = Translations$roomBoard$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
@@ -169,6 +170,48 @@ class Translations$roomMentions$en {
 
 	/// en: 'Mention a room member'
 	String get title => 'Mention a room member';
+}
+
+// Path: roomBoard
+class Translations$roomBoard$en {
+	Translations$roomBoard$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Linked tasks'
+	String get linkedTasks => 'Linked tasks';
+
+	/// en: 'Linked rooms'
+	String get linkedRooms => 'Linked rooms';
+
+	/// en: 'Link task'
+	String get linkTask => 'Link task';
+
+	/// en: 'Open board'
+	String get openBoard => 'Open board';
+
+	/// en: 'Change task status'
+	String get changeStatus => 'Change task status';
+
+	/// en: 'No unlinked tasks in this workspace. Create one on the Board or from a room message.'
+	String get noTasks => 'No unlinked tasks in this workspace. Create one on the Board or from a room message.';
+
+	/// en: 'Could not load linked tasks.'
+	String get loadError => 'Could not load linked tasks.';
+
+	/// en: 'Could not save the task change'
+	String get saveError => 'Could not save the task change';
+
+	/// en: 'Could not open a room for the task'
+	String get openError => 'Could not open a room for the task';
+
+	/// en: 'Discuss in room'
+	String get discuss => 'Discuss in room';
+
+	/// en: 'Open room'
+	String get openRoom => 'Open room';
 }
 
 // Path: profileImages
@@ -384,6 +427,17 @@ extension on Translations {
 			'botCreation.name' => 'Bot name',
 			'botCreation.create' => 'Create',
 			'roomMentions.title' => 'Mention a room member',
+			'roomBoard.linkedTasks' => 'Linked tasks',
+			'roomBoard.linkedRooms' => 'Linked rooms',
+			'roomBoard.linkTask' => 'Link task',
+			'roomBoard.openBoard' => 'Open board',
+			'roomBoard.changeStatus' => 'Change task status',
+			'roomBoard.noTasks' => 'No unlinked tasks in this workspace. Create one on the Board or from a room message.',
+			'roomBoard.loadError' => 'Could not load linked tasks.',
+			'roomBoard.saveError' => 'Could not save the task change',
+			'roomBoard.openError' => 'Could not open a room for the task',
+			'roomBoard.discuss' => 'Discuss in room',
+			'roomBoard.openRoom' => 'Open room',
 			'profileImages.title' => 'Profile image',
 			'profileImages.choose' => 'Choose',
 			'profileImages.pickerTitle' => 'Choose a Petdex profile image',

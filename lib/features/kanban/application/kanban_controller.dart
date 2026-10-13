@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pocket_llm/features/kanban/application/board_task_operations.dart';
 import 'package:pocket_llm/features/kanban/data/task_repository.dart';
 import 'package:pocket_llm/features/kanban/domain/task.dart';
 import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
@@ -23,11 +24,16 @@ typedef BoardReader = T Function<T>(ProviderListenable<T> provider);
 Future<TaskRepository> resolveTaskRepository(
   BoardReader read,
   String workspaceId,
+) => read(taskRepositoryProvider(workspaceId).future);
+
+final taskRepositoryProvider = FutureProvider.family<TaskRepository, String>((
+  ref,
+  workspaceId,
 ) async {
-  final vaults = read(vaultsProvider);
+  final vaults = ref.watch(vaultsProvider);
   final binding = vaults.snapshot.bindingFor(workspaceId);
   if (binding != null) {
-    final paths = read(vaultsProvider.notifier).pathsFor(workspaceId);
+    final paths = ref.read(vaultsProvider.notifier).pathsFor(workspaceId);
     if (paths != null) {
       return VaultTaskRepository(
         paths: paths,
@@ -36,7 +42,23 @@ Future<TaskRepository> resolveTaskRepository(
     }
   }
   return LocalTaskRepository.open();
-}
+});
+
+/// Rooms read the same live state as the active board, or their own workspace
+/// repository when the user has switched workspaces with a room still open.
+final workspaceTasksProvider = FutureProvider.autoDispose
+    .family<List<ProjectTask>, String>((ref, workspaceId) async {
+      final active = ref.watch(activeWorkspaceIdProvider);
+      final board = ref.watch(kanbanProvider);
+      if (active == workspaceId && board.isReady) {
+        if (board.errorMessage != null) throw StateError(board.errorMessage!);
+        return board.tasks;
+      }
+      final repository = await ref.watch(
+        taskRepositoryProvider(workspaceId).future,
+      );
+      return repository.load(workspaceId);
+    });
 
 class KanbanState {
   const KanbanState({
@@ -87,34 +109,59 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
   KanbanNotifier(this._ref) : super(const KanbanState()) {
     _ref.listen<String?>(
       activeWorkspaceIdProvider,
-      (previous, next) => reload(),
+      (previous, next) => Future.microtask(() {
+        if (mounted) reload();
+      }),
+    );
+    _ref.listen(
+      vaultsProvider,
+      (previous, next) => Future.microtask(() {
+        if (mounted) reload();
+      }),
     );
     reload();
   }
 
   final Ref _ref;
-  TaskRepository? _repository;
   String? _workspaceId;
+  var _loadEpoch = 0;
 
   Future<TaskRepository> _resolveRepository(String workspaceId) =>
       resolveTaskRepository(_ref.read, workspaceId);
 
   Future<void> reload() async {
     final workspaceId = _ref.read(activeWorkspaceIdProvider);
+    final epoch = ++_loadEpoch;
+    final changedWorkspace = _workspaceId != workspaceId;
     _workspaceId = workspaceId;
+    state = state.copyWith(
+      tasks: changedWorkspace ? const [] : null,
+      isReady: false,
+      clearError: true,
+    );
     if (workspaceId == null) {
       state = state.copyWith(tasks: const [], isReady: true);
       return;
     }
     try {
-      _repository = await _resolveRepository(workspaceId);
-      final tasks = await _repository!.load(workspaceId);
+      final repository = await _resolveRepository(workspaceId);
+      final tasks = await repository.load(workspaceId);
+      if (!mounted ||
+          epoch != _loadEpoch ||
+          _ref.read(activeWorkspaceIdProvider) != workspaceId) {
+        return;
+      }
       state = KanbanState(
         tasks: tasks,
         isReady: true,
-        usesVault: _repository is VaultTaskRepository,
+        usesVault: repository is VaultTaskRepository,
       );
     } catch (error) {
+      if (!mounted ||
+          epoch != _loadEpoch ||
+          _ref.read(activeWorkspaceIdProvider) != workspaceId) {
+        return;
+      }
       state = state.copyWith(
         isReady: true,
         errorMessage: 'Could not load tasks: $error',
@@ -122,37 +169,21 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     }
   }
 
-  Future<void> _persist() async {
-    final workspaceId = _workspaceId;
-    final repository = _repository;
-    if (workspaceId == null || repository == null) return;
+  Future<T?> _edit<T>(Future<T> Function(TaskRepository, String) action) async {
+    final workspaceId = _ref.read(activeWorkspaceIdProvider);
+    if (workspaceId == null) return null;
     try {
-      await repository.save(workspaceId, state.tasks);
+      final repository = await _resolveRepository(workspaceId);
+      final result = await action(repository, workspaceId);
+      if (!mounted) return result;
+      if (_workspaceId == workspaceId) await reload();
+      return result;
     } catch (error) {
-      state = state.copyWith(errorMessage: 'Could not save tasks: $error');
-    }
-  }
-
-  void _replace(ProjectTask task) {
-    state = state.copyWith(
-      tasks: [
-        for (final candidate in state.tasks)
-          if (candidate.id == task.id) task else candidate,
-      ],
-      clearError: true,
-    );
-  }
-
-  String _nextLocalId(String workspaceId, List<ProjectTask> tasks) {
-    var max = 0;
-    for (final task in tasks) {
-      final match = RegExp(r'^PL-(\d+)$').firstMatch(task.id);
-      if (match != null) {
-        final number = int.tryParse(match.group(1)!) ?? 0;
-        if (number > max) max = number;
+      if (mounted && _workspaceId == workspaceId) {
+        state = state.copyWith(errorMessage: 'Could not save tasks: $error');
       }
+      return null;
     }
-    return 'PL-${(max + 1).toString().padLeft(3, '0')}';
   }
 
   /// Creates a task with the next `PL-<n>` id in this workspace.
@@ -161,80 +192,75 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     String description = '',
     TaskPriority priority = TaskPriority.medium,
     String? createdBy,
-  }) async {
-    final workspaceId = _workspaceId;
-    if (workspaceId == null) return null;
-    var number = await _repository?.nextNumber(workspaceId);
-    number ??= 0;
-    var candidate = number <= 0
-        ? _nextLocalId(workspaceId, state.tasks)
-        : 'PL-${number.toString().padLeft(3, '0')}';
-    while (state.byId.containsKey(candidate)) {
-      final match = RegExp(r'^PL-(\d+)$').firstMatch(candidate);
-      final next = (match == null ? 0 : int.parse(match.group(1)!)) + 1;
-      candidate = 'PL-${next.toString().padLeft(3, '0')}';
-    }
-    final task = ProjectTask.create(
-      id: candidate,
+  }) => _edit(
+    (repository, workspaceId) => createBoardTask(
+      repository: repository,
       workspaceId: workspaceId,
       title: title,
       description: description,
       priority: priority,
       createdBy: createdBy,
+    ),
+  );
+
+  Future<void> _updateTask(
+    String taskId,
+    ProjectTask Function(ProjectTask) update,
+  ) async {
+    await _edit(
+      (repository, workspaceId) => updateBoardTask(
+        repository: repository,
+        workspaceId: workspaceId,
+        taskId: taskId,
+        update: update,
+      ),
     );
-    state = state.copyWith(tasks: [...state.tasks, task], clearError: true);
-    await _persist();
-    return task;
   }
 
   Future<void> moveTask(String taskId, TaskStatus status) async {
-    final task = state.byId[taskId];
-    if (task == null || task.status == status) return;
-    final updated = task.copyWith(status: status);
-    _replace(updated);
-    await _persist();
+    await _updateTask(taskId, (task) => task.copyWith(status: status));
   }
 
   Future<void> assignTask(String taskId, String? botId) async {
-    final task = state.byId[taskId];
-    if (task == null) return;
-    _replace(task.copyWith(assignedBotId: botId, clearAssignee: botId == null));
-    await _persist();
+    await _updateTask(
+      taskId,
+      (task) =>
+          task.copyWith(assignedBotId: botId, clearAssignee: botId == null),
+    );
   }
 
   Future<void> addComment(String taskId, String author, String text) async {
-    final task = state.byId[taskId];
     final trimmed = text.trim();
-    if (task == null || trimmed.isEmpty) return;
-    _replace(
-      task.copyWith(
+    if (trimmed.isEmpty) return;
+    await _updateTask(
+      taskId,
+      (task) => task.copyWith(
         comments: [
           ...task.comments,
           TaskComment(author: author, text: trimmed, createdAt: DateTime.now()),
         ],
       ),
     );
-    await _persist();
   }
 
   Future<void> linkDocument(String taskId, String documentPath) async {
-    final task = state.byId[taskId];
-    if (task == null || task.relatedDocuments.contains(documentPath)) return;
-    _replace(
-      task.copyWith(relatedDocuments: [...task.relatedDocuments, documentPath]),
+    await _updateTask(
+      taskId,
+      (task) => task.copyWith(
+        relatedDocuments: {...task.relatedDocuments, documentPath}.toList(),
+      ),
     );
-    await _persist();
   }
 
   Future<void> deleteTask(String taskId) async {
-    state = state.copyWith(
-      tasks: [
-        for (final task in state.tasks)
-          if (task.id != taskId) task,
-      ],
-      clearError: true,
+    await _edit(
+      (repository, workspaceId) => editBoardTasks(
+        repository,
+        workspaceId,
+        (tasks) async =>
+            (tasks.where((task) => task.id != taskId).toList(), true),
+      ),
     );
-    await _persist();
   }
 
   void clearError() {

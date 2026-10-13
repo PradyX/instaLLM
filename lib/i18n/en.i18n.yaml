@@ -35,6 +35,9 @@ botCreation:
 roomMentions:
   title: Mention a room member
 
+modelRepository:
+  addError: Could not add this model. Please try again.
+
 roomBoard:
   linkedTasks: Linked tasks
   linkedRooms: Linked rooms

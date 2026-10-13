@@ -46,6 +46,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
 	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
+	late final Translations$modelRepository$en modelRepository = Translations$modelRepository$en._(_root);
 	late final Translations$roomBoard$en roomBoard = Translations$roomBoard$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
@@ -170,6 +171,18 @@ class Translations$roomMentions$en {
 
 	/// en: 'Mention a room member'
 	String get title => 'Mention a room member';
+}
+
+// Path: modelRepository
+class Translations$modelRepository$en {
+	Translations$modelRepository$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Could not add this model. Please try again.'
+	String get addError => 'Could not add this model. Please try again.';
 }
 
 // Path: roomBoard
@@ -427,6 +440,7 @@ extension on Translations {
 			'botCreation.name' => 'Bot name',
 			'botCreation.create' => 'Create',
 			'roomMentions.title' => 'Mention a room member',
+			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',
 			'roomBoard.linkedRooms' => 'Linked rooms',
 			'roomBoard.linkTask' => 'Link task',

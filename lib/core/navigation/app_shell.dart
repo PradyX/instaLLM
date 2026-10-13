@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
+import 'package:pocket_llm/core/navigation/navigation_panel_widgets.dart';
 import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/application/bots_controller.dart';
@@ -105,40 +106,48 @@ class ShellChatLeading extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Row(
-        children: [
-          Expanded(child: _ChatSearchField()),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'New chat',
-            onPressed: isGenerating
-                ? null
-                : () async {
-                    final router = GoRouter.of(context);
-                    final controller = ref.read(
-                      conversationControllerProvider.notifier,
-                    );
-                    final modelId = ref
-                        .read(modelSelectionControllerProvider)
-                        .selectedModelId;
-                    final personaId = ref
-                        .read(personasProvider)
-                        .defaultPersonaId;
-                    showConversation(ref);
-                    controller.setSearchQuery('');
-                    onNavigate?.call();
-                    await controller.createConversation(
-                      activeModelId: modelId,
-                      personaId: personaId,
-                    );
-                    router.go(AppRoutes.home);
-                  },
-            icon: const Icon(Icons.add, size: 18),
-            style: IconButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-            ),
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Row(
+            children: [
+              Expanded(child: _ChatSearchField()),
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: 'New chat',
+                onPressed: isGenerating
+                    ? null
+                    : () async {
+                        final router = GoRouter.of(context);
+                        final controller = ref.read(
+                          conversationControllerProvider.notifier,
+                        );
+                        final modelId = ref
+                            .read(modelSelectionControllerProvider)
+                            .selectedModelId;
+                        final personaId = ref
+                            .read(personasProvider)
+                            .defaultPersonaId;
+                        showConversation(ref);
+                        controller.setSearchQuery('');
+                        onNavigate?.call();
+                        await controller.createConversation(
+                          activeModelId: modelId,
+                          personaId: personaId,
+                        );
+                        router.go(AppRoutes.home);
+                      },
+                icon: const Icon(Icons.add, size: 18),
+                style: IconButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -184,13 +193,18 @@ class _ChatSearchFieldState extends ConsumerState<_ChatSearchField> {
     final colorScheme = Theme.of(context).colorScheme;
     return TextField(
       controller: _controller,
+      style: Theme.of(context).textTheme.bodySmall,
       onChanged: (value) => ref
           .read(conversationControllerProvider.notifier)
           .setSearchQuery(value),
       decoration: InputDecoration(
-        hintText: 'Search chats',
+        hintText: t.navigation.searchChats,
         hintMaxLines: 1,
         prefixIcon: const Icon(Icons.search, size: 18),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 40,
+          minHeight: 40,
+        ),
         isDense: true,
         filled: true,
         fillColor: colorScheme.surfaceContainerHighest,
@@ -257,143 +271,182 @@ class AppNavigationPanel extends ConsumerWidget {
               minimum: EdgeInsets.only(
                 bottom: MediaQuery.viewInsetsOf(context).bottom,
               ),
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  InkWell(
-                    onTap: () => navigate(AppRoutes.workspaces),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(6),
-                              child: Image.asset(
-                                'assets/icons/pocketllm_new.png',
-                                fit: BoxFit.contain,
+              child: CustomScrollView(
+                slivers: [
+                  SliverList.list(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                        child: _WorkspacePicker(
+                          onManage: () => navigate(AppRoutes.workspaces),
+                          enabled: !isGenerating,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Image.asset(
+                                    'assets/icons/pocketllm_new.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Pocket LLM',
+                                      style: textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      workspace?.name ??
+                                          t.navigation.noWorkspace,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: textTheme.labelSmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 18,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            const gap = 8.0;
+                            final scale =
+                                MediaQuery.textScalerOf(context).scale(12) / 12;
+                            final columns =
+                                ((constraints.maxWidth + gap) /
+                                        (72 * scale + gap))
+                                    .floor()
+                                    .clamp(1, 3);
+                            final width =
+                                (constraints.maxWidth - gap * (columns - 1)) /
+                                columns;
+                            return Wrap(
+                              spacing: gap,
+                              runSpacing: gap,
                               children: [
-                                Text(
-                                  'Pocket LLM',
-                                  style: textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                for (final (icon, label, route) in [
+                                  (
+                                    Icons.smart_toy_outlined,
+                                    t.navigation.models,
+                                    AppRoutes.modelSelection,
                                   ),
-                                ),
-                                Text(
-                                  workspace?.name ?? 'No workspace',
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
+                                  (
+                                    Icons.speed_outlined,
+                                    t.navigation.benchmark,
+                                    AppRoutes.benchmark,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  (
+                                    Icons.settings_outlined,
+                                    t.navigation.settings,
+                                    AppRoutes.settings,
+                                  ),
+                                ])
+                                  SizedBox(
+                                    width: width,
+                                    child: NavigationShortcutTile(
+                                      icon: icon,
+                                      label: label,
+                                      onPressed: () => navigate(route),
+                                    ),
+                                  ),
                               ],
+                            );
+                          },
+                        ),
+                      ),
+                      leading ??
+                          ShellChatLeading(
+                            isGenerating: isGenerating,
+                            onNavigate: onNavigate,
+                          ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _sectionHeader(
+                              context,
+                              label: t.navigation.chats,
+                              onSeeMore: () =>
+                                  navigate(AppRoutes.conversations),
                             ),
-                          ),
-                          const Icon(Icons.swap_horiz_rounded, size: 18),
-                        ],
+                            _ChatRows(
+                              current: section == AppSection.chats,
+                              isGenerating: isGenerating,
+                              onOpened: onNavigate,
+                            ),
+                            _sectionHeader(
+                              context,
+                              label: t.navigation.bots,
+                              onCreate: () => _createBot(
+                                actionContext,
+                                ref,
+                                onCreated: onNavigate,
+                              ),
+                              createTooltip: 'New bot',
+                            ),
+                            BotChatRows(
+                              workspaceId: workspace?.id,
+                              onOpened: onNavigate,
+                            ),
+                            _sectionHeader(
+                              context,
+                              label: t.navigation.rooms,
+                              onCreate: workspace == null
+                                  ? null
+                                  : () => _createRoom(
+                                      actionContext,
+                                      ref,
+                                      workspace.id,
+                                      onCreated: onNavigate,
+                                    ),
+                              createTooltip: 'New room',
+                            ),
+                            RoomChatRows(
+                              workspaceId: workspace?.id,
+                              onOpened: onNavigate,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _navTile(
-                          context,
-                          icon: Icons.smart_toy_outlined,
-                          label: 'Models',
-                          route: AppRoutes.modelSelection,
-                          onOpened: onNavigate,
-                        ),
-                        _navTile(
-                          context,
-                          icon: Icons.speed_outlined,
-                          label: t.navigation.benchmark,
-                          route: AppRoutes.benchmark,
-                          onOpened: onNavigate,
-                        ),
-                        _navTile(
-                          context,
-                          icon: Icons.settings_outlined,
-                          label: 'Settings',
-                          route: AppRoutes.settings,
-                          onOpened: onNavigate,
-                        ),
-                      ],
-                    ),
-                  ),
-                  leading ??
-                      ShellChatLeading(
-                        isGenerating: isGenerating,
-                        onNavigate: onNavigate,
-                      ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _sectionHeader(
-                          context,
-                          label: 'Chats',
-                          onSeeMore: () => navigate(AppRoutes.conversations),
-                        ),
-                        _ChatRows(
-                          current: section == AppSection.chats,
-                          isGenerating: isGenerating,
-                          onOpened: onNavigate,
-                        ),
-                        _sectionHeader(
-                          context,
-                          label: 'Bots',
-                          onCreate: () => _createBot(
-                            actionContext,
-                            ref,
-                            onCreated: onNavigate,
-                          ),
-                          createTooltip: 'New bot',
-                        ),
-                        BotChatRows(
-                          workspaceId: workspace?.id,
-                          onOpened: onNavigate,
-                        ),
-                        _sectionHeader(
-                          context,
-                          label: 'Rooms',
-                          onCreate: workspace == null
-                              ? null
-                              : () => _createRoom(
-                                  actionContext,
-                                  ref,
-                                  workspace.id,
-                                  onCreated: onNavigate,
-                                ),
-                          createTooltip: 'New room',
-                        ),
-                        RoomChatRows(
-                          workspaceId: workspace?.id,
-                          onOpened: onNavigate,
-                        ),
-                        _sectionLabel(context, 'Board'),
-                        _BoardTile(
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: _BoardTile(
                           current: section == AppSection.board,
                           onOpened: onNavigate,
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -402,6 +455,74 @@ class AppNavigationPanel extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+typedef _WorkspaceMenuChoice = ({String? id, bool manage});
+
+class _WorkspacePicker extends ConsumerWidget {
+  const _WorkspacePicker({
+    required this.onManage,
+    required this.enabled,
+    required this.child,
+  });
+
+  final VoidCallback onManage;
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(workspacesProvider);
+    return PopupMenuButton<_WorkspaceMenuChoice>(
+      key: const ValueKey('workspace-picker'),
+      tooltip: t.navigation.switchWorkspace,
+      enabled: enabled && state.isReady,
+      onSelected: (choice) async {
+        if (choice.manage) {
+          onManage();
+          return;
+        }
+        await ref.read(workspacesProvider.notifier).setActive(choice.id);
+        if (!context.mounted) return;
+        final error = ref.read(workspacesProvider).errorMessage;
+        if (error != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(error)));
+        }
+      },
+      itemBuilder: (context) => [
+        for (final workspace in state.workspaces)
+          PopupMenuItem<_WorkspaceMenuChoice>(
+            value: (id: workspace.id, manage: false),
+            enabled: !state.isReadOnly,
+            child: Row(
+              children: [
+                Icon(
+                  state.active?.id == workspace.id
+                      ? Icons.check_rounded
+                      : Icons.folder_outlined,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    workspace.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        PopupMenuItem<_WorkspaceMenuChoice>(
+          value: (id: null, manage: true),
+          child: Text(t.navigation.manageWorkspaces),
+        ),
+      ],
+      child: child,
     );
   }
 }
@@ -470,34 +591,17 @@ class _ChatRows extends ConsumerWidget {
           )
         else
           for (final summary in summaries)
-            ListTile(
-              dense: true,
+            NavigationChatTile(
+              key: ValueKey('conversation-${summary.conversation.id}'),
               selected: current && activeId == summary.conversation.id,
-              selectedTileColor: Theme.of(
-                context,
-              ).colorScheme.primaryContainer.withValues(alpha: 0.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
               leading: Icon(
                 summary.conversation.isPinned
                     ? Icons.push_pin_outlined
                     : Icons.chat_bubble_outline,
                 size: 18,
               ),
-              title: Text(
-                summary.conversation.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: Text(
-                summary.lastMessagePreview.isEmpty
-                    ? 'No messages yet'
-                    : summary.lastMessagePreview,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: isGenerating
+              title: summary.conversation.title,
+              onPressed: isGenerating
                   ? null
                   : () {
                       // A conversation is what the page shows when no room is
@@ -567,7 +671,7 @@ Future<void> _createRoom(
   context.go(AppRoutes.home);
 }
 
-/// Every bot with its 1:1 room preview; tapping lands in that same room, on
+/// Every bot with its 1:1 room selection; tapping lands in that same room, on
 /// the app's chat page.
 class BotChatRows extends ConsumerWidget {
   const BotChatRows({super.key, required this.workspaceId, this.onOpened});
@@ -605,19 +709,13 @@ class BotChatRows extends ConsumerWidget {
         direct = chat;
       }
     }
-    final lines = direct == null
-        ? const <GroupMessage>[]
-        : snapshot.messagesFor(direct.id);
-    final preview = lines.isEmpty
-        ? (bot.description.isEmpty ? 'Say hello' : bot.description)
-        : lines.last.text;
     final needsYou = direct != null && roomNeedsUser(snapshot, direct.id);
-    return ListTile(
-      dense: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    return NavigationChatTile(
+      key: ValueKey('bot-${bot.id}'),
+      selected: direct != null && ref.watch(activeRoomIdProvider) == direct.id,
       leading: Stack(
         children: [
-          ProfileAvatar(profileKey: botProfileKey(bot.id)),
+          ProfileAvatar(profileKey: botProfileKey(bot.id), size: 24),
           if (needsYou)
             Positioned(
               right: 0,
@@ -633,9 +731,8 @@ class BotChatRows extends ConsumerWidget {
             ),
         ],
       ),
-      title: Text(bot.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis),
-      onTap: workspaceId == null
+      title: bot.name,
+      onPressed: workspaceId == null
           ? null
           : () async {
               final chat = await ref
@@ -651,7 +748,7 @@ class BotChatRows extends ConsumerWidget {
   }
 }
 
-/// Group rooms of the active workspace with previews and needs-you badges.
+/// Group rooms of the active workspace with selection and needs-you badges.
 class RoomChatRows extends ConsumerWidget {
   const RoomChatRows({super.key, required this.workspaceId, this.onOpened});
 
@@ -664,6 +761,7 @@ class RoomChatRows extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupChatsProvider);
     final colorScheme = Theme.of(context).colorScheme;
+    final activeId = ref.watch(activeRoomIdProvider);
     final rooms = [
       for (final chat in state.snapshot.chats)
         if (!chat.isDirect && chat.workspaceId == workspaceId) chat,
@@ -686,21 +784,15 @@ class RoomChatRows extends ConsumerWidget {
           )
         else
           for (final chat in rooms)
-            ListTile(
-              dense: true,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
+            NavigationChatTile(
+              key: ValueKey('room-${chat.id}'),
+              selected: activeId == chat.id,
               leading: ProfileAvatar(
                 profileKey: roomProfileKey(chat.id),
                 fallback: _memberStack(chat, colorScheme),
+                size: 24,
               ),
-              title: Text(
-                chat.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              subtitle: _roomPreview(state.snapshot, chat),
+              title: chat.name,
               trailing: roomNeedsUser(state.snapshot, chat.id)
                   ? Container(
                       width: 10,
@@ -714,7 +806,7 @@ class RoomChatRows extends ConsumerWidget {
                       '${chat.memberBotIds.length}',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
-              onTap: () {
+              onPressed: () {
                 showRoom(ref, chat.id);
                 onOpened?.call();
                 context.go(AppRoutes.home);
@@ -755,12 +847,6 @@ class RoomChatRows extends ConsumerWidget {
       ),
     );
   }
-
-  Widget _roomPreview(GroupChatsSnapshot snapshot, GroupChat chat) {
-    final lines = snapshot.messagesFor(chat.id);
-    final text = lines.isEmpty ? '${chat.mode.label} mode' : lines.last.text;
-    return Text(text, maxLines: 1, overflow: TextOverflow.ellipsis);
-  }
 }
 
 /// The board with its open-task count.
@@ -783,7 +869,9 @@ class _BoardTile extends ConsumerWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       leading: const Icon(Icons.view_kanban_outlined, size: 18),
       title: const Text('Board'),
-      subtitle: !board.isReady ? null : Text('$open open'),
+      trailing: !board.isReady
+          ? null
+          : Text('$open open', style: Theme.of(context).textTheme.labelSmall),
       onTap: () {
         onOpened?.call();
         context.push(AppRoutes.kanban);
@@ -837,47 +925,15 @@ Widget _sectionHeader(
               onPressed: onSeeMore,
               style: TextButton.styleFrom(
                 foregroundColor: colorScheme.primary,
+                textStyle: Theme.of(context).textTheme.labelSmall,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('See more'),
+              child: Text(t.navigation.seeAll),
             ),
         ],
       ),
     ),
-  );
-}
-
-Widget _sectionLabel(BuildContext context, String label) {
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
-    child: Text(
-      label.toUpperCase(),
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-        letterSpacing: 0.08,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-    ),
-  );
-}
-
-Widget _navTile(
-  BuildContext context, {
-  required IconData icon,
-  required String label,
-  required String route,
-  VoidCallback? onOpened,
-}) {
-  return ListTile(
-    dense: true,
-    leading: Icon(icon, size: 18),
-    title: Text(label),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    onTap: () {
-      onOpened?.call();
-      context.push(route);
-    },
   );
 }

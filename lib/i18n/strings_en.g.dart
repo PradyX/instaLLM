@@ -194,6 +194,36 @@ class Translations$navigation$en {
 
 	/// en: 'About'
 	String get about => 'About';
+
+	/// en: 'Models'
+	String get models => 'Models';
+
+	/// en: 'Settings'
+	String get settings => 'Settings';
+
+	/// en: 'Chats'
+	String get chats => 'Chats';
+
+	/// en: 'Bots'
+	String get bots => 'Bots';
+
+	/// en: 'Rooms'
+	String get rooms => 'Rooms';
+
+	/// en: 'Switch workspace'
+	String get switchWorkspace => 'Switch workspace';
+
+	/// en: 'Manage workspaces'
+	String get manageWorkspaces => 'Manage workspaces';
+
+	/// en: 'No workspace'
+	String get noWorkspace => 'No workspace';
+
+	/// en: 'Search chats'
+	String get searchChats => 'Search chats';
+
+	/// en: 'See all'
+	String get seeAll => 'See all';
 }
 
 // Path: appearance
@@ -328,6 +358,16 @@ extension on Translations {
 			'profileImages.useDefault' => 'Use default icon',
 			'navigation.benchmark' => 'Benchmark',
 			'navigation.about' => 'About',
+			'navigation.models' => 'Models',
+			'navigation.settings' => 'Settings',
+			'navigation.chats' => 'Chats',
+			'navigation.bots' => 'Bots',
+			'navigation.rooms' => 'Rooms',
+			'navigation.switchWorkspace' => 'Switch workspace',
+			'navigation.manageWorkspaces' => 'Manage workspaces',
+			'navigation.noWorkspace' => 'No workspace',
+			'navigation.searchChats' => 'Search chats',
+			'navigation.seeAll' => 'See all',
 			'appearance.themeMode' => 'Theme mode',
 			'appearance.auto' => 'Auto',
 			'appearance.light' => 'Light',

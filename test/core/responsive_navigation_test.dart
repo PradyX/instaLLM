@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pocket_llm/core/navigation/app_router.dart';
 import 'package:pocket_llm/core/navigation/app_shell.dart';
+import 'package:pocket_llm/core/navigation/navigation_panel_widgets.dart';
 import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
 import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
 import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
@@ -24,6 +25,7 @@ import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
 import 'package:pocket_llm/features/settings/presentation/settings_page.dart';
 import 'package:pocket_llm/features/workspaces/data/workspace_store.dart';
 import 'package:pocket_llm/features/workspaces/domain/workspace.dart';
+import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -149,7 +151,8 @@ void main() {
       tester,
       () =>
           container.read(conversationControllerProvider).isInitialized &&
-          container.read(groupChatsProvider).isReady,
+          container.read(groupChatsProvider).isReady &&
+          container.read(workspacesProvider).isReady,
     );
     await tester.pump(const Duration(milliseconds: 200));
   }
@@ -214,12 +217,12 @@ void main() {
           'Benchmark',
           'Settings',
           'CHATS',
-          'Chat A',
-          'Chat B',
           'BOTS',
           'ROOMS',
           'Dev',
-          'BOARD',
+          'Chat A',
+          'Chat B',
+          'Board',
         ]),
       );
       expect(
@@ -240,6 +243,13 @@ void main() {
       );
       expect(find.byTooltip('New bot'), findsOneWidget);
       expect(find.byTooltip('New room'), findsOneWidget);
+      final shortcuts = find.byType(NavigationShortcutTile);
+      expect(shortcuts, findsNWidgets(3));
+      final tiles = shortcuts
+          .evaluate()
+          .map((element) => tester.getCenter(find.byWidget(element.widget)))
+          .toList();
+      expect(tiles.map((point) => point.dy).toSet(), hasLength(1));
       expect(
         tester.getSize(find.byType(AppNavigationPanel)).width,
         AppShell.railWidth,
@@ -299,6 +309,114 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('workspace header saves its choice and filters room rows', (
+    tester,
+  ) async {
+    await pumpHome(tester, width: 1400);
+    final workspaces = container.read(workspacesProvider.notifier);
+    await tester.runAsync(() async {
+      await workspaces.createWorkspace('Second workspace');
+      final id = container.read(workspacesProvider).active!.id;
+      await container
+          .read(groupChatsProvider.notifier)
+          .createChat(workspaceId: id, name: 'Second room');
+      await workspaces.setActive('ws');
+    });
+    await tester.pump();
+    expect(panelText('Dev'), findsOneWidget);
+    expect(panelText('Second room'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('workspace-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Second workspace'));
+    await tester.pumpAndSettle();
+    final secondId = container.read(workspacesProvider).active!.id;
+    await pumpUntil(
+      tester,
+      () =>
+          WorkspaceStore(
+            File('${directory.path}/workspaces/workspaces.json'),
+          ).load().activeWorkspaceId ==
+          secondId,
+    );
+    expect(panelText('Second workspace'), findsOneWidget);
+    expect(panelText('Second room'), findsOneWidget);
+    expect(panelText('Dev'), findsNothing);
+  });
+
+  testWidgets('selected compact rows follow conversations, bots and rooms', (
+    tester,
+  ) async {
+    await pumpHome(tester, width: 1400);
+    await tapPanel(tester, 'Chat A');
+    await pumpUntil(
+      tester,
+      () =>
+          container.read(conversationControllerProvider).activeConversationId ==
+          'a',
+    );
+    expect(
+      tester
+          .widget<NavigationChatTile>(
+            find.byKey(const ValueKey('conversation-a')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<NavigationChatTile>(
+            find.byKey(const ValueKey('conversation-b')),
+          )
+          .selected,
+      isFalse,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppNavigationPanel),
+        matching: find.text('No messages yet'),
+      ),
+      findsNothing,
+    );
+    await tapPanel(tester, 'Planner');
+    await pumpUntil(
+      tester,
+      () =>
+          container.read(activeRoomProvider)?.directBotId ==
+          BuiltInBots.plannerId,
+    );
+    expect(
+      tester
+          .widget<NavigationChatTile>(
+            find.byKey(ValueKey('bot-${BuiltInBots.plannerId}')),
+          )
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<NavigationChatTile>(
+            find.byKey(const ValueKey('conversation-a')),
+          )
+          .selected,
+      isFalse,
+    );
+    await tapPanel(tester, 'Dev');
+    expect(
+      tester
+          .widget<NavigationChatTile>(find.byKey(const ValueKey('room-dev')))
+          .selected,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<NavigationChatTile>(
+            find.byKey(ValueKey('bot-${BuiltInBots.plannerId}')),
+          )
+          .selected,
+      isFalse,
+    );
+  });
 
   testWidgets(
     'rooms retain the hamburger and selecting a conversation closes the drawer',
@@ -411,10 +529,10 @@ void main() {
   });
 
   for (final (label, route) in [
-    ('See more', AppRoutes.conversations),
+    ('See all', AppRoutes.conversations),
     ('Models', AppRoutes.modelSelection),
     ('Benchmark', AppRoutes.benchmark),
-    ('Pocket LLM', AppRoutes.workspaces),
+    ('Manage workspaces', AppRoutes.workspaces),
   ]) {
     testWidgets('$label closes the drawer and navigates to its page', (
       tester,
@@ -422,7 +540,15 @@ void main() {
       await pumpHome(tester);
       final scaffold = homeScaffold(tester);
       await openDrawer(tester);
-      await tapPanel(tester, label);
+      if (label == 'Manage workspaces') {
+        await tester.tap(find.byKey(const ValueKey('workspace-picker')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(label));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+      } else {
+        await tapPanel(tester, label);
+      }
       await pumpUntil(
         tester,
         () => find.text('Destination $route').evaluate().isNotEmpty,

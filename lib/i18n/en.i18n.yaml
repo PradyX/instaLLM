@@ -43,6 +43,16 @@ profileImages:
 navigation:
   benchmark: "Benchmark"
   about: "About"
+  models: "Models"
+  settings: "Settings"
+  chats: "Chats"
+  bots: "Bots"
+  rooms: "Rooms"
+  switchWorkspace: "Switch workspace"
+  manageWorkspaces: "Manage workspaces"
+  noWorkspace: "No workspace"
+  searchChats: "Search chats"
+  seeAll: "See all"
 
 appearance:
   themeMode: "Theme mode"

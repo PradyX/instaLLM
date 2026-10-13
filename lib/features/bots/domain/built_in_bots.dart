@@ -2,8 +2,8 @@ import 'package:installm/features/bots/domain/bot.dart';
 
 /// Bot templates that ship with the app (Road Map 2 §16).
 ///
-/// Users duplicate and edit these; the templates themselves are read-only
-/// code so a future release can improve them without clashing with edits.
+/// Optional starting points offered during creation. They never enter the
+/// user's registry automatically; a created copy is an ordinary editable bot.
 /// Skill ids reference the built-in skills by their stable ids.
 abstract final class BuiltInBots {
   static const String researcherId = 'bot-builtin-researcher';

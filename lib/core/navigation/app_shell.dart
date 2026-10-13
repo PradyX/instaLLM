@@ -628,8 +628,14 @@ Future<void> _createBot(
     builder: (_) => const CreateBotDialog(),
   );
   if (draft == null || !context.mounted) return;
-  final bot = await bots.createBot(draft.name);
-  if (bot == null || !context.mounted) return;
+  final bot = await bots.createBot(draft.name, templateId: draft.templateId);
+  if (!context.mounted) return;
+  if (bot == null) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t.botCreation.saveError)));
+    return;
+  }
   if (draft.portrait != null) {
     final saved = await ref
         .read(profileImagesProvider.notifier)
@@ -689,6 +695,12 @@ class BotChatRows extends ConsumerWidget {
     final rooms = ref.watch(groupChatsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     if (!bots.isReady) return const SizedBox();
+    if (bots.bots.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(t.botCreation.empty),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -764,9 +776,13 @@ class RoomChatRows extends ConsumerWidget {
     final state = ref.watch(groupChatsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final activeId = ref.watch(activeRoomIdProvider);
+    final bots = ref.watch(botsProvider);
     final rooms = [
       for (final chat in state.snapshot.chats)
-        if (!chat.isDirect && chat.workspaceId == workspaceId) chat,
+        if (chat.workspaceId == workspaceId &&
+            (!chat.isDirect ||
+                (bots.isReady && bots.botById(chat.directBotId) == null)))
+          chat,
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -790,12 +806,21 @@ class RoomChatRows extends ConsumerWidget {
               key: ValueKey('room-${chat.id}'),
               selected: activeId == chat.id,
               leading: ProfileAvatar(
-                profileKey: roomProfileKey(chat.id),
-                fallback: _memberStack(chat, colorScheme),
+                profileKey: chat.isDirect
+                    ? botProfileKey(chat.directBotId!)
+                    : roomProfileKey(chat.id),
+                fallback: chat.isDirect
+                    ? const Icon(Icons.history_rounded)
+                    : _memberStack(chat, colorScheme),
                 size: 24,
               ),
               title: chat.name,
-              trailing: roomNeedsUser(state.snapshot, chat.id)
+              trailing: chat.isDirect
+                  ? Tooltip(
+                      message: t.botManagement.historyOnly,
+                      child: const Icon(Icons.history_rounded, size: 16),
+                    )
+                  : roomNeedsUser(state.snapshot, chat.id)
                   ? Container(
                       width: 10,
                       height: 10,

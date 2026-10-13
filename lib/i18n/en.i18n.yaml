@@ -31,6 +31,21 @@ botCreation:
   title: New bot
   name: Bot name
   create: Create
+  startWith: Start with
+  blank: Blank bot
+  empty: No bots yet. Use + to create your own.
+  saveError: Could not create the bot. Check available storage and try again.
+
+botManagement:
+  edit: Edit bot
+  delete: Delete bot
+  deleteTitle: Delete this bot?
+  deleteHint: The bot will be removed from your list. Its chats and messages stay readable in Rooms.
+  deleteError: Could not delete the bot. Check available storage and try again.
+  historyOnly: Chat history
+  unavailable: This bot is no longer active. Its chat history is preserved.
+  emptyHistory: No messages in this saved chat.
+  unavailableAssignee: Unavailable bot
 
 roomMentions:
   title: Mention a room member

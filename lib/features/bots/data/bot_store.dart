@@ -6,9 +6,7 @@ import 'package:installm/core/data/versioned_json_document.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/bots/domain/built_in_bots.dart';
 
-/// Persisted bots: custom bots and template duplicates.
-///
-/// Built-in templates are code and never written; they seed every load.
+/// User-created bots. Templates are offered separately, never seeded on load.
 class BotStore {
   BotStore(File file)
     : _document = VersionedJsonDocument(
@@ -17,7 +15,7 @@ class BotStore {
         label: 'BotStore',
       );
 
-  static const int currentVersion = 1;
+  static const int currentVersion = 2;
 
   static Future<BotStore> open() async {
     final support = await getApplicationSupportDirectory();
@@ -25,6 +23,8 @@ class BotStore {
   }
 
   final VersionedJsonDocument _document;
+  bool _needsLegacyBackup = false;
+  bool _needsPartialBackup = false;
 
   String get filePath => _document.filePath;
   bool get isReadOnly => _document.isReadOnly;
@@ -32,10 +32,28 @@ class BotStore {
   BotsSnapshot load() {
     final decoded = _document.read();
     if (decoded == null) return BotsSnapshot.empty;
-    return BotsSnapshot.fromJson(decoded);
+    _needsLegacyBackup = decoded['version'] != currentVersion;
+    final snapshot = BotsSnapshot.fromJson(decoded);
+    final raw = decoded['bots'];
+    _needsPartialBackup =
+        raw is! List || raw.length != snapshot.customBots.length;
+    return snapshot;
   }
 
   bool save(BotsSnapshot snapshot) {
+    // Keep the entire legacy payload, including partial/invalid entries,
+    // before writing the registry that no longer adds templates on load.
+    if (_needsLegacyBackup || _needsPartialBackup) {
+      try {
+        _document.file.copySync(
+          '$filePath.${_needsLegacyBackup ? 'v1' : 'partial'}-${DateTime.now().microsecondsSinceEpoch}',
+        );
+        _needsLegacyBackup = false;
+        _needsPartialBackup = false;
+      } catch (_) {
+        return false;
+      }
+    }
     return _document.write({
       'version': currentVersion,
       'bots': snapshot.customBots.map((bot) => bot.toJson()).toList(),
@@ -50,8 +68,7 @@ class BotsSnapshot {
 
   final List<Bot> customBots;
 
-  /// Templates followed by custom bots, in display order.
-  List<Bot> get allBots => [...BuiltInBots.all(), ...customBots];
+  List<Bot> get allBots => customBots;
 
   BotsSnapshot upsert(Bot bot) {
     final updated = <Bot>[];
@@ -81,14 +98,22 @@ class BotsSnapshot {
       for (final entry in raw) {
         final map = entry is Map<String, dynamic>
             ? entry
-            : entry is Map
+            : entry is Map && entry.keys.every((key) => key is String)
             ? Map<String, dynamic>.from(entry)
             : null;
         if (map == null) continue;
-        // Templates are code: ignore a stored copy by a template id.
-        if (BuiltInBots.byId(map['id'] as String? ?? '') != null) continue;
+        // Version 1 never owned these records: keep its template-shadowing
+        // rule. Version 2 treats every saved record as a user-created bot.
+        final id = map['id'];
+        if (id is! String) continue;
+        if (json['version'] != BotStore.currentVersion &&
+            BuiltInBots.byId(id) != null) {
+          continue;
+        }
         final bot = Bot.fromJson(map);
-        if (bot != null) bots.add(bot);
+        if (bot != null && !bots.any((existing) => existing.id == bot.id)) {
+          bots.add(bot);
+        }
       }
     }
     return BotsSnapshot(customBots: bots);

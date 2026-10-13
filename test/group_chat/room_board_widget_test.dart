@@ -156,6 +156,35 @@ void main() {
     }
   }
 
+  testWidgets('a missing bot assignee remains visible and can be cleared', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.runAsync(
+      () => container
+          .read(kanbanProvider.notifier)
+          .assignTask('PL-001', 'removed-bot'),
+    );
+    await tester.tap(find.byTooltip('Open board'));
+    await until(tester, () => find.byType(KanbanPage).evaluate().isNotEmpty);
+    await tester.tap(find.text('Existing board task'));
+    await tester.pumpAndSettle();
+    expect(find.text('Unavailable bot'), findsOneWidget);
+    expect(
+      container.read(kanbanProvider).byId['PL-001']!.assignedBotId,
+      'removed-bot',
+    );
+    await tester.tap(find.byType(DropdownButtonFormField<String?>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Unassigned').last);
+    await until(
+      tester,
+      () =>
+          container.read(kanbanProvider).byId['PL-001']!.assignedBotId == null,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'link an existing task, change status from the room, then Board reopens that same room',
     (tester) async {

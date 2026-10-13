@@ -45,6 +45,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$home$en home = Translations$home$en._(_root);
 	late final Translations$common$en common = Translations$common$en._(_root);
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
+	late final Translations$botManagement$en botManagement = Translations$botManagement$en._(_root);
 	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
 	late final Translations$modelRepository$en modelRepository = Translations$modelRepository$en._(_root);
 	late final Translations$roomBoard$en roomBoard = Translations$roomBoard$en._(_root);
@@ -159,6 +160,54 @@ class Translations$botCreation$en {
 
 	/// en: 'Create'
 	String get create => 'Create';
+
+	/// en: 'Start with'
+	String get startWith => 'Start with';
+
+	/// en: 'Blank bot'
+	String get blank => 'Blank bot';
+
+	/// en: 'No bots yet. Use + to create your own.'
+	String get empty => 'No bots yet. Use + to create your own.';
+
+	/// en: 'Could not create the bot. Check available storage and try again.'
+	String get saveError => 'Could not create the bot. Check available storage and try again.';
+}
+
+// Path: botManagement
+class Translations$botManagement$en {
+	Translations$botManagement$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Edit bot'
+	String get edit => 'Edit bot';
+
+	/// en: 'Delete bot'
+	String get delete => 'Delete bot';
+
+	/// en: 'Delete this bot?'
+	String get deleteTitle => 'Delete this bot?';
+
+	/// en: 'The bot will be removed from your list. Its chats and messages stay readable in Rooms.'
+	String get deleteHint => 'The bot will be removed from your list. Its chats and messages stay readable in Rooms.';
+
+	/// en: 'Could not delete the bot. Check available storage and try again.'
+	String get deleteError => 'Could not delete the bot. Check available storage and try again.';
+
+	/// en: 'Chat history'
+	String get historyOnly => 'Chat history';
+
+	/// en: 'This bot is no longer active. Its chat history is preserved.'
+	String get unavailable => 'This bot is no longer active. Its chat history is preserved.';
+
+	/// en: 'No messages in this saved chat.'
+	String get emptyHistory => 'No messages in this saved chat.';
+
+	/// en: 'Unavailable bot'
+	String get unavailableAssignee => 'Unavailable bot';
 }
 
 // Path: roomMentions
@@ -439,6 +488,19 @@ extension on Translations {
 			'botCreation.title' => 'New bot',
 			'botCreation.name' => 'Bot name',
 			'botCreation.create' => 'Create',
+			'botCreation.startWith' => 'Start with',
+			'botCreation.blank' => 'Blank bot',
+			'botCreation.empty' => 'No bots yet. Use + to create your own.',
+			'botCreation.saveError' => 'Could not create the bot. Check available storage and try again.',
+			'botManagement.edit' => 'Edit bot',
+			'botManagement.delete' => 'Delete bot',
+			'botManagement.deleteTitle' => 'Delete this bot?',
+			'botManagement.deleteHint' => 'The bot will be removed from your list. Its chats and messages stay readable in Rooms.',
+			'botManagement.deleteError' => 'Could not delete the bot. Check available storage and try again.',
+			'botManagement.historyOnly' => 'Chat history',
+			'botManagement.unavailable' => 'This bot is no longer active. Its chat history is preserved.',
+			'botManagement.emptyHistory' => 'No messages in this saved chat.',
+			'botManagement.unavailableAssignee' => 'Unavailable bot',
 			'roomMentions.title' => 'Mention a room member',
 			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',

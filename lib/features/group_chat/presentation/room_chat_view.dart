@@ -24,6 +24,7 @@ import 'package:installm/features/tools/application/tool_approval_controller.dar
 import 'package:installm/features/tools/application/tool_registry.dart';
 import 'package:installm/features/tools/presentation/tool_approval_dialog.dart';
 import 'package:installm/features/voice/application/composer_dictation_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// One room's lines, as the shared chat page draws them.
 ///
@@ -157,9 +158,9 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
     // for one room from moving a built-in bot in every other room. The pill
     // lists the same models home does — any installed chat model may answer.
     final directBotId = chat.directBotId;
-    final bot = directBotId == null
-        ? null
-        : ref.watch(botsProvider).botById(directBotId);
+    final bots = ref.watch(botsProvider);
+    final bot = directBotId == null ? null : bots.botById(directBotId);
+    final historyOnly = chat.isDirect && bots.isReady && bot == null;
     final chatModels = ref.watch(chatModelsProvider);
     final selectedModel = ref.watch(selectedChatModelProvider);
     // One resolution for the pill and for the reasoning chip beside it: the
@@ -182,8 +183,10 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      chat.isDirect
-                          ? 'Say hello — ${chat.name} answers directly.'
+                      historyOnly
+                          ? t.botManagement.emptyHistory
+                          : chat.isDirect
+                          ? 'Say hello — ${bot?.name ?? chat.name} answers directly.'
                           : 'Say hello with @name to bring a bot in.\n'
                                 'Mode: ${chat.mode.label}.',
                       style: textTheme.bodyMedium,
@@ -221,7 +224,9 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                               ),
                             ),
                         ],
-                        below: message.isPending
+                        below:
+                            message.isPending &&
+                                bots.botById(message.authorBotId) != null
                             ? _PendingReplyCard(message: message)
                             : null,
                       ),
@@ -237,43 +242,51 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-            child: RoomMentionComposer(
-              members: [
-                for (final id in chat.memberBotIds)
-                  ?ref.watch(botsProvider).botById(id),
-              ],
-              controller: _inputController,
-              enabled: !running,
-              hintText: chat.isDirect
-                  ? 'Message ${chat.name}...'
-                  : 'Message the room (@name for a bot)...',
-              leading: ComposerModelPill(
-                models: chatModels,
-                selected: answerModel,
-                enabled: !running,
-                tooltip: 'Switch model',
-                onSelected: (model) => unawaited(
-                  notifier.updateChat(chat.copyWith(modelId: model.id)),
+        if (historyOnly)
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(t.botManagement.unavailable),
+            ),
+          )
+        else
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              child: RoomMentionComposer(
+                members: [
+                  for (final id in chat.memberBotIds)
+                    ?ref.watch(botsProvider).botById(id),
+                ],
+                controller: _inputController,
+                enabled: !running && bots.isReady,
+                hintText: chat.isDirect
+                    ? 'Message ${bot?.name ?? chat.name}...'
+                    : 'Message the room (@name for a bot)...',
+                leading: ComposerModelPill(
+                  models: chatModels,
+                  selected: answerModel,
+                  enabled: !running,
+                  tooltip: 'Switch model',
+                  onSelected: (model) => unawaited(
+                    notifier.updateChat(chat.copyWith(modelId: model.id)),
+                  ),
+                  onEmptyPressed: () => context.push(AppRoutes.modelSelection),
                 ),
-                onEmptyPressed: () => context.push(AppRoutes.modelSelection),
+                reasoning: ComposerReasoningControl(
+                  modelId: answerModel?.id ?? '',
+                  enabled: !running,
+                ),
+                onSend: () => _send(_inputController.text),
+                onMicPressed: () => unawaited(
+                  ref
+                      .read(composerDictationProvider.notifier)
+                      .toggle(_inputController),
+                ),
+                micState: dictation.microphone,
               ),
-              reasoning: ComposerReasoningControl(
-                modelId: answerModel?.id ?? '',
-                enabled: !running,
-              ),
-              onSend: () => _send(_inputController.text),
-              onMicPressed: () => unawaited(
-                ref
-                    .read(composerDictationProvider.notifier)
-                    .toggle(_inputController),
-              ),
-              micState: dictation.microphone,
             ),
           ),
-        ),
       ],
     );
   }
@@ -401,6 +414,9 @@ class RoomHeaderTitle extends ConsumerWidget {
               ],
             ),
           );
+    final bot = room.isDirect
+        ? ref.watch(botsProvider).botById(room.directBotId)
+        : null;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -414,7 +430,7 @@ class RoomHeaderTitle extends ConsumerWidget {
         const SizedBox(width: 8),
         Flexible(
           child: Text(
-            room.name,
+            bot?.name ?? room.name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: textTheme.titleMedium?.copyWith(
@@ -484,8 +500,10 @@ class RoomSettingsSheet extends ConsumerWidget {
             const SizedBox(height: 12),
             if (room.isDirect) ...[
               Text(
-                '${room.name} answers every line here — no @mentions, '
-                'no rounds to tune.',
+                bot == null && bots.isReady
+                    ? t.botManagement.unavailable
+                    : '${bot?.name ?? room.name} answers every line here — no @mentions, '
+                          'no rounds to tune.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (bot != null) ...[
@@ -500,33 +518,21 @@ class RoomSettingsSheet extends ConsumerWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 const SizedBox(height: 4),
-                // A template is read-only code; editing it means taking a
-                // copy, which is the same rule the roster followed.
                 Row(
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: () async {
-                        if (!bot.isBuiltIn) {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) =>
-                                  BotEditorPage(botId: bot.id),
-                            ),
-                          );
-                          return;
-                        }
-                        final copy = await ref
-                            .read(botsProvider.notifier)
-                            .duplicateTemplate(bot.id);
-                        if (copy == null || !context.mounted) return;
-                        await Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (context) => BotEditorPage(botId: copy.id),
-                          ),
-                        );
-                      },
+                      onPressed: bots.isReadOnly
+                          ? null
+                          : () async {
+                              await Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (context) =>
+                                      BotEditorPage(botId: bot.id),
+                                ),
+                              );
+                            },
                       icon: const Icon(Icons.tune_rounded, size: 18),
-                      label: Text(bot.isBuiltIn ? 'Copy to edit' : 'Edit bot'),
+                      label: Text(t.botManagement.edit),
                     ),
                   ],
                 ),

@@ -322,6 +322,13 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
                   value: null,
                   child: Text('Unassigned'),
                 ),
+                if (task.assignedBotId != null &&
+                    bots.botById(task.assignedBotId) == null)
+                  DropdownMenuItem<String?>(
+                    value: task.assignedBotId,
+                    enabled: false,
+                    child: Text(t.botManagement.unavailableAssignee),
+                  ),
                 for (final bot in bots.bots)
                   DropdownMenuItem<String?>(
                     value: bot.id,

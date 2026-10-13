@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:installm/core/widgets/default_bot_avatar.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
 import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:installm/features/profile_images/presentation/profile_image_picker.dart';
 import 'package:installm/i18n/strings.g.dart';
 
 class BotDraft {
-  const BotDraft(this.name, this.portrait);
+  const BotDraft(this.name, this.portrait, {this.templateId});
   final String name;
   final PetdexPet? portrait;
+  final String? templateId;
 }
 
 /// Owns the name controller and cosmetic draft until creation is confirmed.
@@ -22,6 +24,7 @@ class CreateBotDialog extends StatefulWidget {
 class _CreateBotDialogState extends State<CreateBotDialog> {
   final _name = TextEditingController();
   PetdexPet? _portrait;
+  String? _templateId;
 
   @override
   void dispose() {
@@ -31,7 +34,11 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
 
   void _submit() {
     final name = _name.text.trim();
-    if (name.isNotEmpty) Navigator.of(context).pop(BotDraft(name, _portrait));
+    if (name.isNotEmpty) {
+      Navigator.of(
+        context,
+      ).pop(BotDraft(name, _portrait, templateId: _templateId));
+    }
   }
 
   Future<void> _choose() async {
@@ -51,6 +58,36 @@ class _CreateBotDialogState extends State<CreateBotDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          DropdownButtonFormField<String?>(
+            isExpanded: true,
+            initialValue: _templateId,
+            decoration: InputDecoration(labelText: t.botCreation.startWith),
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Text(t.botCreation.blank),
+              ),
+              for (final template in BuiltInBots.all())
+                DropdownMenuItem(
+                  value: template.id,
+                  child: Text(template.name),
+                ),
+            ],
+            onChanged: (id) => setState(() {
+              final previousName = _templateId == null
+                  ? ''
+                  : BuiltInBots.byId(_templateId!)!.name;
+              _templateId = id;
+              if (_name.text.trim().isEmpty || _name.text == previousName) {
+                _name.text = id == null ? '' : BuiltInBots.byId(id)!.name;
+              }
+            }),
+          ),
+          if (_templateId != null) ...[
+            const SizedBox(height: 8),
+            Text(BuiltInBots.byId(_templateId!)!.description),
+          ],
+          const SizedBox(height: 12),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: _portrait == null

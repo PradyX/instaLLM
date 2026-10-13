@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/data/bot_store.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/group_chat/data/group_chat_store.dart';
@@ -87,6 +89,14 @@ void main() {
 
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('room_board');
+    BotStore(File('${directory.path}/bots/bots.json')).save(
+      BotsSnapshot(
+        customBots: [
+          for (final template in BuiltInBots.all())
+            Bot.fromJson(template.toJson())!,
+        ],
+      ),
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

@@ -10,6 +10,8 @@ import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/presentation/profile_image_picker.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// Edits one custom bot: identity, soul, model and profile choice, skills,
 /// MCP servers, tool permissions, memory scope and workspaces.
@@ -23,11 +25,11 @@ class BotEditorPage extends ConsumerStatefulWidget {
 }
 
 class _BotEditorPageState extends ConsumerState<BotEditorPage> {
-  late TextEditingController _name;
-  late TextEditingController _icon;
-  late TextEditingController _description;
-  late TextEditingController _soul;
-  late TextEditingController _permissions;
+  final _name = TextEditingController();
+  final _icon = TextEditingController();
+  final _description = TextEditingController();
+  final _soul = TextEditingController();
+  final _permissions = TextEditingController();
   var _initializedFor = '';
 
   @override
@@ -43,13 +45,41 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
   void _initFrom(Bot bot) {
     if (_initializedFor == bot.id) return;
     _initializedFor = bot.id;
-    _name = TextEditingController(text: bot.name);
-    _icon = TextEditingController(text: bot.icon);
-    _description = TextEditingController(text: bot.description);
-    _soul = TextEditingController(text: bot.soul);
-    _permissions = TextEditingController(
-      text: (bot.toolPermissions.toList()..sort()).join(', '),
+    _name.text = bot.name;
+    _icon.text = bot.icon;
+    _description.text = bot.description;
+    _soul.text = bot.soul;
+    _permissions.text = (bot.toolPermissions.toList()..sort()).join(', ');
+  }
+
+  Future<void> _delete(Bot bot) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.botManagement.deleteTitle),
+        content: Text(t.botManagement.deleteHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(t.common.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(t.botManagement.delete),
+          ),
+        ],
+      ),
     );
+    if (confirmed != true || !mounted) return;
+    final deleted = await ref.read(botsProvider.notifier).removeBot(bot.id);
+    if (!mounted) return;
+    if (deleted) {
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.botManagement.deleteError)));
+    }
   }
 
   Future<void> _save(Bot bot) async {
@@ -97,6 +127,12 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
         .where((model) => model.isDownloaded)
         .toList(growable: false);
     final soulTokens = TokenEstimator.estimateText(_soul.text);
+    final rooms = ref.watch(groupChatsProvider);
+    final running = rooms.snapshot.chats.any(
+      (room) =>
+          rooms.runningChatIds.contains(room.id) &&
+          room.memberBotIds.contains(bot.id),
+    );
 
     Future<void> update(Bot updated) =>
         ref.read(botsProvider.notifier).updateBot(updated);
@@ -106,10 +142,15 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
         title: Text('Edit ${bot.name}'),
         actions: [
           FilledButton.tonal(
-            onPressed: () => _save(bot),
+            onPressed: bots.isReadOnly ? null : () => _save(bot),
             child: const Text('Save'),
           ),
           const SizedBox(width: 8),
+          IconButton(
+            tooltip: t.botManagement.delete,
+            onPressed: bots.isReadOnly || running ? null : () => _delete(bot),
+            icon: const Icon(Icons.delete_outline),
+          ),
         ],
       ),
       body: ListView(

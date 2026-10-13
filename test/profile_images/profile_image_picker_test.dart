@@ -87,6 +87,44 @@ void main() {
       );
 
   testWidgets(
+    'bot creation fits a narrow window with large text and a keyboard',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+      addTearDown(tester.view.reset);
+      BotDraft? draft;
+      await pump(
+        tester,
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              draft = await showDialog<BotDraft>(
+                context: context,
+                builder: (_) => const CreateBotDialog(),
+              );
+            },
+            child: const Text('New bot'),
+          ),
+        ),
+        scale: 2,
+      );
+      await tester.tap(find.text('New bot'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(TextField));
+      await tester.enterText(find.byType(TextField), 'My bot');
+      await tester.pump();
+      await tester.ensureVisible(find.text('Create'));
+      await tester.tap(find.text('Create'));
+      await tester.pumpAndSettle();
+      expect(draft!.name, 'My bot');
+      expect(draft!.templateId, isNull);
+      expect(service.catalogRequests, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'new bot portrait is a draft; create returns it and cancel saves nothing',
     (tester) async {
       BotDraft? draft;

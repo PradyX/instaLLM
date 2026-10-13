@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'package:installm/core/widgets/chat_bubble.dart';
 import 'package:installm/core/widgets/composer_model_pill.dart';
 import 'package:installm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/data/bot_store.dart';
 import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/data/group_chat_store.dart';
@@ -90,6 +92,14 @@ void main() {
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('installm_room_composer');
+    BotStore(File(p.join(tempDir.path, 'bots', 'bots.json'))).save(
+      BotsSnapshot(
+        customBots: [
+          for (final template in BuiltInBots.all())
+            Bot.fromJson(template.toJson())!,
+        ],
+      ),
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

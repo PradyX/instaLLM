@@ -307,8 +307,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   Future<void> sendUserMessage(String chatId, String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.runningChatIds.contains(chatId)) return;
+    await _ref.read(botsProvider.notifier).whenReady;
     final chat = _chatById(chatId);
     if (chat == null) return;
+    if (chat.isDirect && _botById(chat.directBotId!) == null) return;
     _append(GroupMessage.user(chatId: chatId, text: trimmed));
     await _persist();
     await _runTurn(chatId, firstText: trimmed, roundsUsed: 0);
@@ -322,12 +324,17 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   ) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
+    await _ref.read(botsProvider.notifier).whenReady;
     final messages = state.snapshot.messagesFor(chatId);
     GroupMessage? pending;
     for (final message in messages) {
       if (message.id == messageId && message.isPending) pending = message;
     }
-    if (pending == null || pending.authorBotId == null) return;
+    if (pending == null ||
+        pending.authorBotId == null ||
+        _botById(pending.authorBotId!) == null) {
+      return;
+    }
     final chat = _chatById(chatId);
     if (chat == null) return;
     _replace(pending.copyWith(text: trimmed, pendingPrompt: null));

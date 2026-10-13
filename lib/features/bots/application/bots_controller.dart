@@ -20,11 +20,6 @@ class BotsState {
   final String? errorMessage;
   final bool isReadOnly;
 
-  List<Bot> get templateBots =>
-      bots.where((bot) => bot.isBuiltIn).toList(growable: false);
-  List<Bot> get customBots =>
-      bots.where((bot) => !bot.isBuiltIn).toList(growable: false);
-
   Bot? botById(String? id) {
     if (id == null) return null;
     for (final bot in bots) {
@@ -55,15 +50,27 @@ final botsProvider = StateNotifierProvider<BotsNotifier, BotsState>(
 
 /// Owns the bot registry.
 ///
-/// Templates can be duplicated into editable copies, never edited or deleted
-/// in place. Custom bots are full records: soul, model and profile choice,
+/// Only user-created bots enter the registry. Optional templates create
+/// editable copies. Bots are full records: soul, model and profile choice,
 /// skills, MCP servers, tool permissions, memory scope and workspaces.
 class BotsNotifier extends StateNotifier<BotsState> {
-  BotsNotifier(this._ref) : super(BotsState(bots: BuiltInBots.all())) {
-    _load();
+  BotsNotifier(this._ref) : super(const BotsState()) {
+    _loaded = _load();
   }
 
   final Ref _ref;
+  late final Future<void> _loaded;
+  Future<void> get whenReady => _loaded;
+  Future<void> _pending = Future<void>.value();
+
+  Future<T> _mutate<T>(Future<T> Function() action) {
+    final result = _pending.then((_) async {
+      await _loaded;
+      return action();
+    });
+    _pending = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
 
   Future<void> _load() async {
     try {
@@ -86,7 +93,7 @@ class BotsNotifier extends StateNotifier<BotsState> {
     }
   }
 
-  Future<bool> _persist() async {
+  Future<bool> _persist(List<Bot> bots) async {
     try {
       final store = await _ref.read(botStoreProvider.future);
       if (store.isReadOnly) {
@@ -97,7 +104,12 @@ class BotsNotifier extends StateNotifier<BotsState> {
         );
         return false;
       }
-      return store.save(BotsSnapshot(customBots: state.customBots));
+      if (!store.save(BotsSnapshot(customBots: bots))) {
+        state = state.copyWith(errorMessage: 'Could not save bots.');
+        return false;
+      }
+      state = state.copyWith(bots: bots, clearError: true);
+      return true;
     } catch (error) {
       state = state.copyWith(errorMessage: 'Could not save bots: $error');
       return false;
@@ -105,60 +117,53 @@ class BotsNotifier extends StateNotifier<BotsState> {
   }
 
   /// Duplicates [templateId] into an editable custom bot.
-  Future<Bot?> duplicateTemplate(String templateId) async {
-    final template = state.botById(templateId);
-    if (template == null || !template.isBuiltIn) return null;
-    final copy = Bot.create(
-      id: IdGenerator.generate('bot'),
-      name: '${template.name} copy',
-      icon: template.icon,
-      description: template.description,
-      soul: template.soul,
-      modelId: template.modelId,
-      inferenceProfileId: template.inferenceProfileId,
-      skillIds: template.skillIds,
-      mcpServerIds: template.mcpServerIds,
-      toolPermissions: template.toolPermissions,
-      memoryScope: template.memoryScope,
-      workspaceIds: template.workspaceIds,
-    );
-    state = state.copyWith(bots: [...state.bots, copy], clearError: true);
-    final saved = await _persist();
-    return saved ? copy : null;
+  Future<Bot?> duplicateTemplate(String templateId) {
+    final template = BuiltInBots.byId(templateId);
+    if (template == null) return Future.value(null);
+    return createBot(template.name, templateId: templateId);
   }
 
-  Future<Bot?> createBot(String name) async {
-    final bot = Bot.create(name: name);
-    state = state.copyWith(bots: [...state.bots, bot], clearError: true);
-    final saved = await _persist();
-    return saved ? bot : null;
-  }
+  Future<Bot?> createBot(String name, {String? templateId}) => _mutate(
+    () async {
+      final template = templateId == null ? null : BuiltInBots.byId(templateId);
+      if (templateId != null && template == null) return null;
+      final bot = Bot.create(
+        id: IdGenerator.generate('bot'),
+        name: name,
+        icon: template?.icon ?? '🤖',
+        description: template?.description ?? '',
+        soul: template?.soul ?? '',
+        modelId: template?.modelId,
+        contextPolicyId: template?.contextPolicyId,
+        inferenceProfileId: template?.inferenceProfileId,
+        skillIds: template?.skillIds ?? const [],
+        mcpServerIds: template?.mcpServerIds ?? const [],
+        toolPermissions: template?.toolPermissions ?? const {},
+        memoryScope: template?.memoryScope ?? BotMemoryScope.workspace,
+        workspaceIds: template?.workspaceIds ?? const [],
+      );
+      final saved = await _persist([...state.bots, bot]);
+      return saved ? bot : null;
+    },
+  );
 
-  Future<bool> updateBot(Bot bot) async {
+  Future<bool> updateBot(Bot bot) => _mutate(() async {
     if (bot.isBuiltIn) return false;
     if (state.botById(bot.id) == null) return false;
-    state = state.copyWith(
-      bots: [
-        for (final candidate in state.bots)
-          if (candidate.id == bot.id) bot else candidate,
-      ],
-      clearError: true,
-    );
-    return _persist();
-  }
+    return _persist([
+      for (final candidate in state.bots)
+        if (candidate.id == bot.id) bot else candidate,
+    ]);
+  });
 
-  Future<bool> removeBot(String botId) async {
+  Future<bool> removeBot(String botId) => _mutate(() async {
     final bot = state.botById(botId);
     if (bot == null || bot.isBuiltIn) return false;
-    state = state.copyWith(
-      bots: [
-        for (final candidate in state.bots)
-          if (candidate.id != botId) candidate,
-      ],
-      clearError: true,
-    );
-    return _persist();
-  }
+    return _persist([
+      for (final candidate in state.bots)
+        if (candidate.id != botId) candidate,
+    ]);
+  });
 
   void clearError() {
     state = state.copyWith(clearError: true);

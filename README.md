@@ -212,7 +212,9 @@ Settings uses spacing between its controls without divider lines. Settings → V
 
 ### Bot and room profile images
 
-Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. Custom bots also offer this control in their editor. Built-in bots can have a profile image without creating a copy.
+The bot list starts empty. Use **Bots → +** to create a blank bot or start from an optional Researcher, Planner, Coder or Tester template. Templates create ordinary editable bots; they are never added automatically. Open a bot, then **Settings → Edit bot** to change it or delete it. Deleting a bot keeps its chat history readable in **Rooms**. Previous default-bot chats are also retained there, and old task assignments remain visible as unavailable until you clear or reassign them.
+
+Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. Bot creation and the editor also offer this control. Previously chosen default-bot portraits stay attached to their retained chats.
 
 Bots without a chosen image use the same rounded bot mark as the homepage.
 

@@ -895,7 +895,7 @@ Widget _sectionHeader(
 }) {
   final colorScheme = Theme.of(context).colorScheme;
   return Padding(
-    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
     child: SizedBox(
       width: double.infinity,
       child: Wrap(

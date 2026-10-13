@@ -42,11 +42,18 @@ class NavigationShortcutTile extends StatelessWidget {
               children: [
                 Icon(icon, size: 24, color: colors.primary),
                 const SizedBox(height: 8),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      letterSpacing: 0,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],

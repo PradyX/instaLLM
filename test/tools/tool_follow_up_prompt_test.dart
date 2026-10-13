@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/tools/application/tool_follow_up_prompt.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/tools/application/tool_follow_up_prompt.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 void main() {
   const callJson =

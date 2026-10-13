@@ -1,8 +1,8 @@
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 /// Writes and refreshes the local summary of a conversation's older turns.
 ///

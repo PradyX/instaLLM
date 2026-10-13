@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/documents/application/document_context_builder.dart';
-import 'package:pocket_llm/features/documents/data/lexical_document_retriever.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/application/document_context_builder.dart';
+import 'package:installm/features/documents/data/lexical_document_retriever.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 void main() {
   const builder = DocumentContextBuilder();

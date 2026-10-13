@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/context/domain/compaction_checkpoint.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/context/domain/compaction_checkpoint.dart';
 
 /// Persisted compaction checkpoints, one file per conversation.
 ///

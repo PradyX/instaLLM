@@ -3,7 +3,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
-import 'package:pocket_llm/core/utils/logger.dart';
+import 'package:installm/core/utils/logger.dart';
 
 /// How attached images are prepared before they are stored with a message.
 class AttachmentImageOptions {

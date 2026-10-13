@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// The reasoning the installed model [modelId] declares, or null when its own
 /// chat template declares none.

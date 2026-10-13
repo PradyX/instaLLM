@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 void main() {
   group('documentFormatForPath', () {

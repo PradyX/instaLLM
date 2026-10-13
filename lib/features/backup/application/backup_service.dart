@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:pocket_llm/features/backup/domain/backup_archive.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
-import 'package:pocket_llm/features/inference_profiles/data/inference_profile_store.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
-import 'package:pocket_llm/features/personas/data/persona_store.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/backup/domain/backup_archive.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/personas/data/persona_store.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 /// What one import did, section by section.
 ///

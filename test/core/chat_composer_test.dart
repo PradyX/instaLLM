@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart';
+import 'package:installm/core/widgets/chat_composer.dart';
 
 /// Mounts the composer card the way a chat does.
 Future<void> pumpComposer(

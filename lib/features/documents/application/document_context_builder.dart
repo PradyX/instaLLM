@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show TokenEstimator;
-import 'package:pocket_llm/features/documents/domain/document_context.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/document_context.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
 
 /// Turns retrieved local chunks into a prompt section with citation markers.
 ///

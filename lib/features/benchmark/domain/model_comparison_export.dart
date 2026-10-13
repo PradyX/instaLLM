@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
 
 /// Formats a comparison run can be copied in.
 enum ComparisonExportFormat {
@@ -20,7 +20,7 @@ enum ComparisonExportFormat {
 }
 
 /// Marker that identifies a JSON comparison export.
-const String modelComparisonExportFormat = 'pocketllm.model-comparison';
+const String modelComparisonExportFormat = 'installm.model-comparison';
 
 /// Version of the comparison export payload.
 ///

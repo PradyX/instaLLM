@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
-import 'package:pocket_llm/features/obsidian/data/vault_store.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_paths.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/obsidian/application/vault_notes_service.dart';
+import 'package:installm/features/obsidian/data/vault_store.dart';
+import 'package:installm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// Vault registry file, opened once per session.
 final vaultStoreProvider = FutureProvider<VaultStore>(
@@ -67,7 +67,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Vaults were written by a newer version of Pocket LLM and are '
+            ? 'Vaults were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : null,
       );

@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
-import 'package:pocket_llm/features/voice/domain/speakable_reply.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/domain/speakable_reply.dart';
 
 /// True while the hands-free loop owns the microphone and the speaker.
 ///
@@ -47,7 +47,7 @@ class VoiceConversationReadiness {
   /// missing model is a download away.
   String? get blocker {
     if (!speechEngineSupported) {
-      return 'This platform has no local speech engine Pocket LLM can use, so '
+      return 'This platform has no local speech engine InstaLLM can use, so '
           'it cannot read answers aloud. Voice conversation works on Android, '
           'iOS, macOS and Windows.';
     }

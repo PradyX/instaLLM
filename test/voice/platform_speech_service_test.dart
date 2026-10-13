@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
+import 'package:installm/features/voice/data/platform_speech_service.dart';
 
 /// The service may only *check* permission unless it is asked to ask: reading
 /// the state never prepares the recognizer, and the request itself is refused

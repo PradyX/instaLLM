@@ -4,10 +4,10 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "pocket_llm")
+set(BINARY_NAME "installm")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.prady.pocketllm")
+set(APPLICATION_ID "com.prady.installm")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -100,10 +100,10 @@ install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
-set(POCKET_LLM_BUNDLED_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
-if(EXISTS "${POCKET_LLM_BUNDLED_LIB_DIR}")
+set(INSTALLM_BUNDLED_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+if(EXISTS "${INSTALLM_BUNDLED_LIB_DIR}")
   install(
-    DIRECTORY "${POCKET_LLM_BUNDLED_LIB_DIR}/"
+    DIRECTORY "${INSTALLM_BUNDLED_LIB_DIR}/"
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
     COMPONENT Runtime
     FILES_MATCHING

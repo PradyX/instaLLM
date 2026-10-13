@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/documents/data/lexical_document_retriever.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/document_search_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/documents/data/lexical_document_retriever.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/document_search_tool.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 void main() {
   IndexedDocument documentWith(String id, String name, List<String> texts) {

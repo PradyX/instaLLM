@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// Opens the Whisper model picker: what can be downloaded, and what is here.
 Future<void> showWhisperModelPicker(BuildContext context) {

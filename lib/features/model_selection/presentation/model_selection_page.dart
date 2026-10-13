@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_compatibility.dart';
-import 'package:pocket_llm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_import_dialog.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
+import 'package:installm/features/model_selection/presentation/model_import_dialog.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Choices offered when the user taps "Add Model".
@@ -1212,10 +1212,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
 
   void _showDeleteConfirmation(BuildContext context, LlmModel model) {
     final message = model.isExternal
-        ? 'Remove ${model.name} from Pocket LLM? The original file at '
+        ? 'Remove ${model.name} from InstaLLM? The original file at '
               '${model.externalPath} stays on your device.'
         : model.modelSource == ModelSource.imported
-        ? 'Remove ${model.name}? The imported copy stored by Pocket LLM will '
+        ? 'Remove ${model.name}? The imported copy stored by InstaLLM will '
               'be deleted to free up storage space.'
         : 'Are you sure you want to delete ${model.name}? This will free up '
               'storage space.';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
+import 'package:installm/features/home/presentation/composer_shortcuts.dart';
 
 void main() {
   /// Mounts the wrapper around a multi-line field, the way the composer does,

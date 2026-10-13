@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
 
 class NavigationShortcutTile extends StatelessWidget {
   const NavigationShortcutTile({

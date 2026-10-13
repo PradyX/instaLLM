@@ -5,11 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/group_chat/application/active_room.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/home/presentation/home_page.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/home/presentation/home_page.dart';
 
 /// The chat page's toolbar: what it looks like and how much room it leaves
 /// itself. The buttons were filled grey squares, which read as pressed at rest
@@ -38,7 +38,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_toolbar');
+    tempDir = await Directory.systemTemp.createTemp('installm_toolbar');
     // The app resolves its own folders and settings through platform channels,
     // so the temporary directory keeps this test off the real app folders.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

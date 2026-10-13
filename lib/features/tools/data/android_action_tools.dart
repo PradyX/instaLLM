@@ -1,6 +1,6 @@
-import 'package:pocket_llm/core/services/android_tool_executor_service.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/core/services/android_tool_executor_service.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Runs one Android action through the platform channel and reports what
 /// happened. Injected so the tools can be tested without a device.

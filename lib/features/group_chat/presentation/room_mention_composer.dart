@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/widgets/chat_composer.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// The mention being edited at the caret, with room-member prefix matches.
 class BotMentionQuery {

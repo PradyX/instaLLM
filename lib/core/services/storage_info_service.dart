@@ -8,9 +8,7 @@ class StorageInfo {
 }
 
 class StorageInfoService {
-  static const MethodChannel _channel = MethodChannel(
-    'pocket_llm/storage_info',
-  );
+  static const MethodChannel _channel = MethodChannel('installm/storage_info');
 
   Future<StorageInfo?> getStorageInfo() async {
     try {

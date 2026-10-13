@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Thrown when a Hugging Face repository cannot be read or is unavailable.
 class HuggingFaceRepositoryException implements Exception {
@@ -231,7 +231,7 @@ class HuggingFaceRepositoryService {
       final status = error.response?.statusCode;
       if (status == 401 || status == 403) {
         throw const HuggingFaceRepositoryException(
-          'This repository is private or gated. Pocket LLM can only browse '
+          'This repository is private or gated. InstaLLM can only browse '
           'public Hugging Face repositories.',
         );
       }

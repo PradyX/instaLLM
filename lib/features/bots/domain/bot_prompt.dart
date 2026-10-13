@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/bot.dart';
 
 /// Assembles what one bot is told for a task: soul, skills, memory.
 ///

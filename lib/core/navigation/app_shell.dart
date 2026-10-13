@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/navigation/navigation_panel_widgets.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
-import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
-import 'package:pocket_llm/features/bots/application/bots_controller.dart';
-import 'package:pocket_llm/features/bots/presentation/bot_editor_page.dart';
-import 'package:pocket_llm/features/bots/presentation/create_bot_dialog.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/group_chat/application/active_room.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/navigation/navigation_panel_widgets.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/widgets/name_prompt_dialog.dart';
+import 'package:installm/features/bots/application/bots_controller.dart';
+import 'package:installm/features/bots/presentation/bot_editor_page.dart';
+import 'package:installm/features/bots/presentation/create_bot_dialog.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// Which top-level surface the sidebar highlights.
 enum AppSection { chats, bots, rooms, board, more }
@@ -294,7 +294,7 @@ class AppNavigationPanel extends ConsumerWidget {
                                 child: Padding(
                                   padding: const EdgeInsets.all(6),
                                   child: Image.asset(
-                                    'assets/icons/pocketllm_new.png',
+                                    'assets/icons/installm.png',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
@@ -305,7 +305,7 @@ class AppNavigationPanel extends ConsumerWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Pocket LLM',
+                                      'InstaLLM',
                                       style: textTheme.titleSmall?.copyWith(
                                         fontWeight: FontWeight.bold,
                                       ),

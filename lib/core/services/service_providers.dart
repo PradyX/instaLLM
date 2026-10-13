@@ -1,17 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/android_tool_executor_service.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/llm_service.dart';
-import 'package:pocket_llm/core/services/local_embedding_service.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/services/platform_runtime_paths_service.dart';
-import 'package:pocket_llm/core/services/process_memory_probe.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/data/model_reasoning_service.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/android_tool_executor_service.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/llm_service.dart';
+import 'package:installm/core/services/local_embedding_service.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/services/platform_runtime_paths_service.dart';
+import 'package:installm/core/services/process_memory_probe.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/data/model_reasoning_service.dart';
 
 final llmServiceProvider = Provider<LlmService>((ref) {
   final service = LlmService(

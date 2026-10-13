@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:pocket_llm/core/services/storage_info_service.dart';
+import 'package:installm/core/services/storage_info_service.dart';
 
-/// Local, read-only description of the device Pocket LLM runs on.
+/// Local, read-only description of the device InstaLLM runs on.
 ///
 /// Nothing here is uploaded: the profile is collected on demand and only used
 /// to estimate whether a model can run locally.

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/i18n/strings.g.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/settings/attachment_settings_provider.dart';
-import 'package:pocket_llm/core/services/attachment_image_service.dart';
-import 'package:pocket_llm/features/settings/presentation/appearance_settings_section.dart';
-import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/settings/attachment_settings_provider.dart';
+import 'package:installm/core/services/attachment_image_service.dart';
+import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
+import 'package:installm/features/context/application/context_budget_controller.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show formatTokens;
-import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_settings_section.dart';
+import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/voice/presentation/voice_settings_section.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});

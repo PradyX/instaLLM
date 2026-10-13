@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
 
 /// How long a permission question waits before it is treated as refused.
 ///

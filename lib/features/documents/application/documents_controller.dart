@@ -3,18 +3,18 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
-import 'package:pocket_llm/features/documents/application/document_embedding_models.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
-import 'package:pocket_llm/features/documents/domain/embedding_model_ref.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/core/utils/logger.dart';
+import 'package:installm/features/documents/application/document_embedding_models.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/embedding_model_ref.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// The document index on this device, opened once per session.
 ///

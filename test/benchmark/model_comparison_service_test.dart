@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 import 'scripted_comparison_runtime.dart';
 

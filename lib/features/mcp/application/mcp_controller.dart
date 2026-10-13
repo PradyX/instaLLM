@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/mcp/data/mcp_client.dart';
-import 'package:pocket_llm/features/mcp/data/mcp_store.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/features/mcp/data/mcp_client.dart';
+import 'package:installm/features/mcp/data/mcp_store.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
 
 /// MCP server registry file, opened once per session.
 final mcpStoreProvider = FutureProvider<McpStore>((ref) => McpStore.open());
@@ -65,7 +65,7 @@ class McpNotifier extends StateNotifier<McpState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'MCP servers were written by a newer version of Pocket LLM and '
+            ? 'MCP servers were written by a newer version of InstaLLM and '
                   'are read-only in this build.'
             : null,
       );

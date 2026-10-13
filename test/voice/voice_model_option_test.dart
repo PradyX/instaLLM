@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/domain/voice_model_option.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/domain/voice_model_option.dart';
 
 void main() {
   LlmModel model() => const LlmModel(

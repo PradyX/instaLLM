@@ -2,8 +2,8 @@ import 'dart:isolate';
 import 'dart:io' show Platform;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
-import 'package:pocket_llm/features/voice/data/audio_clip_reader.dart';
+import 'package:installm/core/utils/logger.dart';
+import 'package:installm/features/voice/data/audio_clip_reader.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
 /// Runs one audio file through a Whisper model.

@@ -6,16 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
-import 'package:pocket_llm/features/voice/data/platform_tts_service.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_conversation_page.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/voice_conversation_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/data/platform_tts_service.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/features/voice/presentation/voice_conversation_page.dart';
 import 'package:stts/stts.dart';
 
 /// Runs the hands-free voice conversation screen on this machine.
@@ -94,9 +94,7 @@ void main() {
 
   testWidgets('the loop runs a turn and reads the answer with the real device '
       'speech engine', (tester) async {
-    final tempDir = await Directory.systemTemp.createTemp(
-      'pocket_llm_loop_dev',
-    );
+    final tempDir = await Directory.systemTemp.createTemp('installm_loop_dev');
     addTearDown(() async {
       if (tempDir.existsSync()) await tempDir.delete(recursive: true);
     });

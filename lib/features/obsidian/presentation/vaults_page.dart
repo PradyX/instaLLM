@@ -1,9 +1,9 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/obsidian/application/vaults_controller.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// Registered Obsidian vaults and their workspace links.
 ///
@@ -38,7 +38,7 @@ class VaultsPage extends ConsumerWidget {
     VaultRegistration vault,
     String workspaceId,
   ) async {
-    final controller = TextEditingController(text: 'Projects/pocketllm');
+    final controller = TextEditingController(text: 'Projects/installm');
     final projectPath = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -48,7 +48,7 @@ class VaultsPage extends ConsumerWidget {
           autofocus: true,
           decoration: const InputDecoration(
             labelText: 'Folder inside the vault',
-            hintText: 'Projects/pocketllm',
+            hintText: 'Projects/installm',
           ),
           onSubmitted: (value) => Navigator.of(context).pop(value),
         ),

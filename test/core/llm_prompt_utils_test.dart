@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
 
 void main() {
   group('LlmPromptMessage', () {

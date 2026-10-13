@@ -1,11 +1,11 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/git/application/git_service.dart';
-import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
-import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/git/application/git_service.dart';
+import 'package:installm/features/obsidian/application/vault_notes_service.dart';
+import 'package:installm/features/obsidian/application/vaults_controller.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 import 'package:go_router/go_router.dart';
 
 /// One project screen for everything in the workspace (Road Map 2 §13).
@@ -289,7 +289,7 @@ class _Conflicts extends ConsumerWidget {
         final conflicts = snapshot.data ?? const [];
         if (conflicts.isEmpty) {
           return Text(
-            'No conflicts. Pocket LLM never syncs itself — it watches the '
+            'No conflicts. InstaLLM never syncs itself — it watches the '
             'folder your own sync keeps up to date.',
             style: Theme.of(context).textTheme.bodySmall,
           );

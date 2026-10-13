@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// Which engine turns speech into text in the composer.
 enum SttEngine {

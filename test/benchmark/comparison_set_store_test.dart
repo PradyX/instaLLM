@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/benchmark/data/comparison_set_store.dart';
-import 'package:pocket_llm/features/benchmark/domain/comparison_set.dart';
+import 'package:installm/features/benchmark/data/comparison_set_store.dart';
+import 'package:installm/features/benchmark/domain/comparison_set.dart';
 
 void main() {
   late Directory tempDir;
@@ -12,7 +12,7 @@ void main() {
   late ComparisonSetStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_sets_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_sets_test');
     file = File(p.join(tempDir.path, 'benchmark', 'comparison_sets.json'));
     store = ComparisonSetStore(file);
   });

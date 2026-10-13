@@ -4,10 +4,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
 void main() {
   late Directory tempDir;
@@ -15,7 +15,7 @@ void main() {
   late DocumentIndexStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_vectors_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_vectors_test');
     file = File(p.join(tempDir.path, 'documents', 'index.json'));
     store = DocumentIndexStore(file);
   });

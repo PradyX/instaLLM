@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/services/hugging_face_repository_service.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/services/hugging_face_repository_service.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// Browses a repository and hands the selected GGUF to the existing downloader.
 Future<void> showHuggingFaceRepositoryDialog(

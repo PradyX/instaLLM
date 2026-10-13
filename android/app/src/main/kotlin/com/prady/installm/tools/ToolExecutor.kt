@@ -1,4 +1,4 @@
-package com.prady.pocketllm.tools
+package com.prady.installm.tools
 
 import android.content.Context
 import android.util.Log
@@ -40,7 +40,7 @@ class ToolExecutor(
                 toolName = toolName,
             )
         } catch (e: Exception) {
-            Log.e("PocketLlmToolExecutor", "Tool execution failed", e)
+            Log.e("InstaLLMToolExecutor", "Tool execution failed", e)
             ToolJsonResult.error(
                 message = "I couldn't complete that Android action.",
                 toolName = toolName,

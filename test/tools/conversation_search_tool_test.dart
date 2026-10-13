@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/conversation_search_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/conversation_search_tool.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 void main() {
   ConversationSummary summary(

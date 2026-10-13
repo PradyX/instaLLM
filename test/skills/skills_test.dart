@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/permissions/workspace_permission.dart';
-import 'package:pocket_llm/features/skills/domain/built_in_skills.dart';
-import 'package:pocket_llm/features/skills/domain/skill.dart';
-import 'package:pocket_llm/features/skills/domain/skill_parser.dart';
-import 'package:pocket_llm/features/skills/domain/skill_selector.dart';
+import 'package:installm/core/permissions/workspace_permission.dart';
+import 'package:installm/features/skills/domain/built_in_skills.dart';
+import 'package:installm/features/skills/domain/skill.dart';
+import 'package:installm/features/skills/domain/skill_parser.dart';
+import 'package:installm/features/skills/domain/skill_selector.dart';
 
 void main() {
   group('SkillParser', () {

@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show formatTokens;
 
 /// Allowed ranges for the runtime settings a profile can override.

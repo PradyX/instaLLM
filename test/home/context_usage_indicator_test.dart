@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/home/presentation/context_usage_indicator.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/home/presentation/context_usage_indicator.dart';
 
 void main() {
   /// A request that would use half of the model's input budget.
@@ -31,7 +31,7 @@ void main() {
     return tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          appBar: AppBar(title: const Text('Pocket LLM'), actions: [indicator]),
+          appBar: AppBar(title: const Text('InstaLLM'), actions: [indicator]),
           body: const SizedBox.expand(),
         ),
       ),

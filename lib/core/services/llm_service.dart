@@ -5,10 +5,10 @@ import 'dart:math' as math;
 
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/native_runtime_layout.dart';
-import 'package:pocket_llm/core/services/platform_runtime_paths_service.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/native_runtime_layout.dart';
+import 'package:installm/core/services/platform_runtime_paths_service.dart';
+import 'package:installm/core/utils/logger.dart';
 
 /// The bundled llama.cpp engine, seen by the rest of the app through
 /// [InferenceEngine].
@@ -484,7 +484,7 @@ class LlmService implements InferenceEngine {
   }
 
   Future<String?> _resolveMultimodalLibraryPath() async {
-    final overridePath = Platform.environment['POCKET_LLM_MTMD_PATH'];
+    final overridePath = Platform.environment['INSTALLM_MTMD_PATH'];
     if (overridePath != null && overridePath.trim().isNotEmpty) {
       final overrideFile = File(overridePath.trim());
       if (overrideFile.existsSync()) {

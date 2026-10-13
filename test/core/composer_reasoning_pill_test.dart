@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/settings/reasoning_settings_provider.dart';
-import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_reasoning_provider.dart';
+import 'package:installm/core/settings/reasoning_settings_provider.dart';
+import 'package:installm/core/widgets/composer_reasoning_pill.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/features/model_selection/presentation/model_reasoning_provider.dart';
 
 /// What a thinking model declares, in the shape the parser produces: two states,
 /// thinking on by default, and the template's own rendering for each.

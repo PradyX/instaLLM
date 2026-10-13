@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

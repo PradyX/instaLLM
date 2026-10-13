@@ -1,4 +1,4 @@
-package com.prady.pocketllm.tools
+package com.prady.installm.tools
 
 import android.content.Context
 import android.content.Intent

@@ -70,7 +70,7 @@ git clone --depth 1 --branch "${LLMFIT_REF}" "${LLMFIT_REPO_URL}" "${WORK_DIR}/l
 
 pushd "${WORK_DIR}/llmfit-src" >/dev/null
 if [[ -f "${LLMFIT_PATCH}" ]]; then
-  echo "Applying PocketLlama Android hardware-detection patch..."
+  echo "Applying InstaLLM Android hardware-detection patch..."
   git apply "${LLMFIT_PATCH}"
 fi
 

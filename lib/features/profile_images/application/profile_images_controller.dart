@@ -4,8 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/features/profile_images/data/petdex_service.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/data/petdex_service.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 final petdexServiceProvider = FutureProvider<PetdexService>((ref) async {
   final support = await getApplicationSupportDirectory();

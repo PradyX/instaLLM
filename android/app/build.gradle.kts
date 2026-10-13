@@ -20,11 +20,11 @@ val llmfitAndroidArm64Asset = repoRootDir.resolve(
 )
 val generatedLlmfitJniLibsDir = layout.buildDirectory.dir("generated/llmfit/jniLibs")
 val llmfitAndroidArm64Source = providers.environmentVariable(
-    "POCKET_LLMFIT_ANDROID_ARM64_SOURCE"
+    "INSTALLM_LLMFIT_ANDROID_ARM64_SOURCE"
 )
 
 android {
-    namespace = "com.prady.pocketllm"
+    namespace = "com.prady.installm"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -37,7 +37,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.prady.pocketllm"
+        applicationId = "com.prady.installm"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -109,7 +109,7 @@ tasks.register("bundleLlmfitAndroidArm64") {
 
         if (sourcePath.isEmpty()) {
             println(
-                "bundleLlmfitAndroidArm64: POCKET_LLMFIT_ANDROID_ARM64_SOURCE not set, skipping bundled Android llmfit copy."
+                "bundleLlmfitAndroidArm64: INSTALLM_LLMFIT_ANDROID_ARM64_SOURCE not set, skipping bundled Android llmfit copy."
             )
             return@doLast
         }

@@ -5,16 +5,15 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart'
-    show ComposerMicState;
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
-import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/core/widgets/chat_composer.dart' show ComposerMicState;
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/application/composer_dictation_controller.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/data/platform_speech_service.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
 
 /// Device recognizer the test drives: it hears [transcript] or nothing.
 class _FakeListener implements PlatformSpeechListener {
@@ -198,7 +197,7 @@ void main() {
   late String clipPath;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocket_llm_dictation');
+    tempDir = await Directory.systemTemp.createTemp('installm_dictation');
     clipPath = p.join(tempDir.path, 'dictation.wav');
   });
 

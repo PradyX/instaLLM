@@ -5,17 +5,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/widgets/chat_bubble.dart';
-import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
-import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
-import 'package:pocket_llm/features/group_chat/application/active_room.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
-import 'package:pocket_llm/features/home/presentation/home_page.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/core/widgets/chat_bubble.dart';
+import 'package:installm/core/widgets/composer_model_pill.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:installm/features/home/presentation/home_page.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 
 /// Installed chat models, none of which declares tool support: a room answers
 /// on any installed model, so the list must not depend on that capability.
@@ -89,7 +89,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_room_composer');
+    tempDir = await Directory.systemTemp.createTemp('installm_room_composer');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

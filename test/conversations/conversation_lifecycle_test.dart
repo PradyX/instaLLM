@@ -4,13 +4,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
 
 void main() {
   // The controller's startup path reads the stores through platform plugins.
@@ -20,7 +20,7 @@ void main() {
   late ProviderContainer container;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_lifecycle_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_lifecycle_test');
     // Deleting a conversation also removes the attachments its messages
     // carried, which resolves the app's own directory through the platform
     // channel; pointing that at the temporary directory keeps the test off the

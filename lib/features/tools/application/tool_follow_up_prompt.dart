@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// Messages for the one follow-up turn after a tool ran.
 ///

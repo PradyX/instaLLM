@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/current_datetime_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/current_datetime_tool.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 void main() {
   ToolRegistry registryWith(DateTime now) =>

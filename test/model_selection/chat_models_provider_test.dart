@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 
 /// Answers with a fixed catalog, so these checks are about the list the
 /// composers read rather than about storage.

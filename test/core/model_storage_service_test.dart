@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
+import 'package:installm/core/services/model_storage_service.dart';
 
 void main() {
   final service = ModelStorageService();
@@ -10,7 +10,7 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('pocket-llm-test');
+      tempDir = await Directory.systemTemp.createTemp('installm-test');
     });
 
     tearDown(() async {

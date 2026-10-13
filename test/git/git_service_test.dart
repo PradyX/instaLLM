@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/git/application/git_service.dart';
+import 'package:installm/features/git/application/git_service.dart';
 
 void main() {
   group('GitService', () {
     test('a non-repo fails closed', () async {
       if (!GitService.isSupported) return;
-      final dir = await Directory.systemTemp.createTemp('pocketllm_notgit');
+      final dir = await Directory.systemTemp.createTemp('installm_notgit');
       try {
         const service = GitService();
         final status = await service.status(dir.path);
@@ -22,7 +22,7 @@ void main() {
       if (!GitService.isSupported) return;
       final git = await _gitExists();
       if (!git) return;
-      final dir = await Directory.systemTemp.createTemp('pocketllm_git');
+      final dir = await Directory.systemTemp.createTemp('installm_git');
       try {
         await Process.run('git', ['init'], workingDirectory: dir.path);
         await Process.run('git', [

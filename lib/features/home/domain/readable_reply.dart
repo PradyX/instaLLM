@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 /// Whether a finished generation should be read aloud.
 ///

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
 
 void main() {
   group('TokenEstimator', () {

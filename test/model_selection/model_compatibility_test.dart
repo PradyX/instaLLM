@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/model_compatibility.dart';
 
 GgufMetadata _metadata({
   int? layers = 4,

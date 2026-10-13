@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/widgets/composer_model_pill.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 const _alpha = LlmModel(
   id: 'm-alpha',

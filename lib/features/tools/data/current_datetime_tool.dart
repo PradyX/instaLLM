@@ -1,5 +1,5 @@
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Reads the clock; injectable so tests are not time-dependent.
 typedef Clock = DateTime Function();

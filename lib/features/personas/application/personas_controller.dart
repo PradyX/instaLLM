@@ -1,15 +1,17 @@
 import 'dart:convert';
 
+import 'package:installm/core/data/legacy_export_formats.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/personas/data/persona_store.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/data/persona_store.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 /// Marker and schema version of the persona export payload.
 ///
 /// Mirrors the conversation export flow: a `format` marker so unrelated JSON
 /// is rejected with a clear message, and a version so a newer payload is
 /// refused instead of silently half-imported.
-const String personaExportFormat = 'pocket_llm.personas';
+const String personaExportFormat = 'installm.personas';
 const int personaExportSchemaVersion = 1;
 
 /// Persona file, opened once per session.
@@ -125,7 +127,7 @@ class PersonasNotifier extends StateNotifier<PersonasState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Personas were written by a newer version of Pocket LLM and are '
+            ? 'Personas were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : null,
       );
@@ -232,7 +234,8 @@ class PersonasNotifier extends StateNotifier<PersonasState> {
   /// locally gets a fresh one so nothing is overwritten. Returns the imported
   /// personas in payload order.
   Future<List<Persona>> importPayload(Map<String, dynamic> payload) async {
-    if (payload['format'] != personaExportFormat) {
+    if (payload['format'] != personaExportFormat &&
+        payload['format'] != LegacyExportFormats.personas) {
       throw const FormatException('Unrecognized persona export format.');
     }
     final version = (payload['schemaVersion'] as num?)?.toInt();
@@ -286,7 +289,7 @@ class PersonasNotifier extends StateNotifier<PersonasState> {
       if (store.save(state.toSnapshot())) return true;
       state = state.copyWith(
         errorMessage: store.isReadOnly
-            ? 'Personas were written by a newer version of Pocket LLM and are '
+            ? 'Personas were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : 'Could not save personas on this device.',
       );

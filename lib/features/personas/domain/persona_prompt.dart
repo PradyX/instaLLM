@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/llm_structured_response.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/core/utils/llm_structured_response.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 /// Builds the system prompt for one request.
 ///

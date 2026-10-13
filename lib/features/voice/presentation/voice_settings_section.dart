@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
-import 'package:pocket_llm/features/voice/presentation/speech_voice_picker.dart';
-import 'package:pocket_llm/features/voice/presentation/whisper_model_picker.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/data/platform_speech_service.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
+import 'package:installm/features/voice/presentation/speech_voice_picker.dart';
+import 'package:installm/features/voice/presentation/whisper_model_picker.dart';
 
 /// Why the device engine cannot be picked, in the words the settings show.
 ///
@@ -19,13 +19,13 @@ String _platformLimit(
   required bool canAskFromHere,
 }) {
   if (status == PlatformSpeechStatus.unsupported) {
-    return 'This platform has no speech recognizer Pocket LLM can use. '
+    return 'This platform has no speech recognizer InstaLLM can use. '
         'Whisper runs offline on this device.';
   }
   if (status == PlatformSpeechStatus.notAuthorized) {
     if (!canAskFromHere) {
       return 'macOS only shows this prompt to an app it started itself, and '
-          'another program started this one. Open Pocket LLM from Finder or '
+          'another program started this one. Open InstaLLM from Finder or '
           'the Dock to allow it; Whisper needs no speech-recognition permission.';
     }
     return 'Not allowed yet: allow it below, or use Whisper, which '
@@ -74,7 +74,7 @@ class _AllowDeviceRecognitionButtonState
     return switch (status) {
       PlatformSpeechStatus.ready => 'Device recognition is allowed now.',
       PlatformSpeechStatus.unsupported =>
-        'This device has no speech recognizer Pocket LLM can use.',
+        'This device has no speech recognizer InstaLLM can use.',
       PlatformSpeechStatus.notAuthorized =>
         'macOS did not allow speech recognition. Whisper needs '
             'no speech-recognition permission.',
@@ -89,7 +89,7 @@ class _AllowDeviceRecognitionButtonState
         alignment: Alignment.centerLeft,
         child: Tooltip(
           message:
-              'Ask the system to let Pocket LLM use its speech '
+              'Ask the system to let InstaLLM use its speech '
               'recognizer.',
           child: OutlinedButton.icon(
             onPressed: _requesting ? null : _ask,

@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/skills/domain/built_in_skills.dart';
-import 'package:pocket_llm/features/skills/domain/skill.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/skills/domain/built_in_skills.dart';
+import 'package:installm/features/skills/domain/skill.dart';
 
 /// Persisted skill registry: user skills plus per-skill state.
 ///

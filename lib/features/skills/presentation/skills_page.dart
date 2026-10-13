@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/skills/application/skills_controller.dart';
-import 'package:pocket_llm/features/skills/domain/skill.dart';
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/skills/domain/skill.dart';
 
 /// The skill registry: what is installed, what is on, and what each skill
 /// may need.

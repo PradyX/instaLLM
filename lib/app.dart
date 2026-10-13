@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/theme/theme.dart';
-import 'package:pocket_llm/core/theme/theme_provider.dart';
-import 'package:pocket_llm/core/theme/appearance_provider.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/theme/theme.dart';
+import 'package:installm/core/theme/theme_provider.dart';
+import 'package:installm/core/theme/appearance_provider.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MyApp extends ConsumerWidget {
@@ -24,7 +24,7 @@ class MyApp extends ConsumerWidget {
     );
 
     return MaterialApp.router(
-      title: 'Pocket LLM',
+      title: 'InstaLLM',
       debugShowCheckedModeBanner: false,
       theme: theme.light(),
       darkTheme: theme.dark(),

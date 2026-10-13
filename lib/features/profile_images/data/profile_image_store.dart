@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 /// Cosmetic overrides also cover built-in bots without modifying templates.
 /// Version 1 is additive: existing bot/room documents are left untouched.

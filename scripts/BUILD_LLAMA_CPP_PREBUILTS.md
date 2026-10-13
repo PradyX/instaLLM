@@ -1,4 +1,4 @@
-# Building PocketLlama llama.cpp libraries
+# Building InstaLLM llama.cpp libraries
 
 The app pins `llama_cpp_dart: 0.9.0-dev.12` and its matching llama.cpp revision:
 
@@ -10,11 +10,11 @@ afeebe103bd99cda8f5dfaefcabadf890db7fda7 (b10182)
 `0.9.0-dev.10`, so generation behaviour does not change. It changes *packaging*:
 macOS and iOS resolve through Swift Package Manager and link `llama.framework`
 (llama.cpp, its ggml backends and libmtmd in one image), and Android offers a
-native-assets build hook that extracts an arm64-only AAR. PocketLlama therefore
+native-assets build hook that extracts an arm64-only AAR. InstaLLM therefore
 bundles no `macos/Runner/Frameworks` libraries any more, and it switches the
 Android hook off (`hooks.user_defines.llama_cpp_dart.bundle_android: false` in
 `pubspec.yaml`) because this repository builds all three Android ABIs itself.
-The 0.9 API is a rewrite: PocketLlama uses `LlamaEngine` worker isolates,
+The 0.9 API is a rewrite: InstaLLM uses `LlamaEngine` worker isolates,
 `EngineSession`, streaming token events, and `LlamaMedia` for images.
 
 The pinned native source includes `qwen35`, `qwen35moe`, and `qwen3next`
@@ -49,7 +49,7 @@ out the required revision; use `SKIP_GIT_FETCH=1` if it is already available.
 
 Android requires an NDK (`ANDROID_NDK_ROOT` can select it); the script builds
 arm64-v8a, armeabi-v7a, and x86_64. It statically links the C++ runtime and enables
-flexible page sizes. PocketLlama manages JNI libraries itself; do not add a
+flexible page sizes. InstaLLM manages JNI libraries itself; do not add a
 second AAR containing a different llama runtime.
 
 There is no `macos` target: macOS uses the framework the plugin links (see
@@ -73,7 +73,7 @@ simulator.
 Always replace the entire `libllama`, `libmtmd`, and `libggml*` family together.
 On Android and Linux the app passes the bundled **libllama** path to the engine,
 and the binding opens its sibling **libmtmd** for multimodal symbols; the
-`POCKET_LLM_MTMD_PATH` override still selects the containing runtime directory
+`INSTALLM_MTMD_PATH` override still selects the containing runtime directory
 there. On macOS nothing is opened: the app asks the in-process runtime whether it
 carries the mtmd half and reports vision/audio capability from that answer.
 
@@ -118,11 +118,11 @@ It requires glibc 2.34 or newer plus the C++/OpenMP system runtimes; build from
 source on your target Linux distribution when broader compatibility is needed.
 Linux execution must still be tested on Linux.
 
-To exercise PocketLlama's service itself with local native libraries:
+To exercise InstaLLM's service itself with local native libraries:
 
 ```bash
-POCKET_LLM_TEST_MODEL=/absolute/path/to/model.gguf \
-POCKET_LLM_MTMD_PATH="$PWD/linux/lib/libmtmd.so" \
+INSTALLM_TEST_MODEL=/absolute/path/to/model.gguf \
+INSTALLM_MTMD_PATH="$PWD/linux/lib/libmtmd.so" \
 flutter test test/llm_service_native_test.dart
 ```
 

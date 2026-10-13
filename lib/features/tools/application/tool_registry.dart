@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// Runs one validated tool call and returns what the tool produced.
 ///

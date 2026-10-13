@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/personas/data/persona_store.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/personas/data/persona_store.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 void main() {
   late Directory tempDir;
@@ -14,7 +14,7 @@ void main() {
   late PersonaStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_persona_export');
+    tempDir = await Directory.systemTemp.createTemp('installm_persona_export');
     file = File(p.join(tempDir.path, 'personas', 'personas.json'));
     store = PersonaStore(file);
   });
@@ -58,6 +58,18 @@ void main() {
 
   Map<String, dynamic> payloadOf(String json) =>
       jsonDecode(json) as Map<String, dynamic>;
+
+  test('imports pre-rename personas and exports the new identity', () async {
+    final notifier = await loaded(buildContainer());
+    await notifier.savePersona(custom());
+    final payload = payloadOf(notifier.exportJson(personaId: 'p-1'));
+    payload['format'] = 'pocket_llm.personas';
+    final imported = await notifier.importJson(jsonEncode(payload));
+    expect(imported.single.name, 'Reviewer');
+    expect(imported.single.systemPrompt, 'Review code carefully.');
+    expect(imported.single.id, isNot('p-1'));
+    expect(payloadOf(notifier.exportJson())['format'], 'installm.personas');
+  });
 
   group('persona export', () {
     test('exports every persona with a format marker and version', () async {

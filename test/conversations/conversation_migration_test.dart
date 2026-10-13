@@ -2,16 +2,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/conversations/data/conversation_migration.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/data/conversation_migration.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
 
 void main() {
   late Directory tempDir;
   late ConversationRepository repository;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_migration_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_migration_test');
     repository = ConversationRepository(
       ConversationStore(rootDirectory: tempDir),
     );

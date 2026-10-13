@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show TokenEstimator, formatTokens;
-import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
-import 'package:pocket_llm/features/personas/domain/persona_prompt.dart';
+import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/domain/persona_prompt.dart';
 
 /// Lists built-in and custom personas and chooses the default for new chats.
 class PersonasPage extends ConsumerWidget {
@@ -92,7 +92,7 @@ class PersonasPage extends ConsumerWidget {
           Text('Built-in', style: textTheme.titleSmall),
           const SizedBox(height: 4),
           Text(
-            'Shipped with Pocket LLM. Duplicate one to change it.',
+            'Shipped with InstaLLM. Duplicate one to change it.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

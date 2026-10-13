@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
 
 import 'support/gguf_test_builder.dart';
 
@@ -11,7 +11,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_gguf_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_gguf_test');
   });
 
   tearDown(() async {

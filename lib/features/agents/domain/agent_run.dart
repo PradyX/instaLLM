@@ -134,7 +134,7 @@ class AgentStep {
 }
 
 /// Marker and version of an exported agent run.
-const String agentRunExportFormat = 'pocketllm.agent-run';
+const String agentRunExportFormat = 'installm.agent-run';
 const int agentRunExportSchemaVersion = 1;
 
 /// One finished (or stopped) agent run: the goal, the log and the endpoint.

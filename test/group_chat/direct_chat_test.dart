@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
 
 void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_direct_chat');
+    tempDir = await Directory.systemTemp.createTemp('installm_direct_chat');
   });
 
   tearDown(() async {

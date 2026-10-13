@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/backup/domain/backup_archive.dart';
+import 'package:installm/features/backup/domain/backup_archive.dart';
 
 void main() {
   BackupArchive archive() => BackupArchive(
@@ -13,7 +13,7 @@ void main() {
     ),
     sections: {
       BackupSection.conversations: {
-        'format': 'pocket_llm.conversations',
+        'format': 'installm.conversations',
         'conversations': [
           {
             'conversation': {'id': 'c1'},
@@ -44,6 +44,19 @@ void main() {
     expect(decoded.sections[BackupSection.settings], {
       'inference_settings': '{"maxTokens":512}',
     });
+  });
+
+  test('imports pre-rename backups but writes only the new format', () {
+    final payload = archive().toJson();
+    payload['format'] = 'pocketllm.backup';
+    final decoded = BackupArchive.decode(jsonEncode(payload));
+    expect(decoded.has(BackupSection.conversations), isTrue);
+    expect(decoded.toJson()['format'], 'installm.backup');
+    payload['schemaVersion'] = backupSchemaVersion + 1;
+    expect(
+      () => BackupArchive.decode(jsonEncode(payload)),
+      throwsFormatException,
+    );
   });
 
   test('the manifest says what the file holds', () {

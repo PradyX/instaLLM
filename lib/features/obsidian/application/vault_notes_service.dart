@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/obsidian/domain/vault_paths.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
 
 /// Why a note operation was refused.
 enum VaultNoteError {

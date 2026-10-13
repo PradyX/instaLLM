@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// Fetches popular GGUF models from HuggingFace's free API and converts them
 /// into [LlmModel] instances ready for download and inference.

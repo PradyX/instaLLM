@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
 
 /// Persistent, offline benchmark history stored as a JSON file on disk.
 ///

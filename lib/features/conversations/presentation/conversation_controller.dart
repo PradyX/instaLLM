@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_migration.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/conversations/data/conversation_migration.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'conversation_controller.g.dart';

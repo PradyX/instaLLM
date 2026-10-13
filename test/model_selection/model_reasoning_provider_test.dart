@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_reasoning_provider.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/features/model_selection/presentation/model_reasoning_provider.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 import 'support/gguf_test_builder.dart';
 
@@ -76,7 +76,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_reasoning');
+    tempDir = await Directory.systemTemp.createTemp('installm_reasoning');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

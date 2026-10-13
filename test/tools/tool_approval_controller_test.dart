@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/tool_approval_controller.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 void main() {
   const request = ToolApprovalRequest(

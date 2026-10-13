@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/context/data/compaction_policy_store.dart';
-import 'package:pocket_llm/features/context/domain/compaction_policy.dart';
+import 'package:installm/features/context/data/compaction_policy_store.dart';
+import 'package:installm/features/context/domain/compaction_policy.dart';
 
 /// Compaction policy file, opened once per session.
 final compactionPolicyStoreProvider = FutureProvider<CompactionPolicyStore>(
@@ -58,7 +58,7 @@ class CompactionPolicyNotifier extends StateNotifier<CompactionPolicyState> {
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
             ? 'Compaction settings were written by a newer version of '
-                  'Pocket LLM and are read-only in this build.'
+                  'InstaLLM and are read-only in this build.'
             : null,
       );
     } catch (error) {

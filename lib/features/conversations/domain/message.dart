@@ -1,7 +1,7 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
-import 'package:pocket_llm/features/conversations/domain/message_source.dart';
-import 'package:pocket_llm/features/conversations/domain/message_tool_activity.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/conversations/domain/message_source.dart';
+import 'package:installm/features/conversations/domain/message_tool_activity.dart';
 
 /// Who authored a message.
 enum MessageRole {

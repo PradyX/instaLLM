@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:pocket_llm/core/settings/inference_settings_provider.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/core/settings/inference_settings_provider.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 
 /// What the runtime will be started with for one request.
 ///

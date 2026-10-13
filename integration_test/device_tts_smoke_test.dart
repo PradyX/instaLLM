@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:pocket_llm/features/voice/data/platform_tts_service.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/features/voice/data/platform_tts_service.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 import 'package:stts/stts.dart';
 
 /// Talks to the operating system's own speech engine, on a real device.
@@ -26,7 +26,7 @@ void main() {
   testWidgets('this platform reports whether it can speak', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
 
-    // Linux has no engine Pocket LLM can use, so the check is per platform
+    // Linux has no engine InstaLLM can use, so the check is per platform
     // rather than a hard expectation.
     final expected =
         Platform.isAndroid ||
@@ -84,7 +84,7 @@ void main() {
 
     await expectLater(
       engine.speak(
-        text: 'Pocket LLM is checking that reading aloud finishes.',
+        text: 'InstaLLM is checking that reading aloud finishes.',
         rate: defaultSpeechRate,
       ),
       completes,
@@ -146,6 +146,6 @@ void main() {
 
 /// Long enough that the hold lands in the middle of it on every platform.
 const String _longSentence =
-    'Pocket LLM checks on this device that a sentence can be held where it is '
+    'InstaLLM checks on this device that a sentence can be held where it is '
     'and then continued, which is what the pause control on a reply does. It '
     'reads this sentence silently so that running the test never makes a sound.';

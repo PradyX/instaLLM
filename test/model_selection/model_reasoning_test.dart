@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 
 /// The generation-prompt tail of Qwen 3's own template (`tokenizer_config.json`
 /// of Qwen/Qwen3-0.6B), with the message-rendering part left out: what matters

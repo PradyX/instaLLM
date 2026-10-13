@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/context/domain/compaction_policy.dart';
-import 'package:pocket_llm/features/context/domain/context_compaction.dart';
-import 'package:pocket_llm/features/context/domain/context_inspector.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/features/context/domain/compaction_policy.dart';
+import 'package:installm/features/context/domain/context_compaction.dart';
+import 'package:installm/features/context/domain/context_inspector.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 Message message(String id, String content, {bool pinned = false}) {
   return Message(

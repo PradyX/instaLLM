@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// The homepage's bot mark, scaled consistently for profile images.
+/// A generic bot mark, scaled consistently for profile images.
 class DefaultBotAvatar extends StatelessWidget {
   const DefaultBotAvatar({super.key, this.size = 32});
 

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/navigation/app_shell.dart';
-import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
-import 'package:pocket_llm/features/bots/application/bots_controller.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/core/navigation/app_shell.dart';
+import 'package:installm/core/widgets/name_prompt_dialog.dart';
+import 'package:installm/i18n/strings.g.dart';
+import 'package:installm/features/bots/application/bots_controller.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/group_chat/application/active_room.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// The project board: six columns, tap to move, assign and comment.
 ///

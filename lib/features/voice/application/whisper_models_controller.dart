@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// The Whisper models this device has, and any download in flight.
 class WhisperModelsState {

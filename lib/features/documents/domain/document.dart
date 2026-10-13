@@ -1,4 +1,4 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// Formats the local ingestion pipeline understands.
 enum DocumentFormat {
@@ -113,10 +113,10 @@ const Set<String> supportedDocumentExtensions = {
   ..._codeExtensions,
 };
 
-/// One local file a user asked Pocket LLM to read.
+/// One local file a user asked InstaLLM to read.
 ///
 /// The file itself is never copied, moved or modified: [path] is a reference,
-/// and everything Pocket LLM derives from it (text chunks, index entries) is
+/// and everything InstaLLM derives from it (text chunks, index entries) is
 /// stored separately.
 class DocumentSource {
   const DocumentSource({

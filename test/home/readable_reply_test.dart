@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/home/domain/readable_reply.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/home/domain/readable_reply.dart';
 
 void main() {
   Message user(String content) => Message(

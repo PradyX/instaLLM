@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
 
 class AppearanceStore {
   AppearanceStore(File file)

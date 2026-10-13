@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 
 /// Thrown when a file cannot be interpreted as a GGUF model.
 class GgufFormatException implements Exception {
@@ -164,7 +164,7 @@ class GgufReader {
     }
     return GgufFormatException(
       'This GGUF file uses version $version, newer than the supported '
-      'version $supportedMaxVersion. Update Pocket LLM and try again.',
+      'version $supportedMaxVersion. Update InstaLLM and try again.',
     );
   }
 

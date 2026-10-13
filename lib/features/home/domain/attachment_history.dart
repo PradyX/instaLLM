@@ -1,6 +1,6 @@
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
 
 /// An image a conversation already holds, offered back to the composer.
 class AttachmentHistoryEntry {
@@ -29,7 +29,7 @@ class AttachmentHistoryEntry {
 
 /// Images already attached in [messages], newest first.
 ///
-/// Reusing an image never re-reads the original file: the copy Pocket LLM
+/// Reusing an image never re-reads the original file: the copy InstaLLM
 /// already stores is what the next message gets, so a picture whose source was
 /// moved or deleted can still be used again. One entry per stored path is
 /// returned, because attaching the same copy twice would only cost context

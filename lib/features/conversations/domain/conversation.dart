@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
 
 /// Title assigned to a conversation before its first user message arrives.
 const String defaultConversationTitle = 'New chat';

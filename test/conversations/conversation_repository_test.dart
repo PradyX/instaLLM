@@ -1,17 +1,18 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 void main() {
   late Directory tempDir;
   late ConversationRepository repository;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_repo_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_repo_test');
     repository = ConversationRepository(
       ConversationStore(rootDirectory: tempDir),
     );
@@ -93,6 +94,40 @@ void main() {
     expect(await repository.loadSummaries(), hasLength(2));
     expect(await repository.loadMessages(imported.single.id), hasLength(1));
   });
+
+  test(
+    'imports a legacy conversation export with history and model intact',
+    () async {
+      final conversation = await repository.createConversation(
+        id: 'legacy',
+        title: 'Saved chat',
+      );
+      await repository.saveMessages(conversation, [
+        Message.create(
+          conversationId: conversation.id,
+          role: MessageRole.assistant,
+          content: 'Preserved answer',
+          modelId: 'generating-model',
+        ),
+      ]);
+      final payload = await repository.exportPayload();
+      payload['format'] = 'pocketllm.conversations';
+      final imported = await repository.importJson(jsonEncode(payload));
+      final messages = await repository.loadMessages(imported.single.id);
+      expect(imported.single.title, 'Saved chat');
+      expect(messages.single.content, 'Preserved answer');
+      expect(messages.single.modelId, 'generating-model');
+      expect(
+        (await repository.exportPayload())['format'],
+        'installm.conversations',
+      );
+      payload['schemaVersion'] = conversationExportSchemaVersion + 1;
+      await expectLater(
+        repository.importJson(jsonEncode(payload)),
+        throwsFormatException,
+      );
+    },
+  );
 
   test('rejects unknown export formats', () async {
     expect(

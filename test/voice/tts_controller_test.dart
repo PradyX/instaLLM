@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/data/platform_tts_service.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/data/platform_tts_service.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 
 /// Speech engine whose utterances finish only when the test says so, so the
 /// speaking state can be observed while one is in progress.

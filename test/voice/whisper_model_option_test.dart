@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 void main() {
   test('offers models with unique ids and file names', () {

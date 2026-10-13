@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/message_tool_activity.dart';
-import 'package:pocket_llm/features/tools/application/tool_activity_mapping.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/conversations/domain/message_tool_activity.dart';
+import 'package:installm/features/tools/application/tool_activity_mapping.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 void main() {
   ToolCall call() => const ToolCall(

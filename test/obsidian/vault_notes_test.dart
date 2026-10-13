@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_paths.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/obsidian/application/vault_notes_service.dart';
+import 'package:installm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
 
 void main() {
   late Directory vaultDir;
@@ -11,10 +11,10 @@ void main() {
   const service = VaultNotesService();
 
   setUp(() async {
-    vaultDir = await Directory.systemTemp.createTemp('pocketllm_vault');
+    vaultDir = await Directory.systemTemp.createTemp('installm_vault');
     paths = VaultPaths(
       vaultRoot: vaultDir.path,
-      projectPath: 'Projects/pocketllm',
+      projectPath: 'Projects/installm',
     );
   });
 
@@ -50,12 +50,12 @@ void main() {
     test('scaffolds the standard structure', () async {
       final created = await service.ensureProjectStructure(
         paths,
-        projectName: 'pocketllm',
+        projectName: 'installm',
       );
       expect(created, containsAll(['Research', 'Plans', 'Project.md']));
       // Second run creates nothing: scaffolding is idempotent.
       expect(
-        await service.ensureProjectStructure(paths, projectName: 'pocketllm'),
+        await service.ensureProjectStructure(paths, projectName: 'installm'),
         isEmpty,
       );
     });

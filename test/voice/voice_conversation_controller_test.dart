@@ -4,18 +4,18 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
-import 'package:pocket_llm/features/voice/data/platform_tts_service.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
-import 'package:pocket_llm/features/voice/domain/speakable_reply.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/voice_conversation_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/data/platform_tts_service.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/features/voice/domain/speakable_reply.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 
 /// Order in which the loop touched the microphone and the speaker, so
 /// half-duplex behaviour is asserted rather than inferred.
@@ -305,7 +305,7 @@ void main() {
   late String clipPath;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocket_llm_voice_loop');
+    tempDir = await Directory.systemTemp.createTemp('installm_voice_loop');
     clipPath = p.join(tempDir.path, 'clip.wav');
     await File(clipPath).writeAsBytes(const [0, 1, 2, 3]);
   });

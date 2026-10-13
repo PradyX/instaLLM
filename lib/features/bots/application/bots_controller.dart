@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/bots/data/bot_store.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/bots/data/bot_store.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
 
 /// Bot registry file, opened once per session.
 final botStoreProvider = FutureProvider<BotStore>((ref) => BotStore.open());
@@ -74,7 +74,7 @@ class BotsNotifier extends StateNotifier<BotsState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Bots were written by a newer version of Pocket LLM and are '
+            ? 'Bots were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : null,
       );

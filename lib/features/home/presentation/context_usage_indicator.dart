@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
 
 /// Circular token-budget meter for the chat composer.
 ///

@@ -1,6 +1,6 @@
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Longest excerpt of one chunk handed to the model, in characters.
 ///

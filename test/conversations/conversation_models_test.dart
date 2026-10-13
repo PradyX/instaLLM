@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
-import 'package:pocket_llm/features/conversations/domain/message_tool_activity.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/conversations/domain/message_tool_activity.dart';
 
 void main() {
   group('Conversation', () {

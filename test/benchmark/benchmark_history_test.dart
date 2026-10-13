@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_service.dart';
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/benchmark/application/benchmark_service.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 LlmModel _model({GgufMetadata? metadata}) {
   return LlmModel(
@@ -82,7 +82,7 @@ void main() {
   late BenchmarkHistory history;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_bench_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_bench_test');
     historyFile = File(p.join(tempDir.path, 'benchmarks', 'history.json'));
     history = BenchmarkHistory(historyFile);
   });

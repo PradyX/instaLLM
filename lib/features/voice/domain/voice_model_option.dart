@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Why an installed model can or cannot run local speech.
 ///

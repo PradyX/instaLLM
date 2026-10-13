@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// The composer's model pill: which model the next answer runs on, tapped to
 /// switch it.

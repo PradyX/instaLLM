@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/navigation/app_shell.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/core/navigation/app_shell.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 
 /// A chat for these tests; [id] is also the title, so assertions read plainly.
 /// [minutesAgo] is how long since it last changed.

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/skills/data/skill_store.dart';
-import 'package:pocket_llm/features/skills/domain/built_in_skills.dart';
-import 'package:pocket_llm/features/skills/domain/skill.dart';
-import 'package:pocket_llm/features/skills/domain/skill_parser.dart';
+import 'package:installm/features/skills/data/skill_store.dart';
+import 'package:installm/features/skills/domain/built_in_skills.dart';
+import 'package:installm/features/skills/domain/skill.dart';
+import 'package:installm/features/skills/domain/skill_parser.dart';
 
 /// Skill registry file, opened once per session.
 final skillStoreProvider = FutureProvider<SkillStore>(
@@ -75,7 +75,7 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Skills were written by a newer version of Pocket LLM and are '
+            ? 'Skills were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : null,
       );

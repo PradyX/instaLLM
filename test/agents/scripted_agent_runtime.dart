@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/application/agent_loop_service.dart';
 
 /// Agent runtime the tests drive, so the loop can be observed without a model.
 class ScriptedAgentRuntime implements AgentRuntime {

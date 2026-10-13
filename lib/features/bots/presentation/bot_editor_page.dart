@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/bots/application/bots_controller.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
-import 'package:pocket_llm/features/mcp/application/mcp_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_image_picker.dart';
-import 'package:pocket_llm/features/skills/application/skills_controller.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/bots/application/bots_controller.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
+import 'package:installm/features/mcp/application/mcp_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/presentation/profile_image_picker.dart';
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// Edits one custom bot: identity, soul, model and profile choice, skills,
 /// MCP servers, tool permissions, memory scope and workspaces.

@@ -1,6 +1,6 @@
-import 'package:pocket_llm/core/utils/llm_structured_response.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
+import 'package:installm/core/utils/llm_structured_response.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
 
 /// What one raw model reply is.
 ///

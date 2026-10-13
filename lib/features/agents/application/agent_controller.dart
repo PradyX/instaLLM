@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// Models installed on this device — the only ones a bot turn can use.
 ///

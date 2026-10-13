@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_import.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/model_import.dart';
 
 /// A record identifying a locally installed model for duplicate checks.
 class LocalModelRecord {

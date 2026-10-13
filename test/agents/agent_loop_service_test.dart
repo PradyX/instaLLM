@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
-import 'package:pocket_llm/features/agents/domain/agent_run.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/domain/agent_run.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 import 'scripted_agent_runtime.dart';
 

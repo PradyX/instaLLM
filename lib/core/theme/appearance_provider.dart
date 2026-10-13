@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/core/theme/appearance_store.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/theme/appearance_store.dart';
 
 final appearanceStoreProvider = FutureProvider<AppearanceStore>(
   (ref) => AppearanceStore.open(),

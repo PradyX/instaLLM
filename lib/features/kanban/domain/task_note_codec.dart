@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:pocket_llm/features/kanban/domain/task.dart';
+import 'package:installm/features/kanban/domain/task.dart';
 
 /// Converts tasks to and from Obsidian-friendly Markdown notes (§9.2).
 ///

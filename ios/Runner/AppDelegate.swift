@@ -4,8 +4,8 @@ import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  private let storageChannel = "pocket_llm/storage_info"
-  private let runtimePathsChannel = "pocket_llm/runtime_paths"
+  private let storageChannel = "installm/storage_info"
+  private let runtimePathsChannel = "installm/runtime_paths"
 
   override func application(
     _ application: UIApplication,

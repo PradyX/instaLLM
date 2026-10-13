@@ -26,9 +26,7 @@ class AndroidToolExecutionResult {
 }
 
 class AndroidToolExecutorService {
-  static const MethodChannel _channel = MethodChannel(
-    'pocket_llm/tool_executor',
-  );
+  static const MethodChannel _channel = MethodChannel('installm/tool_executor');
 
   /// Asks Android to perform one action with already validated arguments.
   ///

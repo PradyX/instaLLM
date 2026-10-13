@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 
 void main() {
   InferenceProfile sample() => InferenceProfile(

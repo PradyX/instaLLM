@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/process_memory_probe.dart';
+import 'package:installm/core/services/process_memory_probe.dart';
 
 void main() {
   group('parseVmHwm', () {
     test('reads the peak resident set size from /proc/self/status', () {
       const status = '''
-Name:   pocket_llm
+Name:   installm
 State:  S (sleeping)
 VmPeak:   12000000 kB
 VmSize:   11000000 kB

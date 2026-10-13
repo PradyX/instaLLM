@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
 
 /// Asks whether one sensitive tool may run.
 ///
@@ -50,7 +50,7 @@ class ToolApprovalDialog extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'This hands the action to another app on this device. Pocket LLM '
+            'This hands the action to another app on this device. InstaLLM '
             'waits for your answer before anything happens.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,

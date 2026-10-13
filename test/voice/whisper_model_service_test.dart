@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// Storage that writes into a temporary directory instead of the app's model
 /// directory, so the file rules can be exercised without a device.
@@ -94,7 +94,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocket_llm_whisper');
+    tempDir = await Directory.systemTemp.createTemp('installm_whisper');
     storage = _TempModelStorage(tempDir);
     service = WhisperModelService(storage);
   });

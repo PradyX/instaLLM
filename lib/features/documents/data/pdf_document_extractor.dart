@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 /// Reads text out of PDF files.

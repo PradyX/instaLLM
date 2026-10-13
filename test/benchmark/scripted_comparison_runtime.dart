@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
 
 /// Comparison runtime the tests drive, so sequencing, streaming, stopping and
 /// failures can be observed without a model on disk.

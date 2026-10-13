@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/data/platform_tts_service.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/data/platform_tts_service.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 
 /// Whether this build can speak at all, injectable so tests can describe a
 /// platform without a speech engine.
@@ -177,7 +177,7 @@ class TtsController extends StateNotifier<TtsState> {
     if (!state.isSupported) {
       state = state.copyWith(
         errorMessage:
-            'This platform has no local speech engine in Pocket LLM. Reading '
+            'This platform has no local speech engine in InstaLLM. Reading '
             'answers aloud works on Android, iOS, macOS and Windows.',
       );
       return;

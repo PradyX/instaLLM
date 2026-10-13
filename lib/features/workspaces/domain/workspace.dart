@@ -1,4 +1,4 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// A project workspace: the boundary linking bots, chats, skills, MCP
 /// servers, boards, documents and memory.
@@ -47,7 +47,7 @@ class Workspace {
   /// Registered vault this workspace reads/writes, if any.
   final String? obsidianVaultId;
 
-  /// Workspace-relative directory inside the vault (e.g. `Projects/pocketllm`).
+  /// Workspace-relative directory inside the vault (e.g. `Projects/installm`).
   final String obsidianProjectPath;
 
   /// Local Git checkout bots work in, if any. Device-specific, never synced.

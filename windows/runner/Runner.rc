@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.prady" "\0"
-            VALUE "FileDescription", "Pocket LLM" "\0"
+            VALUE "FileDescription", "InstaLLM" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "pocket_llm" "\0"
+            VALUE "InternalName", "installm" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.prady. All rights reserved." "\0"
-            VALUE "OriginalFilename", "pocket_llm.exe" "\0"
-            VALUE "ProductName", "Pocket LLM" "\0"
+            VALUE "OriginalFilename", "installm.exe" "\0"
+            VALUE "ProductName", "InstaLLM" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

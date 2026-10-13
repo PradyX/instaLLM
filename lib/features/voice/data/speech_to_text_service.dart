@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Audio containers the bundled multimodal runtime can decode.
 ///
@@ -51,7 +51,7 @@ abstract class SpeechRuntime {
 
 /// Runs speech models on the app's shared local engine.
 ///
-/// Pocket LLM keeps one model in memory at a time, so loading a speech model
+/// InstaLLM keeps one model in memory at a time, so loading a speech model
 /// releases the chat model and the next chat message loads that one again.
 /// Keeping transcription on the shared engine is what makes that guarantee
 /// hold: a second engine would leave both models resident.

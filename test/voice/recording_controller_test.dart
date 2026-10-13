@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
 
 /// Microphone that records nothing, but says what it was asked to do.
 class _FakeRecorder implements MicrophoneRecorder {

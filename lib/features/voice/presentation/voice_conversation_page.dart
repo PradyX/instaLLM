@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_controller.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_model_picker.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/voice_conversation_controller.dart';
+import 'package:installm/features/voice/application/voice_controller.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/presentation/voice_model_picker.dart';
 
 /// Hands-free conversation: listen, transcribe, answer and speak, then listen
 /// again, with the user able to interrupt the reading.

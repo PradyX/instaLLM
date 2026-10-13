@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show ContextPolicy, formatTokens;
-import 'package:pocket_llm/features/context/application/compaction_policy_controller.dart';
-import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
-import 'package:pocket_llm/features/context/domain/compaction_policy.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
-import 'package:pocket_llm/features/context/domain/context_compaction.dart';
+import 'package:installm/features/context/application/compaction_policy_controller.dart';
+import 'package:installm/features/context/application/context_budget_controller.dart';
+import 'package:installm/features/context/domain/compaction_policy.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
+import 'package:installm/features/context/domain/context_compaction.dart';
 
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
 
 /// Chooses how much of a model's context window one request may use.
 ///

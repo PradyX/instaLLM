@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Opens Pocket LLM the way Finder and the Dock do: a real build of the app,
+# Opens InstaLLM the way Finder and the Dock do: a real build of the app,
 # started by LaunchServices.
 #
 # Why this exists
@@ -8,7 +8,7 @@
 # Two things about a built bundle bite the moment one is opened by hand.
 #
 #  1. `flutter test integration_test/<file> -d macos` builds
-#     build/macos/Build/Products/Debug/Pocket LLM.app with the *test* file as
+#     build/macos/Build/Products/Debug/InstaLLM.app with the *test* file as
 #     its entrypoint and leaves it that way, so a bundle opened by hand after a
 #     device test is not the app: the window stays blank because there is no
 #     test runner to drive it. This script rebuilds from lib/main.dart first.
@@ -36,8 +36,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP="$REPO_ROOT/build/macos/Build/Products/Debug/Pocket LLM.app"
-APP_EXECUTABLE="$APP/Contents/MacOS/Pocket LLM"
+APP="$REPO_ROOT/build/macos/Build/Products/Debug/InstaLLM.app"
+APP_EXECUTABLE="$APP/Contents/MacOS/InstaLLM"
 
 say() { printf '%s\n' "$*"; }
 fail() { printf 'error: %s\n' "$*" >&2; }
@@ -67,7 +67,7 @@ done
 
 running="$(pgrep -f "$APP_EXECUTABLE" | paste -sd' ' - || true)"
 if [ -n "$running" ]; then
-  fail "Pocket LLM is already running (pid $running)."
+  fail "InstaLLM is already running (pid $running)."
   fail "Quit it first: two copies write the same conversations and settings."
   exit 1
 fi

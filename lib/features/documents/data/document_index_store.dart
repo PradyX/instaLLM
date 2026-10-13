@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
 /// Everything the local document index holds.
 ///

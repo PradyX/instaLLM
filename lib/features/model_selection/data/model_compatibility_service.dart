@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_compatibility.dart';
 
 /// Result of evaluating one model against this device.
 class ModelFitReport {

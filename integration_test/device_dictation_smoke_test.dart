@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
-import 'package:pocket_llm/features/voice/presentation/voice_settings_section.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/application/composer_dictation_controller.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/data/platform_speech_service.dart';
+import 'package:installm/features/voice/presentation/voice_settings_section.dart';
 
 /// Drives the composer microphone against the real device: the real recorder
 /// plugin and the real platform recognizer.
@@ -211,7 +211,7 @@ void main() {
       isFalse,
       reason:
           'a test run starts the app from the test runner, so a request '
-          'belongs to the runner and not to Pocket LLM',
+          'belongs to the runner and not to InstaLLM',
     );
     expect(find.text('Allow device recognition'), findsNothing);
     expect(

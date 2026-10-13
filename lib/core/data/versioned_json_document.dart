@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:pocket_llm/core/utils/logger.dart';
+import 'package:installm/core/utils/logger.dart';
 
 /// One JSON document on disk with a schema version, read and written safely.
 ///

@@ -3,16 +3,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 void main() {
   late Directory tempDir;
   late ConversationStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_store_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_store_test');
     store = ConversationStore(rootDirectory: tempDir);
   });
 

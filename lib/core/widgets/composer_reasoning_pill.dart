@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/reasoning_settings_provider.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_reasoning_provider.dart';
+import 'package:installm/core/settings/reasoning_settings_provider.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/features/model_selection/presentation/model_reasoning_provider.dart';
 
 /// The composer's reasoning chip: whether the model deliberates before it
 /// answers, drawn beside the model pill.

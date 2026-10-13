@@ -4,15 +4,15 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/data/whisper_speech_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/data/whisper_speech_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// Speech runtime whose output the test controls token by token, so streaming,
 /// stopping and failures can be observed without a model on disk.
@@ -83,7 +83,7 @@ void main() {
   final small = WhisperModelCatalog.models[2];
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocket_llm_stt_run');
+    tempDir = await Directory.systemTemp.createTemp('installm_stt_run');
     final file = File(p.join(tempDir.path, 'note.wav'));
     await file.writeAsBytes(const [0, 1, 2, 3]);
     clip = file.path;

@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 class HuggingFaceModelCapabilityService {
   static const _cacheKey = 'hf_model_capabilities_cache_v1';

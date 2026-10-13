@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
 
 /// Speech runtime that records what it was asked to do instead of loading a
 /// real model, so the service's own decisions are what the tests check.
@@ -56,7 +56,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocket_llm_stt');
+    tempDir = await Directory.systemTemp.createTemp('installm_stt');
   });
 
   tearDown(() async {

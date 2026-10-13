@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/inference_profiles/data/inference_profile_store.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile_resolver.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile_resolver.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
 
 /// Profile file, opened once per session.
 final inferenceProfileStoreProvider = FutureProvider<InferenceProfileStore>(
@@ -131,7 +131,7 @@ class InferenceProfilesNotifier extends StateNotifier<InferenceProfilesState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Profiles were written by a newer version of Pocket LLM and are '
+            ? 'Profiles were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : null,
       );
@@ -211,7 +211,7 @@ class InferenceProfilesNotifier extends StateNotifier<InferenceProfilesState> {
       if (store.save(state.toSnapshot())) return true;
       state = state.copyWith(
         errorMessage: store.isReadOnly
-            ? 'Profiles were written by a newer version of Pocket LLM and are '
+            ? 'Profiles were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
             : 'Could not save inference profiles on this device.',
       );

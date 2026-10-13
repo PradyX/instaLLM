@@ -1,7 +1,7 @@
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 
 /// Answers what reasoning an installed model declares, once per model.
 ///

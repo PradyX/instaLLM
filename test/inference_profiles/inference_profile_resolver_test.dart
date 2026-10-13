@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/settings/inference_settings_provider.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile_resolver.dart';
+import 'package:installm/core/settings/inference_settings_provider.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile_resolver.dart';
 
 void main() {
   const desktopContext = 4096;

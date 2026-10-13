@@ -1,13 +1,15 @@
 import 'dart:convert';
 
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/core/data/legacy_export_formats.dart';
+
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 /// Format marker for exported conversation payloads.
-const String conversationExportFormat = 'pocketllm.conversations';
+const String conversationExportFormat = 'installm.conversations';
 
 /// Schema version for exported conversation payloads.
 const int conversationExportSchemaVersion = 1;
@@ -207,7 +209,8 @@ class ConversationRepository {
   /// Conversations whose id already exists locally are imported with a fresh
   /// id so nothing is overwritten. Returns the imported conversations.
   Future<List<Conversation>> importPayload(Map<String, dynamic> payload) async {
-    if (payload['format'] != conversationExportFormat) {
+    if (payload['format'] != conversationExportFormat &&
+        payload['format'] != LegacyExportFormats.conversations) {
       throw const FormatException('Unrecognized conversation export format.');
     }
     final version = (payload['schemaVersion'] as num?)?.toInt();

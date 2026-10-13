@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/features/model_selection/data/model_import_service.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/data/model_import_service.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// Picks a local GGUF file, previews its parsed metadata and imports it
 /// either by copying it into app storage or by referencing it in place

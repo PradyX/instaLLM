@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/core/theme/appearance_provider.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
-import 'package:pocket_llm/core/theme/theme_provider.dart';
-import 'package:pocket_llm/features/settings/presentation/accent_theme_tile.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/theme/appearance_provider.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/theme/theme_provider.dart';
+import 'package:installm/features/settings/presentation/accent_theme_tile.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 class AppearanceSettingsSection extends ConsumerWidget {
   const AppearanceSettingsSection({super.key});

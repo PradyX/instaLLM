@@ -1,9 +1,9 @@
-# Building PocketLlama On Linux
+# Building InstaLLM On Linux
 
 This guide covers the Linux-specific pieces that are easy to miss:
 
 - desktop toolchain prerequisites
-- bundled `llama.cpp` runtime libraries for PocketLlama vision support
+- bundled `llama.cpp` runtime libraries for InstaLLM vision support
 - bundled `llmfit` benchmark CLI assets
 
 For the platform-agnostic native runtime background, also see `scripts/BUILD_LLAMA_CPP_PREBUILTS.md`.
@@ -33,12 +33,12 @@ If you want to build the bundled `llmfit` binary too, install Rust with `rustup`
 
 ## 1. Build The Linux Runtime Libraries
 
-PocketLlama bundles Linux shared libraries from `linux/lib/`.
+InstaLLM bundles Linux shared libraries from `linux/lib/`.
 Build them from the same `llama.cpp` revision that matches the checked-in `llama_cpp_dart` package:
 
 ```bash
 export LLAMA_CPP_DIR="$HOME/src/llama.cpp"
-cd /path/to/PocketLlama
+cd /path/to/InstaLLM
 scripts/build_llama_native_libs.sh linux
 ```
 
@@ -56,11 +56,11 @@ linux/lib/libggml-cpu.so
 
 ## 2. Build The Linux `llmfit` Asset
 
-PocketLlama can also bundle a Linux `llmfit` CLI for the benchmark screen.
+InstaLLM can also bundle a Linux `llmfit` CLI for the benchmark screen.
 Build the host-architecture binary with:
 
 ```bash
-cd /path/to/PocketLlama
+cd /path/to/InstaLLM
 scripts/build_llmfit_linux.sh
 ```
 
@@ -76,7 +76,7 @@ You can override the target triple with `LLMFIT_TARGET` if you already have the 
 ## 3. Run The App During Development
 
 ```bash
-cd /path/to/PocketLlama
+cd /path/to/InstaLLM
 flutter clean
 flutter pub get
 flutter run -d linux
@@ -85,7 +85,7 @@ flutter run -d linux
 ## 4. Build The Release Bundle
 
 ```bash
-cd /path/to/PocketLlama
+cd /path/to/InstaLLM
 flutter build linux
 ```
 
@@ -99,7 +99,7 @@ build/linux/arm64/release/bundle/
 The executable inside the bundle is:
 
 ```text
-bundle/pocket_llm
+bundle/installm
 ```
 
 ## 5. Create An Installable Archive
@@ -107,7 +107,7 @@ bundle/pocket_llm
 To package the Linux bundle into a release archive:
 
 ```bash
-cd /path/to/PocketLlama
+cd /path/to/InstaLLM
 scripts/build_linux_archive.sh
 ```
 
@@ -120,8 +120,8 @@ That script:
 Expected output:
 
 ```text
-build/linux/x64/release/pocket_llm-linux-x64.tar.gz
-build/linux/arm64/release/pocket_llm-linux-arm64.tar.gz
+build/linux/x64/release/installm-linux-x64.tar.gz
+build/linux/arm64/release/installm-linux-arm64.tar.gz
 ```
 
 ## 6. Install On A Linux Machine
@@ -143,69 +143,69 @@ sudo pacman -S --needed gtk3 libsecret jsoncpp
 Then extract the archive somewhere permanent, for example:
 
 ```bash
-sudo mkdir -p /opt/pocket-llm
-sudo tar -xzf pocket_llm-linux-x64.tar.gz -C /opt/pocket-llm --strip-components=1
+sudo mkdir -p /opt/installm
+sudo tar -xzf installm-linux-x64.tar.gz -C /opt/installm --strip-components=1
 ```
 
 Run it with:
 
 ```bash
-/opt/pocket-llm/pocket_llm
+/opt/installm/installm
 ```
 
 Optional convenience symlink:
 
 ```bash
-sudo ln -sf /opt/pocket-llm/pocket_llm /usr/local/bin/pocket-llm
+sudo ln -sf /opt/installm/installm /usr/local/bin/installm
 ```
 
 That same extraction flow works on Arch:
 
 ```bash
-sudo mkdir -p /opt/pocket-llm
-sudo tar -xzf pocket_llm-linux-x64.tar.gz -C /opt/pocket-llm --strip-components=1
-sudo ln -sf /opt/pocket-llm/pocket_llm /usr/local/bin/pocket-llm
+sudo mkdir -p /opt/installm
+sudo tar -xzf installm-linux-x64.tar.gz -C /opt/installm --strip-components=1
+sudo ln -sf /opt/installm/installm /usr/local/bin/installm
 ```
 
 ## 7. Add A Desktop Launcher
 
-PocketLlama's installed icon inside the Flutter bundle is typically:
+InstaLLM's installed icon inside the Flutter bundle is typically:
 
 ```text
-/opt/pocket-llm/data/flutter_assets/assets/icons/pocketllm_new.png
+/opt/installm/data/flutter_assets/assets/icons/installm.png
 ```
 
 For a per-user launcher on Ubuntu, Arch, or most other Linux desktops:
 
 ```bash
 mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/pocket-llm.desktop <<'EOF'
+cat > ~/.local/share/applications/installm.desktop <<'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Pocket LLM
+Name=InstaLLM
 Comment=Privacy-first local AI assistant
-Exec=/opt/pocket-llm/pocket_llm
-Icon=/opt/pocket-llm/data/flutter_assets/assets/icons/pocketllm_new.png
+Exec=/opt/installm/installm
+Icon=/opt/installm/data/flutter_assets/assets/icons/installm.png
 Terminal=false
 Categories=Utility;Development;
 StartupNotify=true
 EOF
 
-chmod +x ~/.local/share/applications/pocket-llm.desktop
+chmod +x ~/.local/share/applications/installm.desktop
 ```
 
 For a system-wide launcher:
 
 ```bash
-sudo tee /usr/share/applications/pocket-llm.desktop >/dev/null <<'EOF'
+sudo tee /usr/share/applications/installm.desktop >/dev/null <<'EOF'
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Pocket LLM
+Name=InstaLLM
 Comment=Privacy-first local AI assistant
-Exec=/opt/pocket-llm/pocket_llm
-Icon=/opt/pocket-llm/data/flutter_assets/assets/icons/pocketllm_new.png
+Exec=/opt/installm/installm
+Icon=/opt/installm/data/flutter_assets/assets/icons/installm.png
 Terminal=false
 Categories=Utility;Development;
 StartupNotify=true
@@ -217,6 +217,6 @@ On some desktops, logging out and back in or refreshing the application menu may
 ## Notes
 
 - Linux notifications depend on a running Freedesktop notification daemon in the desktop session.
-- `flutter_secure_storage` uses the Linux keyring when available. PocketLlama falls back to app-local storage if the keyring backend is unavailable at runtime.
+- `flutter_secure_storage` uses the Linux keyring when available. InstaLLM falls back to app-local storage if the keyring backend is unavailable at runtime.
 - If you change the bundled native libraries, run `flutter clean` before retesting so Flutter rebuilds the Linux bundle cleanly.
 - The release archive is a relocatable bundle, not a `.deb`. If you want distro-native packaging later, use the generated bundle as the input to your packaging tool.

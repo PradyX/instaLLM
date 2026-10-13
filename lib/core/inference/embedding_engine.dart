@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:pocket_llm/core/utils/cancel_token.dart';
+import 'package:installm/core/utils/cancel_token.dart';
 
 /// What to load, and the window one input may use.
 ///

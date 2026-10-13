@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/android_tool_executor_service.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/android_action_tools.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/core/services/android_tool_executor_service.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/android_action_tools.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// Gate that allows every sensitive call, like a user tapping Allow.
 class _ApprovingGate implements ToolPermissionGate {

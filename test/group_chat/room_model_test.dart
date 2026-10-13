@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// An installed chat model, as `chatModelsProvider` would report it to a
 /// room. Nothing here declares tool support: a room answers on any installed
@@ -129,7 +129,7 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('pocketllm_room_model');
+      tempDir = await Directory.systemTemp.createTemp('installm_room_model');
     });
 
     tearDown(() async {

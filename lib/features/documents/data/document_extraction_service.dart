@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/data/pdf_document_extractor.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/data/pdf_document_extractor.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
 
 /// Reads plain text, markdown and source files.
 ///

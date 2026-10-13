@@ -7,17 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/services/platform_runtime_paths_service.dart';
-import 'package:pocket_llm/core/services/process_memory_probe.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/benchmark/domain/llmfit_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/services/platform_runtime_paths_service.dart';
+import 'package:installm/core/services/process_memory_probe.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/benchmark/domain/llmfit_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 final benchmarkServiceProvider = Provider<BenchmarkService>((ref) {
   return BenchmarkService(
@@ -285,7 +285,7 @@ class BenchmarkService {
     final binaryName = Platform.isWindows ? 'llmfit.exe' : 'llmfit';
     final candidates = <String>{};
 
-    final overridePath = Platform.environment['POCKET_LLMFIT_PATH'];
+    final overridePath = Platform.environment['INSTALLM_LLMFIT_PATH'];
     if (overridePath != null && overridePath.trim().isNotEmpty) {
       candidates.add(overridePath.trim());
     }

@@ -4,13 +4,13 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/services/attachment_image_service.dart';
+import 'package:installm/core/services/attachment_image_service.dart';
 
 void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_image_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_image_test');
   });
 
   tearDown(() async {

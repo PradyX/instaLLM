@@ -3,15 +3,15 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/benchmark/data/comparison_set_store.dart';
-import 'package:pocket_llm/features/benchmark/domain/comparison_set.dart';
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
-import 'package:pocket_llm/features/benchmark/domain/prompt_suite.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/data/comparison_set_store.dart';
+import 'package:installm/features/benchmark/domain/comparison_set.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/benchmark/domain/prompt_suite.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// Prompt a new comparison starts with.
 ///
@@ -784,7 +784,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:
-              'Saved sets were written by a newer version of Pocket LLM, so '
+              'Saved sets were written by a newer version of InstaLLM, so '
               'this build will not change them.',
         );
         return false;

@@ -2,16 +2,16 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/documents/application/document_embedding_models.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/documents/application/document_embedding_models.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 void main() {
   late Directory tempDir;
   late String modelFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_embed_models');
+    tempDir = await Directory.systemTemp.createTemp('installm_embed_models');
     modelFile = p.join(tempDir.path, 'bge.gguf');
     await File(modelFile).writeAsString('not really a gguf');
   });

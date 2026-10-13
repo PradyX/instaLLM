@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// A model standing on disk, as the service would report it.
 InstalledWhisperModel installedModel(WhisperModelOption option) {

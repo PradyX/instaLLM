@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
 
 /// Persisted group chats plus their messages.
 ///

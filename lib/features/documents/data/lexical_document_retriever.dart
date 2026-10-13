@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
 
 final RegExp _wordPattern = RegExp(r'[\p{L}\p{N}]+', unicode: true);
 final RegExp _camelBoundary = RegExp(

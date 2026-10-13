@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/storage_info_service.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/storage_info_service.dart';
 
 class _FakeStorageInfoService extends StorageInfoService {
   @override

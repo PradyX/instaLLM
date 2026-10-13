@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_router.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/domain/group_router.dart';
 
 void main() {
   Bot bot(String id, String name, {String soul = ''}) {

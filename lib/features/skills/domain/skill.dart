@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/permissions/workspace_permission.dart';
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/permissions/workspace_permission.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// Where a skill came from (Road Map 2 §5.2).
 enum SkillSource {

@@ -1,5 +1,5 @@
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
 
 /// Picks the next speaker without any model call.
 ///

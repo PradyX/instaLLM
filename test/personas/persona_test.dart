@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 void main() {
   group('Persona', () {

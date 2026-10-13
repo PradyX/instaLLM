@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 /// Text read out of one local file, ready for chunking.
 class ExtractedDocument {

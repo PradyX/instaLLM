@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 
 /// A GGUF file the user selected on disk (or its vision projector).
 class ImportedFile {

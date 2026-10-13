@@ -7,17 +7,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/local_embedding_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
-import 'package:pocket_llm/features/documents/domain/embedding_model_ref.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/local_embedding_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/embedding_model_ref.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Runs the document embedding path on this machine with real weights: a real
 /// embedding model loaded through the app's own engine, real vectors, and one
@@ -35,7 +35,7 @@ import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
 /// flutter test integration_test/device_embedding_smoke_test.dart -d macos
 /// ```
 ///
-/// Set `POCKETLLM_TEST_EMBEDDING_MODEL` to a specific `.gguf` path to override
+/// Set `INSTALLM_TEST_EMBEDDING_MODEL` to a specific `.gguf` path to override
 /// discovery.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -49,7 +49,7 @@ void main() {
       // ignore: avoid_print
       print(
         'skipping: no embedding model found. Download bge-small (or set '
-        'POCKETLLM_TEST_EMBEDDING_MODEL) first.',
+        'INSTALLM_TEST_EMBEDDING_MODEL) first.',
       );
       return;
     }
@@ -145,7 +145,7 @@ void main() {
 
     // 4. Through the library, which is what the app does: ingest a file, then
     //    answer a word-free question from its vectors.
-    final tempDir = await Directory.systemTemp.createTemp('pocketllm_device');
+    final tempDir = await Directory.systemTemp.createTemp('installm_device');
     addTearDown(() async {
       if (await tempDir.exists()) await tempDir.delete(recursive: true);
     });
@@ -333,7 +333,7 @@ Future<String> _collect(Stream<String> stream) async {
 
 /// An embedding model from the app's model directory, or an explicit override.
 Future<String?> _findEmbeddingModelFile() async {
-  final override = Platform.environment['POCKETLLM_TEST_EMBEDDING_MODEL']
+  final override = Platform.environment['INSTALLM_TEST_EMBEDDING_MODEL']
       ?.trim();
   if (override != null && override.isNotEmpty) {
     return File(override).existsSync() ? override : null;
@@ -364,7 +364,7 @@ Future<String?> _findEmbeddingModelFile() async {
 
 /// A chat model from the app's model directory, or an explicit override.
 Future<String?> _findChatModelFile() async {
-  final override = Platform.environment['POCKETLLM_TEST_MODEL']?.trim();
+  final override = Platform.environment['INSTALLM_TEST_MODEL']?.trim();
   if (override != null && override.isNotEmpty) {
     return File(override).existsSync() ? override : null;
   }

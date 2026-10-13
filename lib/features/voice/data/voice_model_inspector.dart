@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/domain/voice_model_option.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/domain/voice_model_option.dart';
 
 /// Resolves the projector file paired with [model], or null when there is none.
 typedef ProjectorPathResolver = Future<String?> Function(LlmModel model);

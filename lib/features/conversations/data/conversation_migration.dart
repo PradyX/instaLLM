@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// Migrates legacy per-model chat threads into the conversation store.
 ///
-/// Pocket LLM 1.5.x and earlier stored one thread per model under the secure
+/// InstaLLM 1.5.x and earlier stored one thread per model under the secure
 /// storage key `model_chat_threads_v1`:
 ///
 /// ```json

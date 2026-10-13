@@ -6,12 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/widgets/name_prompt_dialog.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
-import 'package:pocket_llm/features/home/presentation/home_page.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/widgets/name_prompt_dialog.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:installm/features/home/presentation/home_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +30,7 @@ void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_create_room');
+    tempDir = await Directory.systemTemp.createTemp('installm_create_room');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

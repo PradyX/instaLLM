@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/documents/domain/document_context.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/documents/domain/document_context.dart';
 
 /// One assembled prompt: the messages that fit, the system prompt, and what
 /// the assembly cost.

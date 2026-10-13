@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Run native Flutter tests without starting a second Pocket LLM instance.
+# Run native Flutter tests without starting a second InstaLLM instance.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_EXECUTABLE="$REPO_ROOT/build/macos/Build/Products/Debug/Pocket LLM.app/Contents/MacOS/Pocket LLM"
+APP_EXECUTABLE="$REPO_ROOT/build/macos/Build/Products/Debug/InstaLLM.app/Contents/MacOS/InstaLLM"
 
 if [ "$#" -eq 0 ]; then
   printf 'Usage: scripts/test_macos.sh integration_test/<test>.dart [test options]\n' >&2
@@ -11,7 +11,7 @@ if [ "$#" -eq 0 ]; then
 fi
 
 if pgrep -f "$APP_EXECUTABLE" >/dev/null; then
-  printf 'Quit Pocket LLM before native tests; two instances share app storage.\n' >&2
+  printf 'Quit InstaLLM before native tests; two instances share app storage.\n' >&2
   exit 1
 fi
 

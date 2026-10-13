@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
 
 /// Where the tokens of one request are spent (Road Map 2 §4.3).
 ///

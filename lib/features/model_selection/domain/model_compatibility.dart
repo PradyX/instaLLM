@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 
 /// How well a model is expected to fit on this device.
 ///

@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
-import 'package:pocket_llm/features/kanban/data/task_repository.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/kanban/application/kanban_tools.dart';
+import 'package:installm/features/kanban/data/task_repository.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// In-memory board: the tools under test never touch the filesystem.
 class _FakeBoard implements TaskRepository {

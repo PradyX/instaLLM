@@ -1,5 +1,5 @@
-name: pocket_llm
-description: "Yet Another New Flutter Project."
+name: installm
+description: "Private AI. Fully on-device."
 publish_to: 'none'
 version: 1.5.0
 
@@ -85,21 +85,31 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
+  image_path: "assets/icons/installm.png"
+  remove_alpha_ios: true
+  background_color_ios: "#101213"
+  adaptive_icon_background: "#101213"
+  adaptive_icon_foreground: "assets/icons/installm.png"
+  adaptive_icon_foreground_inset: 16
   macos:
     generate: true
-    image_path: "assets/icons/pocketllm_mac.png"
+    image_path: "assets/icons/installm.png"
   windows:
     generate: true
-    image_path: "assets/icons/pocketllm_new.png"
-  image_path: "assets/icons/pocketllm_new.png"
-  color: "#FFFFFF"
+    image_path: "assets/icons/installm.png"
+    icon_size: 256
+  web:
+    generate: true
+    image_path: "assets/icons/installm.png"
+    background_color: "#101213"
+    theme_color: "#101213"
 
 flutter_native_splash:
-  color: "#FFFFFF"
-  image: "assets/icons/pocketllm_new.png"
+  color: "#101213"
+  image: "assets/icons/installm.png"
   android_12:
-    color: "#FFFFFF"
-    image: "assets/icons/pocketllm_new.png"
+    color: "#101213"
+    image: "assets/icons/installm.png"
 
 slang:
   base_locale: en

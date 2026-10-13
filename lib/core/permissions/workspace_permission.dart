@@ -46,7 +46,7 @@ class PermissionRule {
   final String workspaceId;
   final Capability capability;
 
-  /// Glob-ish prefix: `Projects/pocketllm/**` or null for any resource.
+  /// Glob-ish prefix: `Projects/installm/**` or null for any resource.
   final String? resourcePattern;
   final PermissionLevel level;
 

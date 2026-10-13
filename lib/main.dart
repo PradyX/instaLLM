@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pocket_llm/app.dart';
-import 'package:pocket_llm/core/services/local_notification_service.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/app.dart';
+import 'package:installm/core/services/local_notification_service.dart';
+import 'package:installm/core/utils/logger.dart';
+import 'package:installm/i18n/strings.g.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/data/legacy_store_cleanup.dart';
+import 'package:installm/core/data/legacy_store_cleanup.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

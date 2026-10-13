@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
-import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
+import 'package:installm/features/home/presentation/composer_shortcuts.dart';
 
 /// What the composer's mic is doing.
 ///

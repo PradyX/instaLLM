@@ -3,21 +3,21 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/data/hybrid_document_retriever.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_chunking.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
-import 'package:pocket_llm/features/documents/domain/document_index_maintenance.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
-import 'package:pocket_llm/features/documents/domain/embedding_model_ref.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/logger.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/data/hybrid_document_retriever.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_chunking.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
+import 'package:installm/features/documents/domain/document_index_maintenance.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/embedding_model_ref.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
 /// Stage of one ingestion, reported so the UI can show progress.
 enum DocumentIngestStage {

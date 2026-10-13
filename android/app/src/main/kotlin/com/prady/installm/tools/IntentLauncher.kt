@@ -1,4 +1,4 @@
-package com.prady.pocketllm.tools
+package com.prady.installm.tools
 
 import android.app.Activity
 import android.content.ActivityNotFoundException

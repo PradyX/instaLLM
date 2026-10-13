@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/inference_settings_provider.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart'
+import 'package:installm/core/settings/inference_settings_provider.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart'
     show formatTokens;
-import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 
 /// Lists built-in and custom inference profiles and lets one be activated.
 class InferenceProfilesPage extends ConsumerWidget {
@@ -79,7 +79,7 @@ class InferenceProfilesPage extends ConsumerWidget {
           Text('Built-in', style: textTheme.titleSmall),
           const SizedBox(height: 4),
           Text(
-            'Shipped with Pocket LLM. Duplicate one to change it.',
+            'Shipped with InstaLLM. Duplicate one to change it.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
             ),

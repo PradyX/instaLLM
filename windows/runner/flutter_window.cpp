@@ -41,7 +41,7 @@ bool FlutterWindow::OnCreate() {
 
   // Storage Info Method Channel
   auto storage_channel = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      flutter_controller_->engine()->messenger(), "pocket_llm/storage_info",
+      flutter_controller_->engine()->messenger(), "installm/storage_info",
       &flutter::StandardMethodCodec::GetInstance());
 
   storage_channel->SetMethodCallHandler(

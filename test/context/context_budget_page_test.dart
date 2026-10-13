@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/context/application/compaction_policy_controller.dart';
-import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
-import 'package:pocket_llm/features/context/data/compaction_policy_store.dart';
-import 'package:pocket_llm/features/context/data/context_budget_store.dart';
-import 'package:pocket_llm/features/context/presentation/context_budget_page.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile_resolver.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/context/application/compaction_policy_controller.dart';
+import 'package:installm/features/context/application/context_budget_controller.dart';
+import 'package:installm/features/context/data/compaction_policy_store.dart';
+import 'package:installm/features/context/data/context_budget_store.dart';
+import 'package:installm/features/context/presentation/context_budget_page.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile_resolver.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 void main() {
   late Directory tempDir;
@@ -48,7 +48,7 @@ void main() {
   );
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_budget_page');
+    tempDir = await Directory.systemTemp.createTemp('installm_budget_page');
     file = File(p.join(tempDir.path, 'context', 'budget.json'));
     store = ContextBudgetStore(file);
     compactionStore = CompactionPolicyStore(

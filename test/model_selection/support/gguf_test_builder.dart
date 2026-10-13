@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
 
 /// Builds synthetic GGUF files so tests do not depend on real model downloads.
 class GgufTestBuilder {

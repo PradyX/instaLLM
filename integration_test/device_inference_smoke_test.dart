@@ -6,19 +6,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
-import 'package:pocket_llm/features/agents/domain/agent_run.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
-import 'package:pocket_llm/features/personas/domain/persona_prompt.dart';
-import 'package:pocket_llm/features/tools/application/assistant_reply.dart';
-import 'package:pocket_llm/features/tools/application/tools_providers.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/domain/agent_run.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/domain/persona_prompt.dart';
+import 'package:installm/features/tools/application/assistant_reply.dart';
+import 'package:installm/features/tools/application/tools_providers.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// Runs the app's real inference path on this machine with real weights: the
 /// GGUF metadata reader, one chat completion through the local engine, the
@@ -36,7 +36,7 @@ import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
 /// flutter test integration_test/device_inference_smoke_test.dart -d macos
 /// ```
 ///
-/// Set `POCKETLLM_TEST_MODEL` to a specific `.gguf` path to override discovery.
+/// Set `INSTALLM_TEST_MODEL` to a specific `.gguf` path to override discovery.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -49,7 +49,7 @@ void main() {
       // ignore: avoid_print
       print(
         'skipping: no .gguf found in the app model directory. Import or '
-        'download a model first, or set POCKETLLM_TEST_MODEL.',
+        'download a model first, or set INSTALLM_TEST_MODEL.',
       );
       return;
     }
@@ -245,7 +245,7 @@ Future<String> _collect(Stream<String> stream) async {
 /// Mac), which is also where a "keep in place" import points, so this finds the
 /// same files the app would run.
 Future<String?> _findModelFile() async {
-  final override = Platform.environment['POCKETLLM_TEST_MODEL']?.trim();
+  final override = Platform.environment['INSTALLM_TEST_MODEL']?.trim();
   if (override != null && override.isNotEmpty) {
     return File(override).existsSync() ? override : null;
   }

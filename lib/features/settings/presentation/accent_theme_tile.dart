@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/core/theme/theme.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/theme/theme.dart';
 
 /// One accent choice with decorative previews of its actual light/dark palette.
 class AccentThemeTile extends StatelessWidget {

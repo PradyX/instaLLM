@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/tools/application/assistant_reply.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/assistant_reply.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 void main() {
   ToolRegistry registry() =>

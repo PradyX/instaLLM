@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
 void main() {
   late Directory tempDir;
@@ -17,7 +17,7 @@ void main() {
   late DocumentLibrary library;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_library_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_library_test');
     indexFile = File(p.join(tempDir.path, 'index', 'index.json'));
     store = DocumentIndexStore(indexFile);
     library = DocumentLibrary(

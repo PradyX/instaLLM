@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/voice/data/voice_model_inspector.dart';
-import 'package:pocket_llm/features/voice/domain/voice_model_option.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/voice/data/voice_model_inspector.dart';
+import 'package:installm/features/voice/domain/voice_model_option.dart';
 
 /// Reads projector metadata so the catalog knows which models can hear audio.
 final voiceModelInspectorProvider = Provider<VoiceModelInspector>((ref) {

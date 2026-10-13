@@ -1,17 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/utils/llm_prompt_utils.dart';
-import 'package:pocket_llm/features/agents/domain/agent_run.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/tools/application/assistant_reply.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
+import 'package:installm/features/agents/domain/agent_run.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/tools/application/assistant_reply.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// The engine operations an agent run needs.
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/attachment_image_service.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/core/services/attachment_image_service.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// How attached images are prepared before they are stored with a message.
 ///

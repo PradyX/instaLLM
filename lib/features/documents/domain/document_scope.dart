@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/documents/domain/knowledge_collection.dart';
+import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
 /// Which knowledge collection one request may read from.
 ///

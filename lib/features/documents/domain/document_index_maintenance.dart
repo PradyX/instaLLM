@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 /// Fingerprint of normalized document text, used to skip re-indexing when a
 /// file's bytes changed without its text changing.

@@ -2,12 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
-import 'package:pocket_llm/features/voice/presentation/whisper_model_picker.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/features/voice/presentation/whisper_model_picker.dart';
 
 /// Settings that stay in memory, so the tests never touch secure storage.
 class _InMemoryVoiceSettings extends VoiceSettingsNotifier {

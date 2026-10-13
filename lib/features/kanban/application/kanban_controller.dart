@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/kanban/application/board_task_operations.dart';
-import 'package:pocket_llm/features/kanban/data/task_repository.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/kanban/application/board_task_operations.dart';
+import 'package:installm/features/kanban/data/task_repository.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/obsidian/application/vaults_controller.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// Active workspace id, shared by every workspace-scoped screen.
 final activeWorkspaceIdProvider = Provider<String?>((ref) {

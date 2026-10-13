@@ -233,7 +233,7 @@ class SecureStorage {
       p.join(
         supportDirectory.path,
         'compat_secure_storage',
-        'pocket_llm_secure_store.json',
+        'installm_secure_store.json',
       ),
     );
 

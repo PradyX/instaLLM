@@ -3,14 +3,14 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
-import 'package:pocket_llm/features/documents/domain/embedding_model_ref.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 
 /// An embedding engine with two axes, so a test can state which document a
 /// question is close to without running a model.
@@ -82,7 +82,7 @@ void main() {
   late DocumentLibrary library;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_embed_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_embed_test');
     indexFile = File(p.join(tempDir.path, 'documents', 'index.json'));
     engine = _FakeEmbeddingEngine();
     library = DocumentLibrary(

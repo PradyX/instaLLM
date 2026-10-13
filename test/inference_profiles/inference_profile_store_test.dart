@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/inference_profiles/data/inference_profile_store.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 
 void main() {
   late Directory tempDir;
@@ -12,7 +12,7 @@ void main() {
   late InferenceProfileStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_profiles_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_profiles_test');
     file = File(p.join(tempDir.path, 'inference_profiles', 'profiles.json'));
     store = InferenceProfileStore(file);
   });

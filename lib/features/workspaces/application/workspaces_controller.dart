@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/workspaces/data/workspace_store.dart';
-import 'package:pocket_llm/features/workspaces/domain/workspace.dart';
+import 'package:installm/features/workspaces/data/workspace_store.dart';
+import 'package:installm/features/workspaces/domain/workspace.dart';
 
 /// Workspace file, opened once per session.
 final workspaceStoreProvider = FutureProvider<WorkspaceStore>(

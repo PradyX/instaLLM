@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
-import 'package:pocket_llm/features/benchmark/domain/prompt_suite.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/benchmark/domain/prompt_suite.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 void main() {
   LlmModel model(String id, {String name = ''}) => LlmModel(

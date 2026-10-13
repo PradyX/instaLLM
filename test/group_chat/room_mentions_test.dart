@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/group_chat/presentation/room_mention_composer.dart';
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/data/petdex_service.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/group_chat/presentation/room_mention_composer.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/data/petdex_service.dart';
 
 void main() {
   final coder = Bot.create(id: 'c', name: 'Coder');

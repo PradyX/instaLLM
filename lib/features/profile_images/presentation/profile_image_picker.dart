@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/data/petdex_service.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/data/petdex_service.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 class ProfileImageButton extends StatelessWidget {
   const ProfileImageButton({

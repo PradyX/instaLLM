@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// One local benchmark run for one model.
 ///

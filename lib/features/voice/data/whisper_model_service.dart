@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/utils/logger.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 
 /// A Whisper model that is on this device and ready to hear audio.
 ///

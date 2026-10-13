@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/device_profile_service.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_providers.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/data/model_compatibility_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_compatibility.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/benchmark/application/benchmark_providers.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// GGUF metadata inspector for one model (roadmap Phase 2.3).
 ///

@@ -1,12 +1,12 @@
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/android_action_tools.dart';
-import 'package:pocket_llm/features/tools/data/calculator_tool.dart';
-import 'package:pocket_llm/features/tools/data/conversation_search_tool.dart';
-import 'package:pocket_llm/features/tools/data/current_datetime_tool.dart';
-import 'package:pocket_llm/features/tools/data/document_search_tool.dart';
-import 'package:pocket_llm/features/tools/data/installed_models_tool.dart';
-import 'package:pocket_llm/features/tools/data/read_document_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/android_action_tools.dart';
+import 'package:installm/features/tools/data/calculator_tool.dart';
+import 'package:installm/features/tools/data/conversation_search_tool.dart';
+import 'package:installm/features/tools/data/current_datetime_tool.dart';
+import 'package:installm/features/tools/data/document_search_tool.dart';
+import 'package:installm/features/tools/data/installed_models_tool.dart';
+import 'package:installm/features/tools/data/read_document_tool.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Tools that ship with the app.
 ///

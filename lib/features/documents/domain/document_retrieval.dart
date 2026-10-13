@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
 
 /// One chunk returned by a retrieval query.
 class DocumentSearchHit {

@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
 
 /// Persisted bots: custom bots and template duplicates.
 ///

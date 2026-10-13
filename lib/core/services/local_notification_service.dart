@@ -31,11 +31,11 @@ class LocalNotificationService {
       requestSoundPermission: false,
     );
     const linuxSettings = LinuxInitializationSettings(
-      defaultActionName: 'Open Pocket LLM',
+      defaultActionName: 'Open InstaLLM',
     );
     const windowsSettings = WindowsInitializationSettings(
-      appName: 'Pocket LLM',
-      appUserModelId: 'com.prady.pocketllm.desktop',
+      appName: 'InstaLLM',
+      appUserModelId: 'com.prady.installm.desktop',
       guid: '2f655744-b4fd-4d2a-9b61-d0f5f53d0cf4',
     );
 
@@ -127,7 +127,7 @@ class LocalNotificationService {
     debugPrint(
       'LocalNotificationService: notifications are not allowed here, so '
       'download notices are skipped. Allow them in the system notification '
-      'settings for Pocket LLM to get them.',
+      'settings for InstaLLM to get them.',
     );
   }
 
@@ -152,7 +152,7 @@ class LocalNotificationService {
     const linuxDetails = LinuxNotificationDetails(
       category: LinuxNotificationCategory.transferComplete,
       urgency: LinuxNotificationUrgency.normal,
-      defaultActionName: 'Open Pocket LLM',
+      defaultActionName: 'Open InstaLLM',
     );
 
     const details = NotificationDetails(

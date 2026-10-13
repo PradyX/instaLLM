@@ -3,9 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 class PlatformRuntimePathsService {
-  static const MethodChannel _channel = MethodChannel(
-    'pocket_llm/runtime_paths',
-  );
+  static const MethodChannel _channel = MethodChannel('installm/runtime_paths');
 
   Future<String?> getAndroidNativeLibraryDir() async {
     if (!Platform.isAndroid) return null;

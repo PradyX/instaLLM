@@ -1,11 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/llm_service.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/llm_service.dart';
 
 void main() {
-  final modelPath = Platform.environment['POCKET_LLM_TEST_MODEL'];
+  final modelPath = Platform.environment['INSTALLM_TEST_MODEL'];
   test(
     'native service generates, stops, reuses the model, and unloads',
     () async {
@@ -47,7 +47,7 @@ void main() {
       expect(service.loadedModelPath, isNull);
     },
     skip: modelPath == null
-        ? 'Set POCKET_LLM_TEST_MODEL and POCKET_LLM_MTMD_PATH for native testing.'
+        ? 'Set INSTALLM_TEST_MODEL and INSTALLM_MTMD_PATH for native testing.'
         : false,
     timeout: const Timeout(Duration(minutes: 2)),
   );

@@ -2,12 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart'
-    show ComposerMicState;
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/application/transcription_controller.dart';
-import 'package:pocket_llm/features/voice/data/platform_speech_service.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/core/widgets/chat_composer.dart' show ComposerMicState;
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/application/transcription_controller.dart';
+import 'package:installm/features/voice/data/platform_speech_service.dart';
 
 /// Where composer dictation is.
 enum DictationStage {
@@ -49,7 +48,7 @@ class DictationState {
 /// always somewhere the user can reach rather than a retry.
 String platformRefusal(PlatformSpeechStatus status) {
   if (status == PlatformSpeechStatus.unsupported) {
-    return 'This device has no speech recognizer Pocket LLM can use. Switch '
+    return 'This device has no speech recognizer InstaLLM can use. Switch '
         'the transcription engine to Whisper in Settings › Voice.';
   }
   return 'Device recognition is not allowed yet. Allow it in Settings › '

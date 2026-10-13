@@ -3,18 +3,18 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 void main() {
   late Directory tempDir;
   late File indexFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_docs_ctrl');
+    tempDir = await Directory.systemTemp.createTemp('installm_docs_ctrl');
     indexFile = File(p.join(tempDir.path, 'index', 'index.json'));
   });
 

@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:pocket_llm/features/documents/domain/embedding_model_ref.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/documents/domain/embedding_model_ref.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Resolves the embedding model a collection pins to something loadable.
 ///

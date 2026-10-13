@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/application/conversation_context_builder.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_context.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/conversations/application/conversation_context_builder.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_context.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
 
 void main() {
   const builder = ConversationContextBuilder();

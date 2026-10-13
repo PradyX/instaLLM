@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
 
 void main() {
   Float32List vector(List<double> values) => Float32List.fromList(values);

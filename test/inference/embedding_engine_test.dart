@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/services/local_embedding_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/services/local_embedding_service.dart';
+import 'package:installm/core/services/service_providers.dart';
 
 void main() {
   group('EmbeddingEngine contract', () {

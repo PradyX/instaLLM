@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_source.dart';
-import 'package:pocket_llm/features/conversations/domain/message_tool_activity.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_source.dart';
+import 'package:installm/features/conversations/domain/message_tool_activity.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
 
 /// One message in a chat, as the app draws it everywhere.
 ///

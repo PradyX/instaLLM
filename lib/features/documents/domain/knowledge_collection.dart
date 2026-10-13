@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/documents/domain/document.dart';
 
 /// Limits for collection fields a user can change.
 abstract class KnowledgeCollectionLimits {
@@ -11,7 +11,7 @@ abstract class KnowledgeCollectionLimits {
 ///
 /// A collection owns *derived* data only — extracted text, chunks and the file
 /// references — never the files themselves. Removing a collection forgets what
-/// Pocket LLM made from those files and leaves every original untouched.
+/// InstaLLM made from those files and leaves every original untouched.
 ///
 /// The collection records how its index was built (chunking settings, retrieval
 /// backend, pipeline version), which is what makes re-indexing a decision

@@ -4,12 +4,12 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/model_selection/data/gguf_reader.dart';
-import 'package:pocket_llm/features/model_selection/data/model_import_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/gguf_metadata.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_import.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/data/model_import_service.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_import.dart';
 
 import 'support/gguf_test_builder.dart';
 
@@ -37,7 +37,7 @@ void main() {
   late _TempModelStorage storage;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_import_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_import_test');
     modelDir = Directory(p.join(tempDir.path, 'models'));
     await modelDir.create(recursive: true);
     storage = _TempModelStorage(modelDir.path);

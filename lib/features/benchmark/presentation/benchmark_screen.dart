@@ -3,18 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_providers.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_service.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_controller.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/benchmark/domain/comparison_set.dart';
-import 'package:pocket_llm/features/benchmark/domain/llmfit_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/benchmark/application/benchmark_providers.dart';
+import 'package:installm/features/benchmark/application/benchmark_service.dart';
+import 'package:installm/features/benchmark/application/model_comparison_controller.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/domain/comparison_set.dart';
+import 'package:installm/features/benchmark/domain/llmfit_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 class BenchmarkScreen extends ConsumerStatefulWidget {
   const BenchmarkScreen({super.key});
@@ -1450,8 +1450,8 @@ class _ModelComparisonTabState extends ConsumerState<_ModelComparisonTab> {
                     Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        'Saved sets were written by a newer version of Pocket '
-                        'LLM, so they can be loaded but not changed here.',
+                        'Saved sets were written by a newer version of InstaLLM '
+                        ', so they can be loaded but not changed here.',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),

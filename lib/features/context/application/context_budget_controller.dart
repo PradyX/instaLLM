@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/context/data/context_budget_store.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
+import 'package:installm/features/context/data/context_budget_store.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
 
 /// Budget file, opened once per session.
 final contextBudgetStoreProvider = FutureProvider<ContextBudgetStore>(
@@ -79,7 +79,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'The context budget was written by a newer version of Pocket LLM '
+            ? 'The context budget was written by a newer version of InstaLLM '
                   'and is read-only in this build.'
             : null,
       );
@@ -133,7 +133,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
     if (state.isReadOnly) {
       state = state.copyWith(
         errorMessage:
-            'The context budget was written by a newer version of Pocket LLM '
+            'The context budget was written by a newer version of InstaLLM '
             'and is read-only in this build.',
       );
       return false;
@@ -156,7 +156,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
       if (!mounted) return false;
       state = state.copyWith(
         errorMessage: store.isReadOnly
-            ? 'The context budget was written by a newer version of Pocket LLM '
+            ? 'The context budget was written by a newer version of InstaLLM '
                   'and is read-only in this build.'
             : 'Could not save the context budget on this device.',
       );

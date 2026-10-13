@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:pocket_llm/features/mcp/domain/mcp_capabilities.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/features/mcp/domain/mcp_capabilities.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
 
 /// What a failed MCP call reports.
 class McpException implements Exception {
@@ -275,7 +275,7 @@ class McpClient {
     final init = await _transport.send('initialize', {
       'protocolVersion': protocolVersion,
       'capabilities': {},
-      'clientInfo': {'name': 'pocket-llm', 'version': '1'},
+      'clientInfo': {'name': 'installm', 'version': '1'},
     });
     String? serverName;
     String? serverVersion;

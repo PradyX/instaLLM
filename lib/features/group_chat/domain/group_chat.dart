@@ -1,4 +1,4 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// Who answers next in a group chat (Road Map 2 §11.1).
 enum SpeakerMode {

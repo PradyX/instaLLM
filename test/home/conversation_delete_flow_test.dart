@@ -6,11 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversations_page.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/conversations/presentation/conversations_page.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +43,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_delete_flow');
+    tempDir = await Directory.systemTemp.createTemp('installm_delete_flow');
     // The app resolves its own folder through a platform channel, so the
     // temporary directory keeps this test off the real app folders.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
 
 /// One workspace's vault binding: which vault, which folder, what is allowed.
 class WorkspaceVaultBinding {

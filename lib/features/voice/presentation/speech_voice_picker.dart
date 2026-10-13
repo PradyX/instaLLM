@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
 
 /// Stands for "let the device decide", which is not a voice of its own.
 const String _deviceDefaultId = '';

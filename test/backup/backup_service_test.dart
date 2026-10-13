@@ -1,18 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/backup/application/backup_service.dart';
-import 'package:pocket_llm/features/backup/domain/backup_archive.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_repository.dart';
-import 'package:pocket_llm/features/conversations/data/conversation_store.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/inference_profiles/data/inference_profile_store.dart';
-import 'package:pocket_llm/features/inference_profiles/domain/inference_profile.dart';
-import 'package:pocket_llm/features/personas/data/persona_store.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/backup/application/backup_service.dart';
+import 'package:installm/features/backup/domain/backup_archive.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/conversations/data/conversation_repository.dart';
+import 'package:installm/features/conversations/data/conversation_store.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
+import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
+import 'package:installm/features/personas/data/persona_store.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 /// One device's stores, over a temporary directory.
 class _Device {

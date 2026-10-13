@@ -1,6 +1,6 @@
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Longest text handed to the model for one document, in characters.
 ///

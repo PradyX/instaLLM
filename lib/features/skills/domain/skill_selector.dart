@@ -1,5 +1,5 @@
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/skills/domain/skill.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/skills/domain/skill.dart';
 
 /// One skill selected for the current task, with the prompt section to inject.
 class SelectedSkill {

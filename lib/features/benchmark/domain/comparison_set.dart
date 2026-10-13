@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
 
 /// One saved comparison setup: the models to run, the prompt(s) to send and
 /// whether answers are judged blind.

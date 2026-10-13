@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/group_chat/application/group_chat_controller.dart';
-import 'package:pocket_llm/features/group_chat/application/room_board_service.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/kanban/presentation/kanban_page.dart';
-import 'package:pocket_llm/features/workspaces/application/workspaces_controller.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/application/room_board_service.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/kanban/presentation/kanban_page.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 class RoomTasksPanel extends ConsumerStatefulWidget {
   const RoomTasksPanel({super.key, required this.room});

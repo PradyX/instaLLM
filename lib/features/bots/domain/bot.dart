@@ -1,4 +1,4 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// How far a bot's learned facts travel (Road Map 2 §7.4).
 ///

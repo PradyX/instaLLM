@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/bot.dart';
 
 /// Bot templates that ship with the app (Road Map 2 §16).
 ///

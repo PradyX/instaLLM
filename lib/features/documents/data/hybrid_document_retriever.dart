@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'package:pocket_llm/features/documents/data/lexical_document_retriever.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/data/lexical_document_retriever.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
 
 /// Retrieval over the local index, lexical first and semantic when it can be.
 ///

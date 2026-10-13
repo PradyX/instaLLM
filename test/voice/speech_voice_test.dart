@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 
 void main() {
   test('labels a voice with its language, or without one', () {

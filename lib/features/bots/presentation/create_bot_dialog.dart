@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_image_picker.dart';
-import 'package:pocket_llm/i18n/strings.g.dart';
+import 'package:installm/core/widgets/default_bot_avatar.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:installm/features/profile_images/presentation/profile_image_picker.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 class BotDraft {
   const BotDraft(this.name, this.portrait);

@@ -1,25 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/settings/reasoning_settings_provider.dart';
-import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
-import 'package:pocket_llm/features/bots/application/bots_controller.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/bots/domain/bot_prompt.dart';
-import 'package:pocket_llm/features/group_chat/data/group_chat_store.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_router.dart';
-import 'package:pocket_llm/features/group_chat/application/room_board_service.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_tools.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
-import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
-import 'package:pocket_llm/features/obsidian/application/vaults_controller.dart';
-import 'package:pocket_llm/features/skills/application/skills_controller.dart';
-import 'package:pocket_llm/features/skills/domain/skill_selector.dart';
-import 'package:pocket_llm/features/tools/application/tools_providers.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/settings/reasoning_settings_provider.dart';
+import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/bots/application/bots_controller.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/bot_prompt.dart';
+import 'package:installm/features/group_chat/data/group_chat_store.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/domain/group_router.dart';
+import 'package:installm/features/group_chat/application/room_board_service.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/kanban/application/kanban_tools.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/features/obsidian/application/vault_notes_service.dart';
+import 'package:installm/features/obsidian/application/vaults_controller.dart';
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/skills/domain/skill_selector.dart';
+import 'package:installm/features/tools/application/tools_providers.dart';
 
 /// Group chat file, opened once per session.
 final groupChatStoreProvider = FutureProvider<GroupChatStore>(
@@ -127,7 +127,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
-            ? 'Group chats were written by a newer version of Pocket LLM and '
+            ? 'Group chats were written by a newer version of InstaLLM and '
                   'are read-only in this build.'
             : null,
       );

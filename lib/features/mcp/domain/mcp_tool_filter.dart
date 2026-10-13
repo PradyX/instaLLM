@@ -1,6 +1,6 @@
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_capabilities.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/mcp/domain/mcp_capabilities.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
 
 /// Lazy MCP tool selection (Road Map 2 §6.5).
 ///

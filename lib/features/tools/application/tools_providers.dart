@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/data/conversation_search_tool.dart';
-import 'package:pocket_llm/features/tools/data/document_search_tool.dart';
-import 'package:pocket_llm/features/tools/data/installed_models_tool.dart';
-import 'package:pocket_llm/features/tools/data/read_document_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/application/tool_approval_controller.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/data/conversation_search_tool.dart';
+import 'package:installm/features/tools/data/document_search_tool.dart';
+import 'package:installm/features/tools/data/installed_models_tool.dart';
+import 'package:installm/features/tools/data/read_document_tool.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// The registry every tool call in the app goes through.
 ///

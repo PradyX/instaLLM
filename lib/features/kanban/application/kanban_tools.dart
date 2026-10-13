@@ -1,10 +1,10 @@
-import 'package:pocket_llm/features/kanban/data/task_repository.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/kanban/application/board_task_operations.dart';
-export 'package:pocket_llm/features/kanban/application/board_task_operations.dart'
+import 'package:installm/features/kanban/data/task_repository.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/kanban/application/board_task_operations.dart';
+export 'package:installm/features/kanban/application/board_task_operations.dart'
     show createBoardTask;
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// What a board-bound tool call needs. Resolved per call so the tools work
 /// for whatever workspace the run belongs to — never just the active one.

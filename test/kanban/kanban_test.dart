@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/kanban/data/task_repository.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
-import 'package:pocket_llm/features/kanban/domain/task_note_codec.dart';
-import 'package:pocket_llm/features/obsidian/application/vault_notes_service.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_paths.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/kanban/data/task_repository.dart';
+import 'package:installm/features/kanban/domain/task.dart';
+import 'package:installm/features/kanban/domain/task_note_codec.dart';
+import 'package:installm/features/obsidian/application/vault_notes_service.dart';
+import 'package:installm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/features/obsidian/domain/vault_registration.dart';
 
 void main() {
   group('TaskStatus', () {
@@ -102,7 +102,7 @@ void main() {
 
   group('Task repositories', () {
     test('local store round-trips and numbers PL ids', () async {
-      final dir = await Directory.systemTemp.createTemp('pocketllm_tasks');
+      final dir = await Directory.systemTemp.createTemp('installm_tasks');
       try {
         final repo = LocalTaskRepository(dir);
         expect(await repo.nextNumber('w1'), 1);
@@ -119,9 +119,7 @@ void main() {
     });
 
     test('vault repository boards from notes', () async {
-      final vaultDir = await Directory.systemTemp.createTemp(
-        'pocketllm_vtasks',
-      );
+      final vaultDir = await Directory.systemTemp.createTemp('installm_vtasks');
       try {
         final paths = VaultPaths(
           vaultRoot: vaultDir.path,

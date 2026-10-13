@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/mcp/application/mcp_controller.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/features/mcp/application/mcp_controller.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
 
 /// MCP servers: what is configured, what each one offers, and what each
 /// tool may do.

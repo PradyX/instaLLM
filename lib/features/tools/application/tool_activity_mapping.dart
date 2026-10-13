@@ -1,7 +1,7 @@
-import 'package:pocket_llm/features/conversations/domain/message_tool_activity.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_call.dart';
-import 'package:pocket_llm/features/tools/domain/tool_execution_result.dart';
+import 'package:installm/features/conversations/domain/message_tool_activity.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_call.dart';
+import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
 /// Snapshot of one tool run for the conversation record.
 ///

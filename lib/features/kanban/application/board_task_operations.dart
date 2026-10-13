@@ -1,5 +1,5 @@
-import 'package:pocket_llm/features/kanban/data/task_repository.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
+import 'package:installm/features/kanban/data/task_repository.dart';
+import 'package:installm/features/kanban/domain/task.dart';
 
 final _pendingEdits = Expando<Map<String, Future<void>>>();
 

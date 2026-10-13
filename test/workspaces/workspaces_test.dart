@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/obsidian/data/vault_store.dart';
-import 'package:pocket_llm/features/workspaces/domain/workspace.dart';
+import 'package:installm/features/obsidian/data/vault_store.dart';
+import 'package:installm/features/workspaces/domain/workspace.dart';
 
 void main() {
   group('Workspace', () {

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/bots/domain/bot.dart';
-import 'package:pocket_llm/features/bots/domain/bot_prompt.dart';
-import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/bots/domain/bot_prompt.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
 
 void main() {
   group('Bot', () {

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/tools/data/calculator_tool.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/data/calculator_tool.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 void main() {
   test('evaluates arithmetic with normal precedence', () {

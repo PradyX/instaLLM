@@ -1,14 +1,14 @@
 import 'dart:convert';
 
-import 'package:pocket_llm/features/benchmark/domain/local_benchmark_result.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
 
 /// Marker and version of a prompt-suite export payload.
 ///
 /// A suite is a list of runs that share one configuration, so it gets its own
 /// format instead of stretching the single-run payload: consumers of
-/// `pocketllm.model-comparison` keep working unchanged.
-const String promptSuiteExportFormat = 'pocketllm.model-comparison-suite';
+/// `installm.model-comparison` keep working unchanged.
+const String promptSuiteExportFormat = 'installm.model-comparison-suite';
 const int promptSuiteExportSchemaVersion = 1;
 
 /// One prompt of a suite together with the answers it produced.

@@ -7,8 +7,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/profile_images/data/profile_image_store.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/data/profile_image_store.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 /// Requests public assets only, using a dedicated client with no auth/logging.
 /// The catalog stays in memory. Only requested search/selected images reach disk.

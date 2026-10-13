@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:pocket_llm/core/services/model_storage_service.dart';
-import 'package:pocket_llm/features/voice/application/recording_controller.dart';
-import 'package:pocket_llm/features/voice/data/audio_clip_reader.dart';
-import 'package:pocket_llm/features/voice/data/whisper_model_service.dart';
-import 'package:pocket_llm/features/voice/data/whisper_speech_service.dart';
-import 'package:pocket_llm/features/voice/domain/whisper_model_option.dart';
+import 'package:installm/core/services/model_storage_service.dart';
+import 'package:installm/features/voice/application/recording_controller.dart';
+import 'package:installm/features/voice/data/audio_clip_reader.dart';
+import 'package:installm/features/voice/data/whisper_model_service.dart';
+import 'package:installm/features/voice/data/whisper_speech_service.dart';
+import 'package:installm/features/voice/domain/whisper_model_option.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
 /// Talks to the Whisper engine on a real device.
@@ -170,7 +170,7 @@ void main() {
 
 /// Speaks [text] into a 16 kHz mono WAV, which is what the engine decodes.
 Future<File> _spokenClip(String text) async {
-  final directory = await Directory.systemTemp.createTemp('pocket_llm_speech');
+  final directory = await Directory.systemTemp.createTemp('installm_speech');
   final file = File('${directory.path}/spoken.wav');
   final result = await Process.run('say', [
     '-o',

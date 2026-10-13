@@ -7,10 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/data/petdex_service.dart';
-import 'package:pocket_llm/features/profile_images/data/profile_image_store.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/data/petdex_service.dart';
+import 'package:installm/features/profile_images/data/profile_image_store.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 class _Adapter implements HttpClientAdapter {
   _Adapter(this.respond);

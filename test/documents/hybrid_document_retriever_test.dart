@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/documents/data/hybrid_document_retriever.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/data/hybrid_document_retriever.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_vectors.dart';
 
 void main() {
   DocumentSource sourceFor(String id, String name) => DocumentSource(

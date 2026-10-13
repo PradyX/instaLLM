@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/benchmark/application/model_comparison_controller.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/benchmark/data/comparison_set_store.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/benchmark/application/model_comparison_controller.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/data/comparison_set_store.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 import 'scripted_comparison_runtime.dart';
 
@@ -20,9 +20,7 @@ void main() {
   late ComparisonSetStore setStore;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp(
-      'pocketllm_compare_harness',
-    );
+    tempDir = await Directory.systemTemp.createTemp('installm_compare_harness');
     setStore = ComparisonSetStore(
       File(p.join(tempDir.path, 'benchmark', 'comparison_sets.json')),
     );

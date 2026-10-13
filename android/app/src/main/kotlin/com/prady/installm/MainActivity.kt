@@ -1,15 +1,15 @@
-package com.prady.pocketllm
+package com.prady.installm
 
 import android.os.StatFs
-import com.prady.pocketllm.tools.ToolExecutor
+import com.prady.installm.tools.ToolExecutor
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private val storageChannel = "pocket_llm/storage_info"
-    private val runtimePathsChannel = "pocket_llm/runtime_paths"
-    private val toolExecutorChannel = "pocket_llm/tool_executor"
+    private val storageChannel = "installm/storage_info"
+    private val runtimePathsChannel = "installm/runtime_paths"
+    private val toolExecutorChannel = "installm/tool_executor"
     private val toolExecutor = ToolExecutor()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

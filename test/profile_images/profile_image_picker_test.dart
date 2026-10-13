@@ -5,18 +5,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
-import 'package:pocket_llm/features/bots/application/bots_controller.dart';
-import 'package:pocket_llm/features/bots/data/bot_store.dart';
-import 'package:pocket_llm/features/bots/domain/built_in_bots.dart';
-import 'package:pocket_llm/features/bots/presentation/create_bot_dialog.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/data/petdex_service.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:pocket_llm/features/profile_images/presentation/profile_image_picker.dart';
+import 'package:installm/core/widgets/default_bot_avatar.dart';
+import 'package:installm/features/bots/application/bots_controller.dart';
+import 'package:installm/features/bots/data/bot_store.dart';
+import 'package:installm/features/bots/domain/built_in_bots.dart';
+import 'package:installm/features/bots/presentation/create_bot_dialog.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/data/petdex_service.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
+import 'package:installm/features/profile_images/presentation/profile_image_picker.dart';
 
 const _boba = PetdexPet(
   slug: 'boba',

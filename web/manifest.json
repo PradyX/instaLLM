@@ -1,11 +1,11 @@
 {
-    "name": "Pocket LLM",
-    "short_name": "Pocket LLM",
+    "name": "InstaLLM",
+    "short_name": "InstaLLM",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#101213",
+    "theme_color": "#101213",
+    "description": "Private AI. Fully on-device.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

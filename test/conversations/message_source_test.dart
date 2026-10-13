@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_source.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_source.dart';
 
 void main() {
   MessageSource source({

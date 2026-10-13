@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/personas/data/persona_store.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/personas/data/persona_store.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 void main() {
   late Directory tempDir;
@@ -14,7 +14,7 @@ void main() {
   late PersonaStore store;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_personas_ctrl');
+    tempDir = await Directory.systemTemp.createTemp('installm_personas_ctrl');
     file = File(p.join(tempDir.path, 'personas', 'personas.json'));
     store = PersonaStore(file);
   });

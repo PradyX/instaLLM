@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/hugging_face_repository_service.dart';
-import 'package:pocket_llm/core/theme/theme.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_page.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
+import 'package:installm/core/services/hugging_face_repository_service.dart';
+import 'package:installm/core/theme/theme.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_page.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 
 class _Models extends ModelSelectionController {
   final installed = <String>{};

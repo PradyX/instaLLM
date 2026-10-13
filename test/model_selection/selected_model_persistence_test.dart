@@ -4,9 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 
 /// The two smallest catalog chat models. Installing both leaves a real choice,
 /// so "what the user picked" can differ from "what the app would pick".
@@ -29,7 +29,7 @@ void main() {
   }
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_selected_model');
+    tempDir = await Directory.systemTemp.createTemp('installm_selected_model');
     secureStore = <String, String>{};
     // The app resolves its own folders through a platform channel, so the
     // temporary directory keeps this test off the real app folders.

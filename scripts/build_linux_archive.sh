@@ -52,7 +52,7 @@ main() {
   arch="$(basename "$(dirname "$(dirname "${bundle_dir}")")")"
   local release_dir
   release_dir="$(dirname "${bundle_dir}")"
-  local package_name="pocket_llm-linux-${arch}"
+  local package_name="installm-linux-${arch}"
   local stage_dir="${release_dir}/package"
   local archive_path="${release_dir}/${package_name}.tar.gz"
 

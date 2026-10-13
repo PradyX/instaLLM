@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/voice/application/voice_controller.dart';
-import 'package:pocket_llm/features/voice/application/whisper_models_controller.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
-import 'package:pocket_llm/features/voice/data/whisper_speech_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/voice/application/voice_controller.dart';
+import 'package:installm/features/voice/application/whisper_models_controller.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/features/voice/data/whisper_speech_service.dart';
 
 /// The model transcription will run, or null when none is ready.
 ///

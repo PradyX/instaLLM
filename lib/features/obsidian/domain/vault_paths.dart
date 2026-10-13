@@ -11,7 +11,7 @@ class VaultPaths {
   /// Absolute vault root on this device.
   final String vaultRoot;
 
-  /// Workspace-relative project directory, e.g. `Projects/pocketllm`.
+  /// Workspace-relative project directory, e.g. `Projects/installm`.
   final String projectPath;
 
   /// Absolute project directory.

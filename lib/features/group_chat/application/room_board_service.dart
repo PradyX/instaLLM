@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/group_chat/domain/group_chat.dart';
-import 'package:pocket_llm/features/kanban/application/board_task_operations.dart';
-import 'package:pocket_llm/features/kanban/application/kanban_controller.dart';
-import 'package:pocket_llm/features/kanban/domain/task.dart';
+import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/kanban/application/board_task_operations.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/kanban/domain/task.dart';
 
 final roomBoardServiceProvider = Provider((ref) => RoomBoardService(ref));
 

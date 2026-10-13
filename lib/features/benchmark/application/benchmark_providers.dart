@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_history.dart';
+import 'package:installm/features/benchmark/application/benchmark_history.dart';
 
 /// Benchmark history file, opened once per session.
 ///

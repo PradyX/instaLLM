@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/voice/application/voice_controller.dart';
-import 'package:pocket_llm/features/voice/domain/voice_model_option.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/voice/application/voice_controller.dart';
+import 'package:installm/features/voice/domain/voice_model_option.dart';
 
 /// Opens the GGUF voice-model chooser.
 ///

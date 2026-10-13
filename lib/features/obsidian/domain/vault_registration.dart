@@ -1,5 +1,5 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
-import 'package:pocket_llm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/obsidian/domain/vault_paths.dart';
 
 /// One registered Obsidian vault (Road Map 2 §8.1).
 ///

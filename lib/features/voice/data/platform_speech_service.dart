@@ -299,7 +299,7 @@ final platformSttStatusProvider = FutureProvider<PlatformSpeechStatus>((ref) {
 /// launcher with no speech-recognition description makes macOS abort the app
 /// instead of prompting (`__TCC_CRASHING_DUE_TO_PRIVACY_VIOLATION__` in the
 /// crash report — how Freebuff, which declares a microphone description and no
-/// speech-recognition one, takes Pocket LLM down on the first request).
+/// speech-recognition one, takes InstaLLM down on the first request).
 ///
 /// A LaunchServices launch is started by `launchd`, so its parent is pid 1;
 /// anything else has the launching program as its parent, which is the case

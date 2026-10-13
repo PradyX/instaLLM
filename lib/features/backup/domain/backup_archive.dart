@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+import 'package:installm/core/data/legacy_export_formats.dart';
+
 /// Marker written into every backup file, so a wrong file is refused with a
 /// clear message instead of being half-imported.
-const String backupFormat = 'pocketllm.backup';
+const String backupFormat = 'installm.backup';
 
 /// Schema version this build writes, and the highest one it can read.
 ///
@@ -201,19 +203,20 @@ class BackupArchive {
       decoded = jsonDecode(raw);
     } catch (_) {
       throw const FormatException(
-        'This file is not a Pocket LLM backup: it is not readable JSON.',
+        'This file is not a InstaLLM backup: it is not readable JSON.',
       );
     }
     if (decoded is! Map) {
       throw const FormatException(
-        'This file is not a Pocket LLM backup: it holds no backup object.',
+        'This file is not a InstaLLM backup: it holds no backup object.',
       );
     }
 
     final payload = Map<String, dynamic>.from(decoded);
-    if (payload['format'] != backupFormat) {
+    if (payload['format'] != backupFormat &&
+        payload['format'] != LegacyExportFormats.backup) {
       throw const FormatException(
-        'This file is not a Pocket LLM backup (it carries no Pocket LLM '
+        'This file is not a InstaLLM backup (it carries no InstaLLM '
         'format marker).',
       );
     }

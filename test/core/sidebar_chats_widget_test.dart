@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/navigation/app_shell.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/core/navigation/app_shell.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 
 /// A chat with no messages, titled after its id so assertions read plainly.
 ConversationSummary _chat(
@@ -87,7 +87,7 @@ void main() {
   setUp(() async {
     // The sidebar's bots and rooms come from the user's application-support
     // directory; a temporary one keeps these checks off the real stores.
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_sidebar');
+    tempDir = await Directory.systemTemp.createTemp('installm_sidebar');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),

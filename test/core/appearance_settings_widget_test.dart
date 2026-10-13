@@ -6,15 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:pocket_llm/app.dart';
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/core/theme/appearance_provider.dart';
-import 'package:pocket_llm/core/theme/appearance_store.dart';
-import 'package:pocket_llm/core/theme/theme_provider.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart';
-import 'package:pocket_llm/features/settings/presentation/appearance_settings_section.dart';
-import 'package:pocket_llm/features/settings/presentation/accent_theme_tile.dart';
+import 'package:installm/app.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/theme/appearance_provider.dart';
+import 'package:installm/core/theme/appearance_store.dart';
+import 'package:installm/core/theme/theme_provider.dart';
+import 'package:installm/core/widgets/chat_composer.dart';
+import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
+import 'package:installm/features/settings/presentation/accent_theme_tile.dart';
 
 void main() {
   late Directory directory;

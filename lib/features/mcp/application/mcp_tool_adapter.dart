@@ -1,8 +1,8 @@
-import 'package:pocket_llm/features/mcp/data/mcp_client.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_capabilities.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/mcp/data/mcp_client.dart';
+import 'package:installm/features/mcp/domain/mcp_capabilities.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Exposes one allowed MCP tool as a registry entry.
 ///

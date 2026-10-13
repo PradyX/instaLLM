@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/model_selection/domain/model_reasoning.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// The reasoning state the user picked, per model.
 ///

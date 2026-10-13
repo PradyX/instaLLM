@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/storage/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'theme_provider.g.dart';

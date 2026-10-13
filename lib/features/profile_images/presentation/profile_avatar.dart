@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
-import 'package:pocket_llm/features/profile_images/application/profile_images_controller.dart';
-import 'package:pocket_llm/features/profile_images/domain/petdex_pet.dart';
+import 'package:installm/core/widgets/default_bot_avatar.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
+import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 /// Shared by the sidebar, header, member list and picker. Never fetches the
 /// catalog: the default bot mark or a room's member stack needs no networking.

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
 
 /// How the app decides how much of the window one chat request may use.
 ///

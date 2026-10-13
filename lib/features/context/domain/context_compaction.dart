@@ -1,6 +1,6 @@
-import 'package:pocket_llm/features/context/domain/compaction_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
+import 'package:installm/features/context/domain/compaction_policy.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/message.dart';
 
 /// How one message is treated when the window fills up.
 ///

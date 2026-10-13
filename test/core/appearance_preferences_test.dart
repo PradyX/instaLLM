@@ -5,12 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/theme/appearance_preferences.dart';
-import 'package:pocket_llm/core/theme/appearance_provider.dart';
-import 'package:pocket_llm/core/theme/appearance_store.dart';
-import 'package:pocket_llm/core/theme/appearance_surfaces.dart';
-import 'package:pocket_llm/core/theme/theme.dart';
-import 'package:pocket_llm/core/theme/theme_provider.dart';
+import 'package:installm/core/theme/appearance_preferences.dart';
+import 'package:installm/core/theme/appearance_provider.dart';
+import 'package:installm/core/theme/appearance_store.dart';
+import 'package:installm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/theme/theme.dart';
+import 'package:installm/core/theme/theme_provider.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

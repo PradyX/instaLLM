@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_capabilities.dart';
-import 'package:pocket_llm/features/mcp/domain/mcp_server.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/mcp/domain/mcp_capabilities.dart';
+import 'package:installm/features/mcp/domain/mcp_server.dart';
 
 /// Persisted MCP servers plus the last discovered capabilities of each.
 ///

@@ -1,4 +1,4 @@
-package com.prady.pocketllm.tools
+package com.prady.installm.tools
 
 class ToolRegistry(
     tools: List<Tool>,

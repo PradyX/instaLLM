@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/conversations/presentation/delete_conversation_dialog.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/conversations/presentation/delete_conversation_dialog.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
 
 /// Conversation list: search, pin, rename, delete, export/import and switching
 /// between locally stored conversations.

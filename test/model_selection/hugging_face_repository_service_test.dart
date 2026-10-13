@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/services/hugging_face_repository_service.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/services/hugging_face_repository_service.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 HuggingFaceRepositoryFile _file(
   String path, {

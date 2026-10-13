@@ -6,12 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/app_info.dart';
-import 'package:pocket_llm/features/backup/application/backup_providers.dart';
-import 'package:pocket_llm/features/backup/application/backup_service.dart';
-import 'package:pocket_llm/features/backup/domain/backup_archive.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/core/app_info.dart';
+import 'package:installm/features/backup/application/backup_providers.dart';
+import 'package:installm/features/backup/application/backup_service.dart';
+import 'package:installm/features/backup/domain/backup_archive.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// Saves and restores everything that is not a model file.
 ///
@@ -394,10 +394,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       _pendingFileName = null;
     });
     try {
-      const group = XTypeGroup(
-        label: 'Pocket LLM backup',
-        extensions: ['json'],
-      );
+      const group = XTypeGroup(label: 'InstaLLM backup', extensions: ['json']);
       final file = await openFile(acceptedTypeGroups: [group]);
       if (file == null) return;
       final content = await File(file.path).readAsString();
@@ -447,7 +444,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
 
   String _suggestedFileName(DateTime createdAt) {
     String two(int value) => value.toString().padLeft(2, '0');
-    return 'pocketllm-backup-'
+    return 'installm-backup-'
         '${createdAt.year}${two(createdAt.month)}${two(createdAt.day)}-'
         '${two(createdAt.hour)}${two(createdAt.minute)}.json';
   }
@@ -462,7 +459,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       final location = await getSaveLocation(
         suggestedName: fileName,
         acceptedTypeGroups: const [
-          XTypeGroup(label: 'Pocket LLM backup', extensions: ['json']),
+          XTypeGroup(label: 'InstaLLM backup', extensions: ['json']),
         ],
       );
       if (location == null) return null;

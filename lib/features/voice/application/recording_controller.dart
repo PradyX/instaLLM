@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/voice/data/microphone_recorder.dart';
+import 'package:installm/features/voice/data/microphone_recorder.dart';
 
 /// The microphone recorder, injectable so tests never touch a device.
 final microphoneRecorderProvider = Provider<MicrophoneRecorder>((ref) {
@@ -102,7 +102,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         if (!mounted) return;
         state = state.copyWith(
           errorMessage:
-              'Pocket LLM needs microphone access to record. Grant it for this '
+              'InstaLLM needs microphone access to record. Grant it for this '
               'app in the system settings, then try again.',
         );
         return;

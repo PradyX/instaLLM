@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/features/conversations/application/conversation_context_builder.dart';
-import 'package:pocket_llm/features/conversations/application/conversation_memory_service.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation.dart';
-import 'package:pocket_llm/features/conversations/domain/conversation_memory.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_context.dart';
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/features/conversations/application/conversation_context_builder.dart';
+import 'package:installm/features/conversations/application/conversation_memory_service.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/conversation.dart';
+import 'package:installm/features/conversations/domain/conversation_memory.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_context.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
 
 /// An engine that is not llama.cpp, so the summarizer is exercised through the
 /// seam that chat itself uses.
@@ -352,14 +352,14 @@ void main() {
   group('ConversationMemoryService prompt', () {
     test('carries the previous summary and the new messages, oldest first', () {
       final prompt = service.buildPrompt(
-        previousSummary: 'The user is building Pocket LLM.',
+        previousSummary: 'The user is building InstaLLM.',
         messages: [
           message('m1', 'How do I sign a macOS build?'),
           message('m2', 'Use the run script.', isUser: false),
         ],
       );
 
-      expect(prompt, contains('The user is building Pocket LLM.'));
+      expect(prompt, contains('The user is building InstaLLM.'));
       expect(prompt, contains('User: How do I sign a macOS build?'));
       expect(prompt, contains('Assistant: Use the run script.'));
       expect(

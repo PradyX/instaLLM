@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:llama_cpp_dart/llama_cpp_dart.dart';
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/services/llm_service.dart';
-import 'package:pocket_llm/core/services/native_runtime_layout.dart';
-import 'package:pocket_llm/core/services/platform_runtime_paths_service.dart';
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/core/utils/logger.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/services/llm_service.dart';
+import 'package:installm/core/services/native_runtime_layout.dart';
+import 'package:installm/core/services/platform_runtime_paths_service.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/core/utils/logger.dart';
 
 /// How an embedding context is sized.
 ///

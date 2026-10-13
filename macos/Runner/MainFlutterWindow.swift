@@ -8,7 +8,7 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     
-    let storageChannel = FlutterMethodChannel(name: "pocket_llm/storage_info", binaryMessenger: flutterViewController.engine.binaryMessenger)
+    let storageChannel = FlutterMethodChannel(name: "installm/storage_info", binaryMessenger: flutterViewController.engine.binaryMessenger)
     storageChannel.setMethodCallHandler { (call, result) in
       if call.method == "getStorageInfo" {
         do {
@@ -31,7 +31,7 @@ class MainFlutterWindow: NSWindow {
     }
 
     let runtimePathsChannel = FlutterMethodChannel(
-      name: "pocket_llm/runtime_paths",
+      name: "installm/runtime_paths",
       binaryMessenger: flutterViewController.engine.binaryMessenger
     )
     runtimePathsChannel.setMethodCallHandler { call, result in
@@ -47,7 +47,7 @@ class MainFlutterWindow: NSWindow {
   }
 
   private func configureWindowFrame() {
-    let autosaveName = NSWindow.FrameAutosaveName("PocketLLMMainWindow.v1")
+    let autosaveName = NSWindow.FrameAutosaveName("InstaLLMMainWindow.v1")
     let restored = setFrameUsingName(autosaveName)
 
     if !restored {

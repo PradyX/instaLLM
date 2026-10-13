@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/document_retrieval.dart';
 
 /// Retrieved local document text prepared for one request.
 ///

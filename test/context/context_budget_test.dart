@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/context/application/context_budget_controller.dart';
-import 'package:pocket_llm/features/context/data/context_budget_store.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/context/application/context_budget_controller.dart';
+import 'package:installm/features/context/data/context_budget_store.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
 
 void main() {
   group('ContextBudget', () {
@@ -242,7 +242,7 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('pocketllm_budget');
+      tempDir = await Directory.systemTemp.createTemp('installm_budget');
     });
 
     tearDown(() async {
@@ -334,7 +334,7 @@ void main() {
     late ContextBudgetStore store;
 
     setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('pocketllm_budget_ctl');
+      tempDir = await Directory.systemTemp.createTemp('installm_budget_ctl');
       file = File(p.join(tempDir.path, 'context', 'budget.json'));
       store = ContextBudgetStore(file);
     });

@@ -3,17 +3,17 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/data/pdf_document_extractor.dart';
-import 'package:pocket_llm/features/documents/domain/document.dart';
-import 'package:pocket_llm/features/documents/domain/document_extraction.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/data/pdf_document_extractor.dart';
+import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/document_extraction.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 void main() {
   late Directory tempDir;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_pdf_test');
+    tempDir = await Directory.systemTemp.createTemp('installm_pdf_test');
   });
 
   tearDown(() async {

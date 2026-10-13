@@ -1,15 +1,15 @@
-> **Development has moved:** Active development continues as **InstaLLM** at [PradyX/instaLLM](https://github.com/PradyX/instaLLM). This repository is retained for historical reference and receives no further development.
-
 <p align="center">
-  <img src="assets/icons/pocketllm_new.png" width="120" alt="Pocket LLM Logo">
+  <img src="assets/icons/installm.png" width="120" alt="InstaLLM Logo">
 </p>
 
-# Pocket LLM
+# InstaLLM
 
-Pocket LLM is a **privacy-first local AI assistant that runs entirely on your device**.  
+[Source repository](https://github.com/PradyX/instaLLM) · Private AI. Fully on-device.
+
+InstaLLM is a **privacy-first local AI assistant that runs entirely on your device**.
 It enables **on-device Local Language Model (LLM) inference using GGUF models** with `llama_cpp_dart`, allowing you to chat with AI **without sending your data to external servers**.
 
-Unlike most AI apps that rely on cloud APIs, **Pocket LLM performs all inference locally on your phone or desktop**. Your prompts, conversations, and models remain **fully under your control**, making it suitable for users who value **privacy, offline capability, and ownership of their data**.
+Unlike most AI apps that rely on cloud APIs, **InstaLLM performs all inference locally on your phone or desktop**. Your prompts, conversations, and models remain **fully under your control**, making it suitable for users who value **privacy, offline capability, and ownership of their data**.
 
 The app is designed as a **mobile-first local AI runtime** that now also supports desktop workflows, providing a smooth chat experience with model downloads, streaming responses, and per-model chat memory — all running directly **on-device**.
 
@@ -20,7 +20,7 @@ Because inference happens locally:
 - No usage tracking of your conversations
 - Works even without an internet connection (after models are downloaded)
 
-Pocket LLM focuses on bringing **personal AI to your pocket** — lightweight, private, and fully local.
+InstaLLM brings **personal AI to your devices** — lightweight, private, and fully local.
 
 <p align="center">
   <img src="screens/1.png" width="18%" />
@@ -258,13 +258,13 @@ Your distro may use a different runtime package name for `jsoncpp`.
 
 ### Linux notifications do not appear
 
-Pocket LLM uses the Freedesktop notifications API on Linux.
+InstaLLM uses the Freedesktop notifications API on Linux.
 You need a running desktop notification daemon/session for notifications to show.
 
 ### Linux secure storage falls back to local file storage
 
 On Linux, `flutter_secure_storage` depends on the system keyring.
-If the keyring is unavailable or locked, Pocket LLM automatically falls back to app-local storage so the app can still run.
+If the keyring is unavailable or locked, InstaLLM automatically falls back to app-local storage so the app can still run.
 Install and unlock a supported keyring if you want the platform-backed secure store.
 
 ## Privacy
@@ -282,3 +282,62 @@ Install and unlock a supported keyring if you want the platform-backed secure st
 
 This project is licensed under **GNU GPL v3**.
 See [LICENSE](LICENSE).
+
+
+## App identity and existing data
+
+The Dart package is `installm`; native app identifiers are `com.prady.installm`.
+This is a new installation identity. It does not overwrite or uninstall the
+previous app. History and tags are preserved in this repository.
+
+Before switching on Android or iOS, use the previous app's **Settings → Backup**
+to export a backup, then import it into InstaLLM. Previous conversation, backup,
+and persona exports remain readable. New exports use `installm.*` markers.
+Backups do not include model weights, attachment binaries, credentials, or the
+entire workspace (including bots, rooms and Board tasks); retain the previous
+installation and re-add models/files as needed. These sandboxed platforms do not
+allow InstaLLM to read another app's private data automatically.
+
+For desktop app-support files, quit both installations and run the explicit,
+local migration before first launching InstaLLM:
+
+```bash
+dart run scripts/migrate_app_data.dart \
+  --source "/absolute/path/to/previous/app-support" \
+  --destination "/absolute/path/to/new/app-support"
+```
+
+On macOS the destination is `~/Library/Application Support/com.prady.installm`.
+On Linux it is normally `~/.local/share/com.prady.installm`; confirm the location
+for your installation. The command copies files unchanged through a temporary
+directory and writes `identity_migration.v1.json`. It refuses existing
+destinations, ambiguous compatibility stores and overlapping paths, preserves
+partial/corrupt files and links, and retains all original data. The Linux file
+compatibility store is renamed to `installm_secure_store.json`.
+
+This command does not migrate OS Keychain/keyring entries or preferences tied to
+the previous native identity. Re-enter credentials and re-add model records if
+needed. Model/attachment paths in Documents and external references are kept
+where they are; model weights are not duplicated by the support migration.
+Keep the source directory because existing absolute references can still point
+to it. No private file contents are printed or sent over the network.
+
+## Regenerating icons
+
+`InstaLLM_llama_vector.svg` is the supplied master artwork. The icon and splash
+assets for Android, iOS, macOS, Windows and web are derived from it; Linux uses
+the bundled `assets/icons/installm.png` for its window and desktop launcher.
+Rasterization uses CairoSVG 2.9.1 and Cairo in a temporary Python virtualenv:
+
+```bash
+python3 -m venv /tmp/installm-icons
+/tmp/installm-icons/bin/pip install CairoSVG==2.9.1
+/tmp/installm-icons/bin/python scripts/generate_brand_icons.py
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
+
+On Homebrew macOS, install Cairo if missing and set
+`DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` for the Python invocation when
+Cairo is not found. The SVG's transparent rounded tile is preserved for macOS;
+iOS icons use an opaque charcoal background, and Android has an adaptive icon.

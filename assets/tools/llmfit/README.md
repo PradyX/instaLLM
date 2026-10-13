@@ -13,7 +13,7 @@ Planned / supported asset paths in app code:
 - `windows/x64/llmfit.exe`
 
 Android arm64 build hook:
-- Set `POCKET_LLMFIT_ANDROID_ARM64_SOURCE=/absolute/path/to/llmfit`
+- Set `INSTALLM_LLMFIT_ANDROID_ARM64_SOURCE=/absolute/path/to/llmfit`
 - Then run your normal Android build command.
 - The Gradle task `bundleLlmfitAndroidArm64` will copy that binary to:
   `assets/tools/llmfit/android/arm64-v8a/llmfit`

@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/context/domain/context_budget.dart';
-import 'package:pocket_llm/features/conversations/domain/context_policy.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
-import 'package:pocket_llm/features/personas/domain/persona_prompt.dart';
-import 'package:pocket_llm/features/tools/application/built_in_tools.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/context/domain/context_budget.dart';
+import 'package:installm/features/conversations/domain/context_policy.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/personas/domain/persona.dart';
+import 'package:installm/features/personas/domain/persona_prompt.dart';
+import 'package:installm/features/tools/application/built_in_tools.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 void main() {
   Message userMessage(String text) => Message(

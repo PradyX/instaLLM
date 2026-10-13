@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/core/inference/inference_engine.dart';
-import 'package:pocket_llm/core/services/llm_service.dart';
-import 'package:pocket_llm/core/services/service_providers.dart';
-import 'package:pocket_llm/features/agents/application/agent_loop_service.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/voice/data/speech_to_text_service.dart';
+import 'package:installm/core/inference/inference_engine.dart';
+import 'package:installm/core/services/llm_service.dart';
+import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/voice/data/speech_to_text_service.dart';
 
 /// An engine that is not llama.cpp at all.
 ///

@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/skills/domain/skill.dart';
+import 'package:installm/features/skills/domain/skill.dart';
 
 /// Skills that ship with the app (Road Map 2 §16 supports these workflows).
 ///

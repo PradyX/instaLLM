@@ -5,11 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_controller.dart';
-import 'package:pocket_llm/features/benchmark/application/model_comparison_service.dart';
-import 'package:pocket_llm/features/benchmark/domain/model_comparison_export.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/benchmark/application/model_comparison_controller.dart';
+import 'package:installm/features/benchmark/application/model_comparison_service.dart';
+import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// Runs a real comparison on this machine, against models that are really on
 /// disk, and round-trips the export through the real clipboard.
@@ -76,7 +76,7 @@ void main() {
       print(
         'skipping: ${models.length} installed model(s); a comparison needs '
         '${ModelComparisonService.minimumModels}. '
-        'Set POCKET_LLM_COMPARE_PATHS to compare GGUF files directly.',
+        'Set INSTALLM_COMPARE_PATHS to compare GGUF files directly.',
       );
       return;
     }

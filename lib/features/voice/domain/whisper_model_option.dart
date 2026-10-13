@@ -1,4 +1,4 @@
-import 'package:pocket_llm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/features/model_selection/domain/model_compatibility.dart';
 
 /// One file of a speech model, as this app stores it.
 ///
@@ -28,7 +28,7 @@ class WhisperModelFile {
   String get sizeLabel => ModelMemoryEstimate.formatBytes(bytes);
 }
 
-/// A Whisper speech model Pocket LLM can run on this device with sherpa-onnx.
+/// A Whisper speech model InstaLLM can run on this device with sherpa-onnx.
 ///
 /// These are the int8 ONNX exports of Whisper that the sherpa-onnx project
 /// publishes. They are a different shape from the whisper.cpp GGML files and

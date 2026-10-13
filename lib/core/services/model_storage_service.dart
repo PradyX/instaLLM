@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 class DownloadMetadata {
   final int totalSize;
@@ -59,7 +59,7 @@ class ModelStorageService {
   final Dio _dio = Dio(
     BaseOptions(
       followRedirects: true,
-      headers: {'User-Agent': 'PocketLLM/1.0', 'Accept': '*/*'},
+      headers: {'User-Agent': 'InstaLLM/1.0', 'Accept': '*/*'},
     ),
   );
 

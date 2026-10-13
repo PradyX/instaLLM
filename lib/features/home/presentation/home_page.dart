@@ -6,37 +6,36 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/navigation/app_router.dart';
-import 'package:pocket_llm/features/conversations/domain/message.dart';
-import 'package:pocket_llm/features/conversations/domain/message_attachment.dart';
-import 'package:pocket_llm/features/group_chat/application/active_room.dart';
-import 'package:pocket_llm/features/group_chat/presentation/room_chat_view.dart';
-import 'package:pocket_llm/features/home/domain/attachment_history.dart';
-import 'package:pocket_llm/features/home/domain/readable_reply.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
+import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:installm/features/home/domain/attachment_history.dart';
+import 'package:installm/features/home/domain/readable_reply.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 
-import 'package:pocket_llm/core/settings/voice_settings_provider.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/core/widgets/chat_bubble.dart';
-import 'package:pocket_llm/core/widgets/chat_composer.dart';
-import 'package:pocket_llm/core/widgets/composer_model_pill.dart';
-import 'package:pocket_llm/core/widgets/composer_reasoning_pill.dart';
-import 'package:pocket_llm/core/widgets/default_bot_avatar.dart';
-import 'package:pocket_llm/features/home/presentation/composer_attach_button.dart';
-import 'package:pocket_llm/features/voice/application/composer_dictation_controller.dart';
-import 'package:pocket_llm/features/home/presentation/composer_shortcuts.dart';
-import 'package:pocket_llm/features/home/presentation/home_controller.dart';
-import 'package:pocket_llm/core/navigation/app_shell.dart';
-import 'package:pocket_llm/features/voice/application/tts_controller.dart';
-import 'package:pocket_llm/features/voice/application/voice_conversation_controller.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
-import 'package:pocket_llm/features/model_selection/presentation/chat_models_provider.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/features/model_selection/presentation/model_selection_state.dart';
-import 'package:pocket_llm/features/tools/application/tool_approval_controller.dart';
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/presentation/tool_approval_dialog.dart';
+import 'package:installm/core/settings/voice_settings_provider.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/core/widgets/chat_bubble.dart';
+import 'package:installm/core/widgets/chat_composer.dart';
+import 'package:installm/core/widgets/composer_model_pill.dart';
+import 'package:installm/core/widgets/composer_reasoning_pill.dart';
+import 'package:installm/features/home/presentation/composer_attach_button.dart';
+import 'package:installm/features/voice/application/composer_dictation_controller.dart';
+import 'package:installm/features/home/presentation/composer_shortcuts.dart';
+import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/core/navigation/app_shell.dart';
+import 'package:installm/features/voice/application/tts_controller.dart';
+import 'package:installm/features/voice/application/voice_conversation_controller.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
+import 'package:installm/features/tools/application/tool_approval_controller.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/presentation/tool_approval_dialog.dart';
 
 /// What tapping an empty-state suggestion does before its prompt is prepared.
 ///
@@ -328,7 +327,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   /// Offers the images this conversation already holds.
   ///
-  /// The listed files are the copies Pocket LLM stored when they were first
+  /// The listed files are the copies InstaLLM stored when they were first
   /// sent, so reusing one costs no preparation and still works when the file
   /// the user picked the first time has moved or been deleted. Copies that are
   /// no longer on the device are filtered out instead of being offered and
@@ -861,7 +860,12 @@ class _HomePageState extends ConsumerState<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const DefaultBotAvatar(size: 64),
+            Image.asset(
+              'assets/icons/installm.png',
+              width: 64,
+              height: 64,
+              semanticLabel: 'InstaLLM',
+            ),
             const SizedBox(height: 20),
             Text(
               greeting,
@@ -1012,7 +1016,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ? 'Wait for current response...'
                 : canAttachImage
                 ? 'Ask about your image or start a chat...'
-                : 'Message Pocket LLM...',
+                : 'Message InstaLLM...',
             onSend: _sendMessage,
             sendsOnEnter: sendsMessageOnEnter,
             header: (isGenerating || _draftImages.isNotEmpty)

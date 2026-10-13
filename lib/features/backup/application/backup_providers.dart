@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pocket_llm/features/backup/application/backup_service.dart';
-import 'package:pocket_llm/features/benchmark/application/benchmark_providers.dart';
-import 'package:pocket_llm/features/conversations/presentation/conversation_controller.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/inference_profiles/application/inference_profiles_controller.dart';
-import 'package:pocket_llm/features/personas/application/personas_controller.dart';
-import 'package:pocket_llm/storage/secure_storage.dart';
+import 'package:installm/features/backup/application/backup_service.dart';
+import 'package:installm/features/benchmark/application/benchmark_providers.dart';
+import 'package:installm/features/conversations/presentation/conversation_controller.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
+import 'package:installm/features/personas/application/personas_controller.dart';
+import 'package:installm/storage/secure_storage.dart';
 
 /// The backup service over this app's own stores.
 ///

@@ -1,4 +1,4 @@
-import 'package:pocket_llm/core/utils/id_generator.dart';
+import 'package:installm/core/utils/id_generator.dart';
 
 /// How the app reaches an MCP server (Road Map 2 §6.2).
 enum McpTransportKind {

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:pocket_llm/core/app_info.dart';
-import 'package:pocket_llm/features/backup/application/backup_providers.dart';
-import 'package:pocket_llm/features/backup/domain/backup_archive.dart';
+import 'package:installm/core/app_info.dart';
+import 'package:installm/features/backup/application/backup_providers.dart';
+import 'package:installm/features/backup/domain/backup_archive.dart';
 
 /// Captures a real backup from this machine's own stores — conversations,
 /// personas, profiles, settings, benchmark history and the knowledge index —

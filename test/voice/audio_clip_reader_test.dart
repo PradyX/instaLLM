@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pocket_llm/features/voice/data/audio_clip_reader.dart';
+import 'package:installm/features/voice/data/audio_clip_reader.dart';
 
 List<int> _le16(int value) => [value & 0xff, (value >> 8) & 0xff];
 

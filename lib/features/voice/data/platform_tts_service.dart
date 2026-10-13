@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:pocket_llm/features/voice/domain/speech_voice.dart';
+import 'package:installm/features/voice/domain/speech_voice.dart';
 import 'package:stts/stts.dart';
 
 /// Whether this build has a local speech engine at all.

@@ -4,14 +4,14 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:pocket_llm/core/inference/embedding_engine.dart';
-import 'package:pocket_llm/core/utils/cancel_token.dart';
-import 'package:pocket_llm/features/documents/application/document_embedding_models.dart';
-import 'package:pocket_llm/features/documents/application/document_library.dart';
-import 'package:pocket_llm/features/documents/application/documents_controller.dart';
-import 'package:pocket_llm/features/documents/data/document_extraction_service.dart';
-import 'package:pocket_llm/features/documents/data/document_index_store.dart';
-import 'package:pocket_llm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/inference/embedding_engine.dart';
+import 'package:installm/core/utils/cancel_token.dart';
+import 'package:installm/features/documents/application/document_embedding_models.dart';
+import 'package:installm/features/documents/application/document_library.dart';
+import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/documents/data/document_extraction_service.dart';
+import 'package:installm/features/documents/data/document_index_store.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Two axes: `docker` along x, `garden` along y.
 class _FakeEmbeddingEngine implements EmbeddingEngine {
@@ -66,7 +66,7 @@ void main() {
   late File modelFile;
 
   setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('pocketllm_ctrl_embed');
+    tempDir = await Directory.systemTemp.createTemp('installm_ctrl_embed');
     indexFile = File(p.join(tempDir.path, 'documents', 'index.json'));
     modelFile = File(p.join(tempDir.path, 'bge.gguf'));
     await modelFile.writeAsString('model bytes');

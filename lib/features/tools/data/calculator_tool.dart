@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:pocket_llm/features/tools/application/tool_registry.dart';
-import 'package:pocket_llm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
 
 /// Longest expression accepted, so a model cannot hand the parser a document.
 const int maximumExpressionLength = 200;

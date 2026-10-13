@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:pocket_llm/core/data/versioned_json_document.dart';
-import 'package:pocket_llm/features/personas/domain/persona.dart';
+import 'package:installm/core/data/versioned_json_document.dart';
+import 'package:installm/features/personas/domain/persona.dart';
 
 /// Persisted persona selection: the custom personas plus the default one.
 ///

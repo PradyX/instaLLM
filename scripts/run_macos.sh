@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Runs Pocket LLM on macOS, keeping the development provisioning profile fresh.
+# Runs InstaLLM on macOS, keeping the development provisioning profile fresh.
 #
 # Why this exists
 # ---------------
@@ -10,7 +10,7 @@
 # -allowProvisioningUpdates to xcodebuild (only the iOS path does). Once the
 # profile lapses, `flutter run -d macos` stops with
 #
-#   error: No profiles for 'com.prady.pocketllm' were found
+#   error: No profiles for 'com.prady.installm' were found
 #
 # instead of renewing it. Xcode's own Run button renews the profile silently, so
 # the failure only shows up on the command line, about once a week.
@@ -91,7 +91,7 @@ newest_profile_for() {
     for profile in "$dir"/*.provisionprofile; do
       [ -e "$profile" ] || continue
 
-      decoded_plist="$(mktemp -t pocketllm-profile)"
+      decoded_plist="$(mktemp -t installm-profile)"
       security cms -D -i "$profile" > "$decoded_plist" 2>/dev/null || continue
 
       app_id="$(plutil -p "$decoded_plist" |

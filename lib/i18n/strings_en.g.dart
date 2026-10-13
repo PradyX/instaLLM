@@ -47,6 +47,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
 	late final Translations$botManagement$en botManagement = Translations$botManagement$en._(_root);
 	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
+	late final Translations$roomManagement$en roomManagement = Translations$roomManagement$en._(_root);
 	late final Translations$modelRepository$en modelRepository = Translations$modelRepository$en._(_root);
 	late final Translations$roomBoard$en roomBoard = Translations$roomBoard$en._(_root);
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
@@ -220,6 +221,27 @@ class Translations$roomMentions$en {
 
 	/// en: 'Mention a room member'
 	String get title => 'Mention a room member';
+}
+
+// Path: roomManagement
+class Translations$roomManagement$en {
+	Translations$roomManagement$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Delete chat'
+	String get delete => 'Delete chat';
+
+	/// en: 'Delete this chat?'
+	String get deleteTitle => 'Delete this chat?';
+
+	/// en: 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.'
+	String get deleteHint => 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.';
+
+	/// en: 'Could not delete the chat. Finish any running reply, check available storage and try again.'
+	String get deleteError => 'Could not delete the chat. Finish any running reply, check available storage and try again.';
 }
 
 // Path: modelRepository
@@ -502,6 +524,10 @@ extension on Translations {
 			'botManagement.emptyHistory' => 'No messages in this saved chat.',
 			'botManagement.unavailableAssignee' => 'Unavailable bot',
 			'roomMentions.title' => 'Mention a room member',
+			'roomManagement.delete' => 'Delete chat',
+			'roomManagement.deleteTitle' => 'Delete this chat?',
+			'roomManagement.deleteHint' => 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.',
+			'roomManagement.deleteError' => 'Could not delete the chat. Finish any running reply, check available storage and try again.',
 			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',
 			'roomBoard.linkedRooms' => 'Linked rooms',

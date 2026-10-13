@@ -12,6 +12,7 @@ import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/bot_editor_page.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
+import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 import 'package:installm/features/group_chat/presentation/room_mention_composer.dart';
@@ -459,6 +460,40 @@ class RoomSettingsSheet extends ConsumerWidget {
 
   final String chatId;
 
+  Future<void> _deleteChat(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.roomManagement.deleteTitle),
+        content: Text(t.roomManagement.deleteHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(t.common.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(t.roomManagement.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final selection = ref.read(activeRoomIdProvider.notifier);
+    final deleted = await ref
+        .read(groupChatsProvider.notifier)
+        .removeChat(chatId);
+    if (!context.mounted) return;
+    if (deleted) {
+      if (selection.state == chatId) selection.state = null;
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.roomManagement.deleteError)));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupChatsProvider);
@@ -610,6 +645,19 @@ class RoomSettingsSheet extends ConsumerWidget {
                 ],
               ),
             ],
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed:
+                  state.isReadOnly || state.runningChatIds.contains(room.id)
+                  ? null
+                  : () => _deleteChat(context, ref),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+                side: BorderSide(color: Theme.of(context).colorScheme.error),
+              ),
+              icon: const Icon(Icons.delete_outline),
+              label: Text(t.roomManagement.delete),
+            ),
           ],
         ),
       ),

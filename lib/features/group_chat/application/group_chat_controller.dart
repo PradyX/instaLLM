@@ -195,13 +195,28 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     await _persist();
   }
 
-  Future<void> removeChat(String chatId) async {
-    _cancelRequested.add(chatId);
-    state = state.copyWith(
-      snapshot: state.snapshot.removeChat(chatId),
-      clearError: true,
-    );
-    await _persist();
+  Future<bool> removeChat(String chatId) async {
+    try {
+      final store = await _ref.read(groupChatStoreProvider.future);
+      if (store.isReadOnly || state.runningChatIds.contains(chatId)) {
+        state = state.copyWith(
+          errorMessage:
+              'This chat cannot be deleted while read-only or answering.',
+        );
+        return false;
+      }
+      if (_chatById(chatId) == null) return false;
+      final snapshot = state.snapshot.removeChat(chatId);
+      if (!store.save(snapshot)) {
+        state = state.copyWith(errorMessage: 'Could not delete the chat.');
+        return false;
+      }
+      state = state.copyWith(snapshot: snapshot, clearError: true);
+      return true;
+    } catch (error) {
+      state = state.copyWith(errorMessage: 'Could not delete the chat: $error');
+      return false;
+    }
   }
 
   /// Stops the running turn in [chatId], if any.

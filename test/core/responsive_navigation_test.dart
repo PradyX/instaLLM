@@ -27,6 +27,8 @@ import 'package:installm/features/group_chat/presentation/room_mention_composer.
 import 'package:installm/features/home/presentation/home_page.dart';
 import 'package:installm/features/kanban/presentation/kanban_page.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart';
+import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/settings/presentation/settings_page.dart';
 import 'package:installm/features/workspaces/data/workspace_store.dart';
 import 'package:installm/features/workspaces/domain/workspace.dart';
@@ -203,6 +205,7 @@ void main() {
   Future<void> tapPanel(WidgetTester tester, String text) async {
     final target = panelText(text);
     await tester.ensureVisible(target);
+    await tester.pump();
     await tester.tap(target);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -395,6 +398,88 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final narrow in [false, true]) {
+    testWidgets(
+      'retained chat deletion confirms and returns to the conversation ${narrow ? 'in the drawer' : 'in the rail'}',
+      (tester) async {
+        // Exercise the installed-model chat surface the user has open, rather
+        // than the unrelated first-install onboarding layout.
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [
+            conversationStoreProvider.overrideWithValue(conversations),
+            chatModelsProvider.overrideWithValue(const [
+              LlmModel(
+                id: 'installed',
+                name: 'Installed',
+                parameterSize: '1B',
+                description: 'Fixture',
+                isDownloaded: true,
+              ),
+            ]),
+          ],
+        );
+        BotStore(
+          File('${directory.path}/bots/bots.json'),
+        ).save(BotsSnapshot.empty);
+        final store = GroupChatStore(
+          File('${directory.path}/group_chat/chats.json'),
+        );
+        final chat = GroupChat.create(
+          id: 'old-delete',
+          workspaceId: 'ws',
+          name: 'Saved Researcher',
+          directBotId: BuiltInBots.researcherId,
+          memberBotIds: [BuiltInBots.researcherId],
+        );
+        store.save(
+          store
+              .load()
+              .upsertChat(chat)
+              .appendMessage(
+                GroupMessage.user(chatId: chat.id, text: 'Earlier message'),
+              ),
+        );
+        final raw = File(store.filePath).readAsStringSync();
+        await pumpHome(
+          tester,
+          width: narrow ? 390 : 1400,
+          scale: narrow ? 2 : 1,
+        );
+        if (narrow) await openDrawer(tester);
+        await tapPanel(tester, 'Saved Researcher');
+        await tester.tap(find.byTooltip('Settings'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Delete chat'));
+        await tester.tap(find.text('Delete chat'));
+        await tester.pumpAndSettle();
+        expect(find.text('Delete this chat?'), findsOneWidget);
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(File(store.filePath).readAsStringSync(), raw);
+        expect(container.read(activeRoomIdProvider), chat.id);
+        await tester.tap(find.text('Delete chat'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Delete chat'));
+        await pumpUntil(
+          tester,
+          () => container.read(activeRoomIdProvider) == null,
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(RoomSettingsSheet), findsNothing);
+        expect(find.byType(RoomChatView), findsNothing);
+        expect(store.load().chats.any((room) => room.id == chat.id), isFalse);
+        expect(store.load().messagesFor(chat.id), isEmpty);
+        expect(store.load().chats.any((room) => room.id == 'dev'), isTrue);
+        expect(
+          container.read(conversationControllerProvider).summaries.length,
+          2,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets(
     'the drawer presents the same header, controls and rows as the wide rail',

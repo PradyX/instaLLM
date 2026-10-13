@@ -50,6 +50,12 @@ botManagement:
 roomMentions:
   title: Mention a room member
 
+roomManagement:
+  delete: Delete chat
+  deleteTitle: Delete this chat?
+  deleteHint: This permanently deletes this chat and its messages. Bots and Board tasks are kept.
+  deleteError: Could not delete the chat. Finish any running reply, check available storage and try again.
+
 modelRepository:
   addError: Could not add this model. Please try again.
 

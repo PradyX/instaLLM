@@ -7,6 +7,13 @@ import 'package:installm/features/group_chat/application/group_chat_controller.d
 import 'package:installm/features/group_chat/data/group_chat_store.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 
+class _FailingGroupStore extends GroupChatStore {
+  _FailingGroupStore(super.file);
+  bool failWrites = false;
+  @override
+  bool save(GroupChatsSnapshot snapshot) => !failWrites && super.save(snapshot);
+}
+
 void main() {
   late Directory tempDir;
 
@@ -20,13 +27,15 @@ void main() {
     }
   });
 
-  ProviderContainer buildContainer() {
+  ProviderContainer buildContainer({GroupChatStore? store}) {
     final container = ProviderContainer(
       overrides: [
         groupChatStoreProvider.overrideWith(
-          (ref) async => GroupChatStore(
-            File(p.join(tempDir.path, 'group_chat', 'chats.json')),
-          ),
+          (ref) async =>
+              store ??
+              GroupChatStore(
+                File(p.join(tempDir.path, 'group_chat', 'chats.json')),
+              ),
         ),
       ],
     );
@@ -43,6 +52,108 @@ void main() {
     expect(container.read(groupChatsProvider).isReady, isTrue);
     return notifier;
   }
+
+  group('removeChat', () {
+    test(
+      'deletes only the selected chat and its messages across restart',
+      () async {
+        final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
+        final store = GroupChatStore(file);
+        final first = GroupChat.create(
+          id: 'first',
+          workspaceId: 'ws',
+          name: 'First',
+          directBotId: 'old-bot',
+        );
+        final second = GroupChat.create(
+          id: 'second',
+          workspaceId: 'ws',
+          name: 'Second',
+        );
+        store.save(
+          GroupChatsSnapshot(
+            chats: [first, second],
+            messages: {
+              first.id: [
+                GroupMessage.user(chatId: first.id, text: 'Remove this'),
+              ],
+              second.id: [
+                GroupMessage.user(chatId: second.id, text: 'Keep this'),
+              ],
+            },
+          ),
+        );
+        final container = buildContainer(store: store);
+        final notifier = await loaded(container);
+        expect(await notifier.removeChat(first.id), isTrue);
+        final restored = GroupChatStore(file).load();
+        expect(restored.chats.map((chat) => chat.id), [second.id]);
+        expect(restored.messagesFor(first.id), isEmpty);
+        expect(restored.messagesFor(second.id).single.text, 'Keep this');
+        expect(
+          container
+              .read(groupChatsProvider)
+              .snapshot
+              .chats
+              .map((chat) => chat.id),
+          [second.id],
+        );
+      },
+    );
+
+    test(
+      'a failed deletion keeps the chat and messages visible and saved',
+      () async {
+        final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
+        final store = _FailingGroupStore(file);
+        final chat = GroupChat.create(
+          id: 'keep',
+          workspaceId: 'ws',
+          name: 'Keep',
+        );
+        store.save(
+          GroupChatsSnapshot(
+            chats: [chat],
+            messages: {
+              chat.id: [GroupMessage.user(chatId: chat.id, text: 'Keep this')],
+            },
+          ),
+        );
+        final raw = file.readAsStringSync();
+        final container = buildContainer(store: store);
+        final notifier = await loaded(container);
+        store.failWrites = true;
+        expect(await notifier.removeChat(chat.id), isFalse);
+        expect(
+          container.read(groupChatsProvider).snapshot.chats.single.id,
+          chat.id,
+        );
+        expect(
+          container
+              .read(groupChatsProvider)
+              .snapshot
+              .messagesFor(chat.id)
+              .single
+              .text,
+          'Keep this',
+        );
+        expect(file.readAsStringSync(), raw);
+        expect(container.read(groupChatsProvider).errorMessage, isNotNull);
+        store.failWrites = false;
+        expect(await notifier.removeChat(chat.id), isTrue);
+      },
+    );
+
+    test('a newer room store cannot be deleted or downgraded', () async {
+      final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
+      file.parent.createSync(recursive: true);
+      const raw = '{"version":99,"chats":[{"id":"future"}],"messages":{}}';
+      file.writeAsStringSync(raw);
+      final notifier = await loaded(buildContainer());
+      expect(await notifier.removeChat('future'), isFalse);
+      expect(file.readAsStringSync(), raw);
+    });
+  });
 
   group('directChatWith', () {
     test('creates one 1:1 room and reuses it', () async {

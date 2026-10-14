@@ -219,6 +219,31 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     }
   }
 
+  /// Clears messages after a successful write; the room and its settings stay.
+  Future<bool> clearChat(String chatId) async {
+    try {
+      final store = await _ref.read(groupChatStoreProvider.future);
+      if (store.isReadOnly || state.runningChatIds.contains(chatId)) {
+        state = state.copyWith(
+          errorMessage:
+              'This chat cannot be cleared while read-only or answering.',
+        );
+        return false;
+      }
+      if (_chatById(chatId) == null) return false;
+      final snapshot = state.snapshot.clearChat(chatId);
+      if (!store.save(snapshot)) {
+        state = state.copyWith(errorMessage: 'Could not clear the chat.');
+        return false;
+      }
+      state = state.copyWith(snapshot: snapshot, clearError: true);
+      return true;
+    } catch (_) {
+      state = state.copyWith(errorMessage: 'Could not clear the chat.');
+      return false;
+    }
+  }
+
   /// Stops the running turn in [chatId], if any.
   void cancelTurn(String chatId) {
     _cancelRequested.add(chatId);

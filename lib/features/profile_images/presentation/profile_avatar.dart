@@ -58,3 +58,31 @@ class PetdexAvatar extends ConsumerWidget {
     );
   }
 }
+
+/// Browsing/draft images use RAM only; profile commits own disk persistence.
+class PetdexPreviewAvatar extends ConsumerWidget {
+  const PetdexPreviewAvatar({
+    super.key,
+    required this.pet,
+    required this.fallback,
+    this.size = 48,
+  });
+  final PetdexPet pet;
+  final Widget fallback;
+  final double size;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bytes = ref.watch(petdexPreviewProvider(pet)).valueOrNull;
+    return SizedBox.square(
+      dimension: size,
+      child: bytes == null
+          ? Center(child: fallback)
+          : Image.memory(
+              bytes,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => Center(child: fallback),
+            ),
+    );
+  }
+}

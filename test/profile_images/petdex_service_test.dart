@@ -151,6 +151,87 @@ void main() {
   });
 
   test(
+    'browsing coalesces RAM previews; only confirmation saves a file',
+    () async {
+      final bytes = _sprite();
+      final adapter = _Adapter((_) => ResponseBody.fromBytes(bytes, 200));
+      final api = service(adapter);
+      final previews = await Future.wait([
+        api.preview(_boba),
+        api.preview(_boba),
+      ]);
+      expect(previews.first, same(previews.last));
+      expect(adapter.urls, [_boba.previewUrl]);
+      expect(directory.listSync(recursive: true).whereType<File>(), isEmpty);
+      final container = ProviderContainer(
+        overrides: [petdexServiceProvider.overrideWith((_) async => api)],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container
+            .read(profileImagesProvider.notifier)
+            .select(botProfileKey('created'), _boba),
+        isTrue,
+      );
+      expect(api.cachedFile(_boba).existsSync(), isTrue);
+      expect(api.store.load()[botProfileKey('created')], _boba);
+      expect(adapter.urls, [_boba.previewUrl]);
+      final offline = service(
+        _Adapter((_) => throw const SocketException('offline')),
+      );
+      expect(await offline.preview(_boba), previews.first);
+    },
+  );
+
+  test('RAM browsing is bounded and does not grow the disk cache', () async {
+    final bytes = _sprite();
+    final adapter = _Adapter((_) => ResponseBody.fromBytes(bytes, 200));
+    final api = service(adapter);
+    final pets = List.generate(
+      PetdexService.maxMemoryPreviews + 1,
+      (i) => PetdexPet(
+        slug: 'pet-$i',
+        name: 'Pet $i',
+        spritesheetUrl: 'https://assets.petdex.dev/pets/pet-$i/sprite.webp',
+      ),
+    );
+    expect(PetdexService.browse(pets), hasLength(pets.length));
+    for (final pet in pets) {
+      await api.preview(pet);
+    }
+    expect(adapter.urls, hasLength(pets.length));
+    await api.preview(pets.last);
+    expect(adapter.urls, hasLength(pets.length));
+    await api.preview(pets.first);
+    expect(adapter.urls, hasLength(pets.length + 1));
+    expect(directory.listSync(recursive: true).whereType<File>(), isEmpty);
+  });
+
+  test(
+    'a newer profile store refuses selection before saving any portrait',
+    () async {
+      final api = service(
+        _Adapter((_) => throw StateError('network not expected')),
+      );
+      final file = File(p.join(directory.path, 'selections.json'))
+        ..writeAsStringSync('{"version":99,"selections":{}}');
+      final raw = file.readAsStringSync();
+      final container = ProviderContainer(
+        overrides: [petdexServiceProvider.overrideWith((_) async => api)],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container
+            .read(profileImagesProvider.notifier)
+            .select(botProfileKey('created'), _boba),
+        isFalse,
+      );
+      expect(file.readAsStringSync(), raw);
+      expect(api.cachedFile(_boba).existsSync(), isFalse);
+    },
+  );
+
+  test(
     'only the requested image is cached; deduplicates requests and reuses cache after restart',
     () async {
       final bytes = _sprite();
@@ -327,7 +408,7 @@ void main() {
     'concurrent choices preserve separate bot and room selections',
     () async {
       final api = service(
-        _Adapter((_) => throw StateError('network not expected')),
+        _Adapter((_) => ResponseBody.fromBytes(_sprite(), 200)),
       );
       final container = ProviderContainer(
         overrides: [petdexServiceProvider.overrideWith((ref) async => api)],

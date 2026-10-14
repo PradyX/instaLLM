@@ -10,6 +10,8 @@ import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/data/group_chat_store.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
+import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
+import 'package:installm/features/group_chat/presentation/room_tasks_panel.dart';
 import 'package:installm/features/home/presentation/home_page.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart';
 import 'package:installm/features/kanban/data/task_repository.dart';
@@ -111,7 +113,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  Future<void> pump(WidgetTester tester, {bool narrow = false}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    bool narrow = false,
+    bool settings = false,
+  }) async {
     await tester.runAsync(() async {
       container.read(groupChatsProvider);
       container.read(workspacesProvider);
@@ -149,8 +155,12 @@ void main() {
       () =>
           container.read(kanbanProvider).isReady &&
           container.read(groupChatsProvider).isReady &&
-          find.byTooltip('Link task').evaluate().isNotEmpty,
+          find.byTooltip('Settings').evaluate().isNotEmpty,
     );
+    if (settings) {
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+    }
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -278,4 +288,55 @@ void main() {
     final error = tester.takeException();
     expect(error, isNull);
   });
+
+  testWidgets(
+    'direct bot tasks live in settings and still link and open the board',
+    (tester) async {
+      room = room.copyWith(directBotId: 'former', memberBotIds: ['former']);
+      GroupChatStore(File('${directory.path}/rooms.json')).save(
+        GroupChatsSnapshot(
+          chats: [room],
+          messages: {
+            room.id: [message],
+          },
+        ),
+      );
+      await pump(tester);
+      expect(find.byType(RoomTasksPanel), findsNothing);
+      expect(
+        find
+            .byTooltip('New chat')
+            .evaluate()
+            .where(
+              (element) =>
+                  element.findAncestorWidgetOfExactType<AppBar>() != null,
+            ),
+        isEmpty,
+      );
+      await tester.tap(find.byTooltip('Settings'));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(RoomSettingsSheet),
+          matching: find.byType(RoomTasksPanel),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Link task'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Existing board task'));
+      await until(
+        tester,
+        () => container
+            .read(kanbanProvider)
+            .byId['PL-001']!
+            .relatedRoomIds
+            .contains(room.id),
+      );
+      await tester.tap(find.byTooltip('Open board'));
+      await until(tester, () => find.byType(KanbanPage).evaluate().isNotEmpty);
+      expect(find.byType(RoomSettingsSheet), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,6 +37,8 @@ class ProfileImagesController extends AsyncNotifier<Map<String, PetdexPet>> {
     try {
       await future;
       final service = await ref.read(petdexServiceProvider.future);
+      if (service.store.isReadOnly) return false;
+      if (pet != null) await service.image(pet);
       final next = Map<String, PetdexPet>.from(
         state.valueOrNull ?? service.store.load(),
       );
@@ -73,3 +76,12 @@ final petdexImageProvider = FutureProvider.autoDispose.family<File, PetdexPet>((
     petdexServiceProvider.future,
   )).image(pet, cancelToken: token);
 });
+
+final petdexPreviewProvider = FutureProvider.autoDispose
+    .family<Uint8List, PetdexPet>((ref, pet) async {
+      final token = CancelToken();
+      ref.onDispose(token.cancel);
+      return (await ref.watch(
+        petdexServiceProvider.future,
+      )).preview(pet, cancelToken: token);
+    });

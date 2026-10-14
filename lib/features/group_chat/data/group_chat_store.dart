@@ -97,6 +97,11 @@ class GroupChatsSnapshot {
     );
   }
 
+  GroupChatsSnapshot clearChat(String chatId) => GroupChatsSnapshot(
+    chats: chats,
+    messages: Map<String, List<GroupMessage>>.from(messages)..remove(chatId),
+  );
+
   GroupChatsSnapshot appendMessage(GroupMessage message) {
     final updated = Map<String, List<GroupMessage>>.from(messages);
     updated[message.chatId] = [...updated[message.chatId] ?? const [], message];

@@ -12,8 +12,9 @@ import 'package:installm/features/workspaces/application/workspaces_controller.d
 import 'package:installm/i18n/strings.g.dart';
 
 class RoomTasksPanel extends ConsumerStatefulWidget {
-  const RoomTasksPanel({super.key, required this.room});
+  const RoomTasksPanel({super.key, required this.room, this.onOpenBoard});
   final GroupChat room;
+  final VoidCallback? onOpenBoard;
 
   @override
   ConsumerState<RoomTasksPanel> createState() => _RoomTasksPanelState();
@@ -121,8 +122,10 @@ class _RoomTasksPanelState extends ConsumerState<RoomTasksPanel> {
             tooltip: t.roomBoard.openBoard,
             icon: const Icon(Icons.view_kanban_outlined),
             onPressed: () async {
-              if (await _activateWorkspace() && context.mounted) {
-                context.go(AppRoutes.kanban);
+              final router = GoRouter.of(context);
+              if (await _activateWorkspace() && mounted) {
+                widget.onOpenBoard?.call();
+                router.go(AppRoutes.kanban);
               }
             },
           ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +30,7 @@ class _Petdex extends PetdexService {
   final requested = <String>[];
   int catalogRequests = 0;
   bool offline = false;
-  Completer<File>? pending;
+  Completer<Uint8List>? pending;
 
   @override
   Future<List<PetdexPet>> catalog({CancelToken? cancelToken}) async {
@@ -39,9 +40,14 @@ class _Petdex extends PetdexService {
   }
 
   @override
-  Future<File> image(PetdexPet pet, {CancelToken? cancelToken}) async {
+  Future<Uint8List> preview(PetdexPet pet, {CancelToken? cancelToken}) async {
     requested.add(pet.slug);
     if (pending != null) return pending!.future;
+    return img.encodePng(img.Image(width: 96, height: 104));
+  }
+
+  @override
+  Future<File> image(PetdexPet pet, {CancelToken? cancelToken}) async {
     return writeImage(pet);
   }
 
@@ -158,37 +164,41 @@ void main() {
     expect(draft!.soul, 'My planning draft.');
   });
 
-  testWidgets('six starter pets slide and search stays in the creation sheet', (
-    tester,
-  ) async {
-    await open(tester);
-    expect(service.catalogRequests, 1);
-    expect(service.requested, isNot(contains('pet-6')));
-    await tester.tap(find.byTooltip('Next portraits'));
-    await tester.pumpAndSettle();
-    expect(field('bot-portrait-pet-5'), findsOneWidget);
-    expect(field('bot-portrait-pet-6'), findsNothing);
-    await tester.enterText(field('bot-portrait-search'), 'Pet 7');
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpAndSettle();
-    expect(service.catalogRequests, 1);
-    expect(field('bot-portrait-pet-7'), findsOneWidget);
-    expect(find.byType(ProfileImagePicker), findsNothing);
-    await tester.tap(field('bot-portrait-pet-7'));
-    await tester.pumpAndSettle();
-    expect(service.store.load(), isEmpty);
-    expect(find.byTooltip('Use default icon'), findsOneWidget);
-    // Scrolling the form must not discard the inline search or selection.
-    await tester.ensureVisible(field('bot-soul'));
-    await tester.ensureVisible(field('bot-portrait-search'));
-    expect(field('bot-portrait-pet-7'), findsOneWidget);
-    await tester.enterText(field('bot-name'), 'Pet bot');
-    await tester.pump();
-    await tester.tap(find.text('Create'));
-    await tester.pumpAndSettle();
-    expect(draft!.portrait, service.pets[7]);
-    expect(service.store.load(), isEmpty);
-  });
+  testWidgets(
+    'more portraits slide and search stays in the creation sheet without saving files',
+    (tester) async {
+      await open(tester);
+      expect(service.catalogRequests, 1);
+      expect(service.requested, isNot(contains('pet-6')));
+      await tester.tap(find.byTooltip('Next portraits'));
+      await tester.pumpAndSettle();
+      expect(field('bot-portrait-pet-5'), findsOneWidget);
+      await tester.tap(find.byTooltip('Next portraits'));
+      await tester.pumpAndSettle();
+      expect(field('bot-portrait-pet-7'), findsOneWidget);
+      await tester.enterText(field('bot-portrait-search'), 'Pet 7');
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      expect(service.catalogRequests, 1);
+      expect(field('bot-portrait-pet-7'), findsOneWidget);
+      expect(find.byType(ProfileImagePicker), findsNothing);
+      await tester.tap(field('bot-portrait-pet-7'));
+      await tester.pumpAndSettle();
+      expect(service.store.load(), isEmpty);
+      expect(find.byTooltip('Use default icon'), findsOneWidget);
+      // Scrolling the form must not discard the inline search or selection.
+      await tester.ensureVisible(field('bot-soul'));
+      await tester.ensureVisible(field('bot-portrait-search'));
+      expect(field('bot-portrait-pet-7'), findsOneWidget);
+      await tester.enterText(field('bot-name'), 'Pet bot');
+      await tester.pump();
+      await tester.tap(find.text('Create'));
+      await tester.pumpAndSettle();
+      expect(draft!.portrait, service.pets[7]);
+      expect(service.store.load(), isEmpty);
+      expect(directory.listSync(recursive: true).whereType<File>(), isEmpty);
+    },
+  );
 
   testWidgets('an unavailable catalog still allows offline creation', (
     tester,
@@ -205,10 +215,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'saved portraits remain selectable when the web catalog is offline',
+    (tester) async {
+      final saved = service.pets.last;
+      service.store.save({botProfileKey('created'): saved});
+      service.writeImage(saved);
+      service.offline = true;
+      await open(tester);
+      await tester.tap(find.text('Saved (1)'));
+      await tester.pumpAndSettle();
+      expect(field('bot-portrait-pet-7'), findsOneWidget);
+      await tester.tap(field('bot-portrait-pet-7'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Use default icon'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(draft, isNull);
+      expect(service.store.load(), {botProfileKey('created'): saved});
+      expect(
+        directory.listSync(recursive: true).whereType<File>(),
+        hasLength(2),
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('closing during image loading ignores a late selection', (
     tester,
   ) async {
-    service.pending = Completer<File>();
+    service.pending = Completer<Uint8List>();
     // No settle while the previews are loading indefinitely.
     tester.view.physicalSize = const Size(1200, 900);
     tester.view.devicePixelRatio = 1;
@@ -225,7 +261,7 @@ void main() {
     await tester.tap(field('bot-portrait-pet-0'));
     await tester.pump();
     await tester.pumpWidget(const SizedBox());
-    service.pending!.complete(service.writeImage(service.pets.first));
+    service.pending!.complete(img.encodePng(img.Image(width: 96, height: 104)));
     await tester.pumpAndSettle();
     expect(service.store.load(), isEmpty);
     expect(tester.takeException(), isNull);

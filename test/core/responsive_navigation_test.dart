@@ -403,7 +403,147 @@ void main() {
 
   for (final narrow in [false, true]) {
     testWidgets(
-      'retained chat deletion confirms and returns to the conversation ${narrow ? 'in the drawer' : 'in the rail'}',
+      'bot settings put Edit on the right and confirm deletion ${narrow ? 'narrow' : 'wide'}',
+      (tester) async {
+        // Match the installed-model chat surface shown in the user's app.
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [
+            conversationStoreProvider.overrideWithValue(conversations),
+            petdexCatalogProvider.overrideWith((_) async => []),
+            chatModelsProvider.overrideWithValue(const [
+              LlmModel(
+                id: 'installed',
+                name: 'Installed',
+                parameterSize: '1B',
+                description: 'Fixture',
+                isDownloaded: true,
+              ),
+            ]),
+          ],
+        );
+        final store = GroupChatStore(
+          File('${directory.path}/group_chat/chats.json'),
+        );
+        final room = GroupChat.create(
+          id: 'planner-settings',
+          workspaceId: 'ws',
+          name: 'Planner',
+          directBotId: BuiltInBots.plannerId,
+          memberBotIds: [BuiltInBots.plannerId],
+        );
+        store.save(
+          store
+              .load()
+              .upsertChat(room)
+              .appendMessage(
+                GroupMessage.user(
+                  chatId: room.id,
+                  text: 'Retain this history.',
+                ),
+              ),
+        );
+        await pumpHome(
+          tester,
+          width: narrow ? 390 : 1400,
+          scale: narrow ? 2 : 1,
+        );
+        if (narrow) await openDrawer(tester);
+        await tapPanel(tester, 'Planner');
+        final original = container
+            .read(botsProvider)
+            .botById(BuiltInBots.plannerId)!;
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byTooltip('New chat'),
+          ),
+          findsNothing,
+        );
+        expect(find.byTooltip('Link task'), findsNothing);
+        await tester.tap(find.byTooltip('Settings'));
+        await tester.pumpAndSettle();
+        final title = tester.getRect(find.text('Bot settings'));
+        final edit = tester.getRect(
+          find.widgetWithText(TextButton, 'Edit bot'),
+        );
+        expect(edit.left, greaterThanOrEqualTo(title.right));
+        expect(edit.center.dy, closeTo(title.center.dy, 1));
+        expect(find.text(original.description), findsNothing);
+        expect(find.byTooltip('Link task'), findsOneWidget);
+        await tester.tap(find.text('Edit bot'));
+        await tester.pumpAndSettle();
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'new sheet opens the editor',
+        );
+        expect(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TextField &&
+                widget.decoration?.labelText == 'Description',
+          ),
+          findsNothing,
+        );
+        await tester.enterText(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is TextField && widget.decoration?.labelText == 'Name',
+          ),
+          'Renamed planner',
+        );
+        await tester.tap(find.text('Save'));
+        await pumpUntil(
+          tester,
+          () =>
+              container.read(botsProvider).botById(original.id)?.name ==
+              'Renamed planner',
+        );
+        expect(
+          BotStore(File('${directory.path}/bots/bots.json'))
+              .load()
+              .allBots
+              .singleWhere((bot) => bot.id == original.id)
+              .description,
+          original.description,
+        );
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'returning to bot settings',
+        );
+        await tester.ensureVisible(find.text('Delete bot'));
+        await tester.tap(find.text('Delete bot'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(container.read(botsProvider).botById(original.id), isNotNull);
+        await tester.tap(find.text('Delete bot'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Delete bot'));
+        await pumpUntil(
+          tester,
+          () => container.read(botsProvider).botById(original.id) == null,
+        );
+        await tester.pumpAndSettle();
+        expect(container.read(activeRoomIdProvider), room.id);
+        expect(store.load().chats.any((chat) => chat.id == room.id), isTrue);
+        expect(
+          store.load().messagesFor(room.id).single.text,
+          'Retain this history.',
+        );
+        expect(find.byType(RoomSettingsSheet), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final narrow in [false, true]) {
+    testWidgets(
+      'retained chat clearing confirms and keeps the chat ${narrow ? 'in the drawer' : 'in the rail'}',
       (tester) async {
         // Exercise the installed-model chat surface the user has open, rather
         // than the unrelated first-install onboarding layout.
@@ -453,25 +593,30 @@ void main() {
         await tapPanel(tester, 'Saved Researcher');
         await tester.tap(find.byTooltip('Settings'));
         await tester.pumpAndSettle();
-        await tester.ensureVisible(find.text('Delete chat'));
-        await tester.tap(find.text('Delete chat'));
+        await tester.ensureVisible(find.text('Clear chat'));
+        await tester.tap(find.text('Clear chat'));
         await tester.pumpAndSettle();
-        expect(find.text('Delete this chat?'), findsOneWidget);
+        expect(find.text('Clear this chat?'), findsOneWidget);
         await tester.tap(find.text('Cancel'));
         await tester.pumpAndSettle();
         expect(File(store.filePath).readAsStringSync(), raw);
         expect(container.read(activeRoomIdProvider), chat.id);
-        await tester.tap(find.text('Delete chat'));
+        await tester.tap(find.text('Clear chat'));
         await tester.pumpAndSettle();
-        await tester.tap(find.widgetWithText(FilledButton, 'Delete chat'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Clear chat'));
         await pumpUntil(
           tester,
-          () => container.read(activeRoomIdProvider) == null,
+          () => container
+              .read(groupChatsProvider)
+              .snapshot
+              .messagesFor(chat.id)
+              .isEmpty,
         );
         await tester.pumpAndSettle();
         expect(find.byType(RoomSettingsSheet), findsNothing);
-        expect(find.byType(RoomChatView), findsNothing);
-        expect(store.load().chats.any((room) => room.id == chat.id), isFalse);
+        expect(find.byType(RoomChatView), findsOneWidget);
+        expect(container.read(activeRoomIdProvider), chat.id);
+        expect(store.load().chats.any((room) => room.id == chat.id), isTrue);
         expect(store.load().messagesFor(chat.id), isEmpty);
         expect(store.load().chats.any((room) => room.id == 'dev'), isTrue);
         expect(

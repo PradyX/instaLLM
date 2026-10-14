@@ -186,8 +186,8 @@ class Translations$botCreation$en {
 	/// en: 'Search pets'
 	String get searchPortraits => 'Search pets';
 
-	/// en: 'Petdex portraits load online.'
-	String get portraitHint => 'Petdex portraits load online.';
+	/// en: 'Only confirmed portraits are saved for offline use.'
+	String get portraitHint => 'Only confirmed portraits are saved for offline use.';
 
 	/// en: 'Portraits are unavailable. You can still create your bot.'
 	String get portraitsOffline => 'Portraits are unavailable. You can still create your bot.';
@@ -215,6 +215,9 @@ class Translations$botManagement$en {
 	final Translations _root; // ignore: unused_field
 
 	// Translations
+
+	/// en: 'Bot settings'
+	String get settings => 'Bot settings';
 
 	/// en: 'Edit bot'
 	String get edit => 'Edit bot';
@@ -264,17 +267,23 @@ class Translations$roomManagement$en {
 
 	// Translations
 
-	/// en: 'Delete chat'
-	String get delete => 'Delete chat';
+	/// en: 'Room settings'
+	String get settings => 'Room settings';
 
-	/// en: 'Delete this chat?'
-	String get deleteTitle => 'Delete this chat?';
+	/// en: 'Chat settings'
+	String get chatSettings => 'Chat settings';
 
-	/// en: 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.'
-	String get deleteHint => 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.';
+	/// en: 'Clear chat'
+	String get clear => 'Clear chat';
 
-	/// en: 'Could not delete the chat. Finish any running reply, check available storage and try again.'
-	String get deleteError => 'Could not delete the chat. Finish any running reply, check available storage and try again.';
+	/// en: 'Clear this chat?'
+	String get clearTitle => 'Clear this chat?';
+
+	/// en: 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.'
+	String get clearHint => 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.';
+
+	/// en: 'Could not clear the chat. Finish any running reply, check available storage and try again.'
+	String get clearError => 'Could not clear the chat. Finish any running reply, check available storage and try again.';
 }
 
 // Path: modelRepository
@@ -339,6 +348,15 @@ class Translations$profileImages$en {
 
 	// Translations
 
+	/// en: 'Browse'
+	String get browse => 'Browse';
+
+	/// en: 'Saved'
+	String get saved => 'Saved';
+
+	/// en: 'No saved portraits yet.'
+	String get noSaved => 'No saved portraits yet.';
+
 	/// en: 'Profile image'
 	String get title => 'Profile image';
 
@@ -351,8 +369,8 @@ class Translations$profileImages$en {
 	/// en: 'Search pets by name'
 	String get search => 'Search pets by name';
 
-	/// en: 'Search loads images from Petdex. Only selected images and visible search results are cached.'
-	String get networkHint => 'Search loads images from Petdex. Only selected images and visible search results are cached.';
+	/// en: 'Browse Petdex online. Confirmed portraits are saved for offline use.'
+	String get networkHint => 'Browse Petdex online. Confirmed portraits are saved for offline use.';
 
 	/// en: 'Search for a pet to see profile images.'
 	String get startSearch => 'Search for a pet to see profile images.';
@@ -551,13 +569,14 @@ extension on Translations {
 			'botCreation.starterSoul' => 'You are a helpful assistant.\nGive clear, practical answers.\nAsk for clarification when needed.',
 			'botCreation.defaultPortrait' => 'Keep the bot icon or choose a pet.',
 			'botCreation.searchPortraits' => 'Search pets',
-			'botCreation.portraitHint' => 'Petdex portraits load online.',
+			'botCreation.portraitHint' => 'Only confirmed portraits are saved for offline use.',
 			'botCreation.portraitsOffline' => 'Portraits are unavailable. You can still create your bot.',
 			'botCreation.previousPortraits' => 'Previous portraits',
 			'botCreation.nextPortraits' => 'Next portraits',
 			'botCreation.chatError' => 'Bot saved. Tap it in Bots to open its chat again.',
 			'botCreation.empty' => 'No bots yet. Use + to create your own.',
 			'botCreation.saveError' => 'Could not create the bot. Check available storage and try again.',
+			'botManagement.settings' => 'Bot settings',
 			'botManagement.edit' => 'Edit bot',
 			'botManagement.delete' => 'Delete bot',
 			'botManagement.deleteTitle' => 'Delete this bot?',
@@ -568,10 +587,12 @@ extension on Translations {
 			'botManagement.emptyHistory' => 'No messages in this saved chat.',
 			'botManagement.unavailableAssignee' => 'Unavailable bot',
 			'roomMentions.title' => 'Mention a room member',
-			'roomManagement.delete' => 'Delete chat',
-			'roomManagement.deleteTitle' => 'Delete this chat?',
-			'roomManagement.deleteHint' => 'This permanently deletes this chat and its messages. Bots and Board tasks are kept.',
-			'roomManagement.deleteError' => 'Could not delete the chat. Finish any running reply, check available storage and try again.',
+			'roomManagement.settings' => 'Room settings',
+			'roomManagement.chatSettings' => 'Chat settings',
+			'roomManagement.clear' => 'Clear chat',
+			'roomManagement.clearTitle' => 'Clear this chat?',
+			'roomManagement.clearHint' => 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.',
+			'roomManagement.clearError' => 'Could not clear the chat. Finish any running reply, check available storage and try again.',
 			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',
 			'roomBoard.linkedRooms' => 'Linked rooms',
@@ -584,11 +605,14 @@ extension on Translations {
 			'roomBoard.openError' => 'Could not open a room for the task',
 			'roomBoard.discuss' => 'Discuss in room',
 			'roomBoard.openRoom' => 'Open room',
+			'profileImages.browse' => 'Browse',
+			'profileImages.saved' => 'Saved',
+			'profileImages.noSaved' => 'No saved portraits yet.',
 			'profileImages.title' => 'Profile image',
 			'profileImages.choose' => 'Choose',
 			'profileImages.pickerTitle' => 'Choose a Petdex profile image',
 			'profileImages.search' => 'Search pets by name',
-			'profileImages.networkHint' => 'Search loads images from Petdex. Only selected images and visible search results are cached.',
+			'profileImages.networkHint' => 'Browse Petdex online. Confirmed portraits are saved for offline use.',
 			'profileImages.startSearch' => 'Search for a pet to see profile images.',
 			'profileImages.noResults' => 'No pets found. Try another name.',
 			'profileImages.catalogError' => 'Could not load Petdex. Check your connection and retry.',

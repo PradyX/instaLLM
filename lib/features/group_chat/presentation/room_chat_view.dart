@@ -12,7 +12,6 @@ import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/bot_editor_page.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
-import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 import 'package:installm/features/group_chat/presentation/room_mention_composer.dart';
@@ -177,7 +176,7 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
 
     return Column(
       children: [
-        RoomTasksPanel(room: chat),
+        if (!chat.isDirect) RoomTasksPanel(room: chat),
         Expanded(
           child: messages.isEmpty
               ? Center(
@@ -460,12 +459,12 @@ class RoomSettingsSheet extends ConsumerWidget {
 
   final String chatId;
 
-  Future<void> _deleteChat(BuildContext context, WidgetRef ref) async {
+  Future<void> _clearChat(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(t.roomManagement.deleteTitle),
-        content: Text(t.roomManagement.deleteHint),
+        title: Text(t.roomManagement.clearTitle),
+        content: Text(t.roomManagement.clearHint),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -473,24 +472,63 @@ class RoomSettingsSheet extends ConsumerWidget {
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(t.roomManagement.delete),
+            child: Text(t.roomManagement.clear),
           ),
         ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
-    final selection = ref.read(activeRoomIdProvider.notifier);
-    final deleted = await ref
+    final cleared = await ref
         .read(groupChatsProvider.notifier)
-        .removeChat(chatId);
+        .clearChat(chatId);
     if (!context.mounted) return;
-    if (deleted) {
-      if (selection.state == chatId) selection.state = null;
+    if (cleared) {
       Navigator.of(context).pop();
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(t.roomManagement.deleteError)));
+      ).showSnackBar(SnackBar(content: Text(t.roomManagement.clearError)));
+    }
+  }
+
+  Future<void> _deleteBot(
+    BuildContext context,
+    WidgetRef ref,
+    String botId,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.botManagement.deleteTitle),
+        content: Text(t.botManagement.deleteHint),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(t.common.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(t.botManagement.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final state = ref.read(groupChatsProvider);
+    final running = state.snapshot.chats.any(
+      (chat) =>
+          state.runningChatIds.contains(chat.id) &&
+          (chat.directBotId == botId || chat.memberBotIds.contains(botId)),
+    );
+    final deleted =
+        !running && await ref.read(botsProvider.notifier).removeBot(botId);
+    if (!context.mounted) return;
+    if (deleted) {
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.botManagement.deleteError)));
     }
   }
 
@@ -508,6 +546,14 @@ class RoomSettingsSheet extends ConsumerWidget {
     final bot = room.directBotId == null
         ? null
         : bots.botById(room.directBotId);
+    final botRunning =
+        bot != null &&
+        state.snapshot.chats.any(
+          (chat) =>
+              state.runningChatIds.contains(chat.id) &&
+              (chat.directBotId == bot.id ||
+                  chat.memberBotIds.contains(bot.id)),
+        );
 
     return Padding(
       padding: EdgeInsets.only(
@@ -521,9 +567,31 @@ class RoomSettingsSheet extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Room settings',
-              style: Theme.of(context).textTheme.titleMedium,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    bot != null
+                        ? t.botManagement.settings
+                        : room.isDirect
+                        ? t.roomManagement.chatSettings
+                        : t.roomManagement.settings,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (bot != null)
+                  TextButton.icon(
+                    onPressed: bots.isReadOnly
+                        ? null
+                        : () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => BotEditorPage(botId: bot.id),
+                            ),
+                          ),
+                    icon: const Icon(Icons.tune_rounded, size: 18),
+                    label: Text(t.botManagement.edit),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             ProfileImageButton(
@@ -541,37 +609,11 @@ class RoomSettingsSheet extends ConsumerWidget {
                           'no rounds to tune.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              if (bot != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Bot settings',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                if (bot.description.trim().isNotEmpty)
-                  Text(
-                    bot.description,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    FilledButton.tonalIcon(
-                      onPressed: bots.isReadOnly
-                          ? null
-                          : () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (context) =>
-                                      BotEditorPage(botId: bot.id),
-                                ),
-                              );
-                            },
-                      icon: const Icon(Icons.tune_rounded, size: 18),
-                      label: Text(t.botManagement.edit),
-                    ),
-                  ],
-                ),
-              ],
+              const SizedBox(height: 12),
+              RoomTasksPanel(
+                room: room,
+                onOpenBoard: () => Navigator.of(context).pop(),
+              ),
             ],
             if (!room.isDirect) ...[
               DropdownButtonFormField<SpeakerMode>(
@@ -646,17 +688,39 @@ class RoomSettingsSheet extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: 24),
-            OutlinedButton.icon(
-              onPressed:
-                  state.isReadOnly || state.runningChatIds.contains(room.id)
-                  ? null
-                  : () => _deleteChat(context, ref),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.error,
-                side: BorderSide(color: Theme.of(context).colorScheme.error),
-              ),
-              icon: const Icon(Icons.delete_outline),
-              label: Text(t.roomManagement.delete),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed:
+                      state.isReadOnly || state.runningChatIds.contains(room.id)
+                      ? null
+                      : () => _clearChat(context, ref),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                  label: Text(t.roomManagement.clear),
+                ),
+                if (bot != null)
+                  OutlinedButton.icon(
+                    onPressed: bots.isReadOnly || botRunning
+                        ? null
+                        : () => _deleteBot(context, ref, bot.id),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.error,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(t.botManagement.delete),
+                  ),
+              ],
             ),
           ],
         ),

@@ -11,7 +11,7 @@ import 'package:installm/features/profile_images/data/profile_image_store.dart';
 import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 
 /// Requests public assets only, using a dedicated client with no auth/logging.
-/// The catalog stays in memory. Only requested search/selected images reach disk.
+/// Catalog/browsing previews stay in memory; confirmed portraits reach disk.
 class PetdexService {
   PetdexService({required Directory directory, required Dio dio})
     : _directory = directory,
@@ -21,16 +21,23 @@ class PetdexService {
       );
 
   static const maxSearchImages = 100;
+  static const maxMemoryPreviews = 32;
   static const _maxAssetBytes = 8 * 1024 * 1024;
+  static const _maxAvatarBytes = 256 * 1024;
   final Directory _directory;
   final Dio _dio;
   final ProfileImageStore store;
   final _pending = <String, Future<File>>{};
+  final _pendingPreviews = <PetdexPet, Future<Uint8List>>{};
+  final _previews = <PetdexPet, Uint8List>{};
   Future<List<PetdexPet>>? _catalog;
   // Limit native decodes and HTTP requests even when a grid is scrolled quickly.
   Future<void> _imageQueue = Future<void>.value();
 
-  void close() => _dio.close(force: true);
+  void close() {
+    _previews.clear();
+    _dio.close(force: true);
+  }
 
   Future<List<PetdexPet>> catalog({CancelToken? cancelToken}) async {
     final existing = _catalog;
@@ -77,6 +84,11 @@ class PetdexService {
   /// A small starting selection for the explicitly opened bot creation sheet.
   /// Metadata is cheap; only visible portraits are fetched by the widgets.
   static List<PetdexPet> featured(List<PetdexPet> pets) {
+    return browse(pets).take(6).toList(growable: false);
+  }
+
+  /// Metadata only. Lazy widgets load the visible part of this larger list.
+  static List<PetdexPet> browse(List<PetdexPet> pets) {
     final curated = pets.where(
       (pet) =>
           pet.spritesheetUrl.startsWith('https://assets.petdex.dev/curated/'),
@@ -89,7 +101,6 @@ class PetdexService {
           (pet) =>
               seenSlugs.add(pet.slug) && seenImages.add(pet.spritesheetUrl),
         )
-        .take(6)
         .toList(growable: false);
   }
 
@@ -97,11 +108,12 @@ class PetdexService {
       File(p.join(_directory.path, 'images', '${pet.slug}.png'));
 
   Future<File> image(PetdexPet pet, {CancelToken? cancelToken}) async {
+    if (_isCancelled(cancelToken)) throw cancelToken!.cancelError!;
     if (PetdexPet.fromJson(pet.toJson()) == null) {
       throw const FormatException('Invalid Petdex pet');
     }
     final file = cachedFile(pet);
-    if (await file.exists()) {
+    if (await file.exists() && await file.length() <= _maxAvatarBytes) {
       // Invalid/partial cache files are re-fetched, never displayed as blank.
       final bytes = await file.readAsBytes();
       if (_isCachedAvatar(bytes)) {
@@ -111,14 +123,69 @@ class PetdexService {
     }
     final existing = _pending[pet.slug];
     if (existing != null) return existing;
-    final request = _imageQueue.then((_) => _loadImage(pet, cancelToken));
-    _imageQueue = request.then<void>((_) {}, onError: (Object _) {});
+    final request = _saveImage(pet, cancelToken);
     _pending[pet.slug] = request;
     try {
       return await request;
     } finally {
       _pending.remove(pet.slug);
     }
+  }
+
+  /// A bounded RAM preview, reusing an existing saved file without writing one.
+  Future<Uint8List> preview(PetdexPet pet, {CancelToken? cancelToken}) async {
+    if (_isCancelled(cancelToken)) throw cancelToken!.cancelError!;
+    if (PetdexPet.fromJson(pet.toJson()) == null) {
+      throw const FormatException('Invalid Petdex pet');
+    }
+    final cached = _previews.remove(pet);
+    if (cached != null) {
+      _previews[pet] = cached;
+      return cached;
+    }
+    final existing = _pendingPreviews[pet];
+    if (existing != null) return existing;
+    final request = _imageQueue.then((_) async {
+      if (_isCancelled(cancelToken)) throw cancelToken!.cancelError!;
+      final file = cachedFile(pet);
+      Uint8List? avatar;
+      if (await file.exists() && await file.length() <= _maxAvatarBytes) {
+        final bytes = await file.readAsBytes();
+        if (_isCachedAvatar(bytes)) avatar = bytes;
+      }
+      avatar ??= await _loadPreview(pet, cancelToken);
+      if (_isCancelled(cancelToken)) throw cancelToken!.cancelError!;
+      _previews[pet] = avatar;
+      while (_previews.length > maxMemoryPreviews) {
+        _previews.remove(_previews.keys.first);
+      }
+      return avatar;
+    });
+    _imageQueue = request.then<void>((_) {}, onError: (Object _) {});
+    _pendingPreviews[pet] = request;
+    try {
+      return await request;
+    } finally {
+      _pendingPreviews.remove(pet);
+    }
+  }
+
+  bool _isCancelled(CancelToken? token) => token?.isCancelled == true;
+
+  Future<File> _saveImage(PetdexPet pet, CancelToken? token) async {
+    final avatar = await preview(pet, cancelToken: token);
+    if (_isCancelled(token)) throw token!.cancelError!;
+    final file = cachedFile(pet);
+    await file.parent.create(recursive: true);
+    final temporary = File('${file.path}.part');
+    try {
+      await temporary.writeAsBytes(avatar, flush: true);
+      await temporary.rename(file.path);
+    } finally {
+      if (await temporary.exists()) await temporary.delete();
+    }
+    await pruneCache(keepSlug: pet.slug);
+    return file;
   }
 
   bool _isCachedAvatar(Uint8List bytes) {
@@ -133,7 +200,7 @@ class PetdexService {
     }
   }
 
-  Future<File> _loadImage(PetdexPet pet, CancelToken? token) async {
+  Future<Uint8List> _loadPreview(PetdexPet pet, CancelToken? token) async {
     if (token?.isCancelled == true) throw token!.cancelError!;
     Uint8List avatar;
     try {
@@ -146,17 +213,7 @@ class PetdexService {
       avatar = await compute(cropPetdexAvatar, (bytes, false));
     }
     if (token?.isCancelled == true) throw token!.cancelError!;
-    final file = cachedFile(pet);
-    await file.parent.create(recursive: true);
-    final temporary = File('${file.path}.part');
-    try {
-      await temporary.writeAsBytes(avatar, flush: true);
-      await temporary.rename(file.path);
-    } finally {
-      if (await temporary.exists()) await temporary.delete();
-    }
-    await pruneCache(keepSlug: pet.slug);
-    return file;
+    return avatar;
   }
 
   Future<Uint8List> _download(String url, {CancelToken? cancelToken}) async {

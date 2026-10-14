@@ -27,7 +27,6 @@ class BotEditorPage extends ConsumerStatefulWidget {
 class _BotEditorPageState extends ConsumerState<BotEditorPage> {
   final _name = TextEditingController();
   final _icon = TextEditingController();
-  final _description = TextEditingController();
   final _soul = TextEditingController();
   final _permissions = TextEditingController();
   var _initializedFor = '';
@@ -36,7 +35,6 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
   void dispose() {
     _name.dispose();
     _icon.dispose();
-    _description.dispose();
     _soul.dispose();
     _permissions.dispose();
     super.dispose();
@@ -47,7 +45,6 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
     _initializedFor = bot.id;
     _name.text = bot.name;
     _icon.text = bot.icon;
-    _description.text = bot.description;
     _soul.text = bot.soul;
     _permissions.text = (bot.toolPermissions.toList()..sort()).join(', ');
   }
@@ -91,7 +88,6 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
     final updated = bot.copyWith(
       name: _name.text,
       icon: _icon.text,
-      description: _description.text,
       soul: _soul.text,
       toolPermissions: permissions,
     );
@@ -131,7 +127,7 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
     final running = rooms.snapshot.chats.any(
       (room) =>
           rooms.runningChatIds.contains(room.id) &&
-          room.memberBotIds.contains(bot.id),
+          (room.directBotId == bot.id || room.memberBotIds.contains(bot.id)),
     );
 
     Future<void> update(Bot updated) =>
@@ -167,30 +163,12 @@ class _BotEditorPageState extends ConsumerState<BotEditorPage> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: _icon,
-                  decoration: const InputDecoration(
-                    labelText: 'Icon (emoji)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 5,
-                child: TextField(
-                  controller: _description,
-                  decoration: const InputDecoration(
-                    labelText: 'Description',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ),
-            ],
+          TextField(
+            controller: _icon,
+            decoration: const InputDecoration(
+              labelText: 'Icon (emoji)',
+              border: OutlineInputBorder(),
+            ),
           ),
           const SizedBox(height: 12),
           TextField(

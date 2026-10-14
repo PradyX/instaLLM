@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -43,8 +44,15 @@ class _FakePetdex extends PetdexService {
   }
 
   @override
+  Future<Uint8List> preview(PetdexPet pet, {CancelToken? cancelToken}) async {
+    if (!requestedImages.contains(pet.slug)) requestedImages.add(pet.slug);
+    if (failImages) throw const SocketException('offline');
+    return img.encodePng(img.Image(width: 96, height: 104));
+  }
+
+  @override
   Future<File> image(PetdexPet pet, {CancelToken? cancelToken}) async {
-    requestedImages.add(pet.slug);
+    if (!requestedImages.contains(pet.slug)) requestedImages.add(pet.slug);
     if (failImages) throw const SocketException('offline');
     final file = cachedFile(pet);
     file.parent.createSync(recursive: true);
@@ -180,7 +188,7 @@ void main() {
   );
 
   testWidgets(
-    'opening picker loads no gallery; search loads only matches, selection persists and can be removed',
+    'opening picker browses in RAM; search filters locally and confirmed selection persists',
     (tester) async {
       final key = botProfileKey(BuiltInBots.coderId);
       await pump(tester, ProfileImageButton(profileKey: key));
@@ -188,14 +196,14 @@ void main() {
       expect(find.byType(DefaultBotAvatar), findsOneWidget);
       await tester.tap(find.text('Choose'));
       await tester.pumpAndSettle();
-      expect(service.catalogRequests, 0);
-      expect(service.requestedImages, isEmpty);
+      expect(service.catalogRequests, 1);
+      expect(service.requestedImages.toSet(), {'boba', 'cat'});
 
       await tester.enterText(find.byType(TextField), 'Boba');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(service.catalogRequests, 1);
-      expect(service.requestedImages, ['boba']);
+      expect(service.requestedImages.toSet(), {'boba', 'cat'});
       expect(find.text('Cat'), findsNothing);
       await tester.tap(
         find.descendant(of: find.byType(Card), matching: find.text('Boba')),

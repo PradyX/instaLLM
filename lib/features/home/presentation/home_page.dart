@@ -585,13 +585,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                 icon: Icons.settings_outlined,
                 onPressed: () => showRoomSettings(context, room.id),
               ),
-            if (room != null) const SizedBox(width: 6),
-            _toolbarIconButton(
-              context,
-              tooltip: 'New chat',
-              icon: Icons.add,
-              onPressed: isGenerating ? null : _startNewConversation,
-            ),
+            if (room != null && !room.isDirect) const SizedBox(width: 6),
+            if (room?.isDirect != true)
+              _toolbarIconButton(
+                context,
+                tooltip: 'New chat',
+                icon: Icons.add,
+                onPressed: isGenerating ? null : _startNewConversation,
+              ),
           ],
         ),
         drawer: isWide

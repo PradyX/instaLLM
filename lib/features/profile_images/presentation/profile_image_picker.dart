@@ -57,6 +57,7 @@ class ProfileImagePicker extends ConsumerStatefulWidget {
 class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   Timer? _debounce;
   var _query = '';
+  var _savedOnly = false;
   var _saving = false;
   String? _error;
 
@@ -75,7 +76,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     try {
       // A chosen portrait must be cached successfully before it is saved.
       if (pet != null) {
-        final provider = petdexImageProvider(pet);
+        final provider = petdexPreviewProvider(pet);
         if (ref.read(provider).hasError) ref.invalidate(provider);
         await ref.read(provider.future);
       }
@@ -106,8 +107,10 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
     final selected = widget.profileKey == null
         ? widget.initialSelection
         : ref.watch(profileImagesProvider).valueOrNull?[widget.profileKey];
-    // No catalog request and no thumbnail requests until the user searches.
-    final catalog = _query.isEmpty ? null : ref.watch(petdexCatalogProvider);
+    final saved = PetdexService.browse(
+      ref.watch(profileImagesProvider).valueOrNull?.values.toList() ?? [],
+    );
+    final catalog = _savedOnly ? null : ref.watch(petdexCatalogProvider);
     return AlertDialog(
       scrollable: true,
       title: Text(t.profileImages.pickerTitle),
@@ -122,6 +125,22 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(t.profileImages.browse),
+                  selected: !_savedOnly,
+                  onSelected: (_) => setState(() => _savedOnly = false),
+                ),
+                ChoiceChip(
+                  label: Text('${t.profileImages.saved} (${saved.length})'),
+                  selected: _savedOnly,
+                  onSelected: (_) => setState(() => _savedOnly = true),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             TextField(
               autofocus: true,
               decoration: InputDecoration(
@@ -147,23 +166,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
             if (_saving) const LinearProgressIndicator(),
             const SizedBox(height: 12),
             Expanded(
-              child: catalog == null
-                  ? Center(
-                      child: selected == null
-                          ? Text(t.profileImages.startSearch)
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                PetdexAvatar(
-                                  pet: selected,
-                                  fallback: const Icon(Icons.pets_outlined),
-                                  size: 88,
-                                ),
-                                Text(selected.name),
-                              ],
-                            ),
-                    )
-                  : catalog.when(
+              child: _savedOnly
+                  ? _grid(context, saved)
+                  : catalog!.when(
                       loading: () =>
                           const Center(child: CircularProgressIndicator()),
                       error: (_, _) => Center(
@@ -179,69 +184,7 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
                           ],
                         ),
                       ),
-                      data: (pets) {
-                        final matches = PetdexService.search(pets, _query);
-                        if (matches.isEmpty) {
-                          return Center(child: Text(t.profileImages.noResults));
-                        }
-                        return GridView.builder(
-                          key: ValueKey(_query),
-                          scrollCacheExtent: const ScrollCacheExtent.pixels(0),
-                          gridDelegate:
-                              SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 140,
-                                mainAxisExtent:
-                                    108 +
-                                    MediaQuery.textScalerOf(context).scale(32),
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                              ),
-                          itemCount: matches.length,
-                          itemBuilder: (context, index) {
-                            final pet = matches[index];
-                            return Tooltip(
-                              message: pet.creator.isEmpty
-                                  ? pet.name
-                                  : '${pet.name} · ${pet.creator}',
-                              child: Card(
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: _saving ? null : () => _select(pet),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Column(
-                                      children: [
-                                        PetdexAvatar(
-                                          pet: pet,
-                                          fallback: const Icon(
-                                            Icons.pets_outlined,
-                                          ),
-                                          size: 72,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          pet.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        if (pet.creator.isNotEmpty)
-                                          Text(
-                                            pet.creator,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                      data: (pets) => _grid(context, [...saved, ...pets]),
                     ),
             ),
           ],
@@ -258,6 +201,72 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
           child: Text(t.common.close),
         ),
       ],
+    );
+  }
+
+  Widget _grid(BuildContext context, List<PetdexPet> pets) {
+    final choices = PetdexService.browse(pets);
+    final matches = _query.isEmpty
+        ? choices
+        : PetdexService.search(choices, _query);
+    if (matches.isEmpty) {
+      return Center(
+        child: Text(
+          _savedOnly && _query.isEmpty
+              ? t.profileImages.noSaved
+              : t.profileImages.noResults,
+        ),
+      );
+    }
+    return GridView.builder(
+      key: ValueKey(_query),
+      scrollCacheExtent: const ScrollCacheExtent.pixels(0),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 140,
+        mainAxisExtent: 108 + MediaQuery.textScalerOf(context).scale(32),
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: matches.length,
+      itemBuilder: (context, index) {
+        final pet = matches[index];
+        return Tooltip(
+          message: pet.creator.isEmpty
+              ? pet.name
+              : '${pet.name} · ${pet.creator}',
+          child: Card(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: _saving ? null : () => _select(pet),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  children: [
+                    PetdexPreviewAvatar(
+                      pet: pet,
+                      fallback: const Icon(Icons.pets_outlined),
+                      size: 72,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      pet.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (pet.creator.isNotEmpty)
+                      Text(
+                        pet.creator,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

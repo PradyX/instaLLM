@@ -42,7 +42,7 @@ botCreation:
     Ask for clarification when needed.
   defaultPortrait: Keep the bot icon or choose a pet.
   searchPortraits: Search pets
-  portraitHint: Petdex portraits load online.
+  portraitHint: Only confirmed portraits are saved for offline use.
   portraitsOffline: Portraits are unavailable. You can still create your bot.
   previousPortraits: Previous portraits
   nextPortraits: Next portraits
@@ -51,6 +51,7 @@ botCreation:
   saveError: Could not create the bot. Check available storage and try again.
 
 botManagement:
+  settings: Bot settings
   edit: Edit bot
   delete: Delete bot
   deleteTitle: Delete this bot?
@@ -65,10 +66,12 @@ roomMentions:
   title: Mention a room member
 
 roomManagement:
-  delete: Delete chat
-  deleteTitle: Delete this chat?
-  deleteHint: This permanently deletes this chat and its messages. Bots and Board tasks are kept.
-  deleteError: Could not delete the chat. Finish any running reply, check available storage and try again.
+  settings: Room settings
+  chatSettings: Chat settings
+  clear: Clear chat
+  clearTitle: Clear this chat?
+  clearHint: This permanently clears its messages. The bot, chat settings and Board tasks are kept.
+  clearError: Could not clear the chat. Finish any running reply, check available storage and try again.
 
 modelRepository:
   addError: Could not add this model. Please try again.
@@ -87,11 +90,14 @@ roomBoard:
   openRoom: Open room
 
 profileImages:
+  browse: Browse
+  saved: Saved
+  noSaved: No saved portraits yet.
   title: "Profile image"
   choose: "Choose"
   pickerTitle: "Choose a Petdex profile image"
   search: "Search pets by name"
-  networkHint: "Search loads images from Petdex. Only selected images and visible search results are cached."
+  networkHint: "Browse Petdex online. Confirmed portraits are saved for offline use."
   startSearch: "Search for a pet to see profile images."
   noResults: "No pets found. Try another name."
   catalogError: "Could not load Petdex. Check your connection and retry."

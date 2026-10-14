@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,107 +54,141 @@ void main() {
     return notifier;
   }
 
-  group('removeChat', () {
-    test(
-      'deletes only the selected chat and its messages across restart',
-      () async {
-        final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
-        final store = GroupChatStore(file);
-        final first = GroupChat.create(
-          id: 'first',
-          workspaceId: 'ws',
-          name: 'First',
-          directBotId: 'old-bot',
-        );
-        final second = GroupChat.create(
-          id: 'second',
-          workspaceId: 'ws',
-          name: 'Second',
-        );
-        store.save(
-          GroupChatsSnapshot(
-            chats: [first, second],
-            messages: {
-              first.id: [
-                GroupMessage.user(chatId: first.id, text: 'Remove this'),
-              ],
-              second.id: [
-                GroupMessage.user(chatId: second.id, text: 'Keep this'),
-              ],
-            },
-          ),
-        );
-        final container = buildContainer(store: store);
-        final notifier = await loaded(container);
-        expect(await notifier.removeChat(first.id), isTrue);
-        final restored = GroupChatStore(file).load();
-        expect(restored.chats.map((chat) => chat.id), [second.id]);
-        expect(restored.messagesFor(first.id), isEmpty);
-        expect(restored.messagesFor(second.id).single.text, 'Keep this');
-        expect(
-          container
-              .read(groupChatsProvider)
-              .snapshot
-              .chats
-              .map((chat) => chat.id),
-          [second.id],
-        );
-      },
-    );
+  for (final clear in [false, true]) {
+    group(clear ? 'clearChat' : 'removeChat', () {
+      test(
+        'deletes only the selected chat and its messages across restart',
+        () async {
+          final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
+          final store = GroupChatStore(file);
+          final first = GroupChat.create(
+            id: 'first',
+            workspaceId: 'ws',
+            name: 'First',
+            directBotId: 'old-bot',
+          );
+          final second = GroupChat.create(
+            id: 'second',
+            workspaceId: 'ws',
+            name: 'Second',
+          );
+          store.save(
+            GroupChatsSnapshot(
+              chats: [first, second],
+              messages: {
+                first.id: [
+                  GroupMessage.user(chatId: first.id, text: 'Remove this'),
+                ],
+                second.id: [
+                  GroupMessage.user(chatId: second.id, text: 'Keep this'),
+                ],
+              },
+            ),
+          );
+          final container = buildContainer(store: store);
+          final notifier = await loaded(container);
+          expect(
+            await (clear ? notifier.clearChat : notifier.removeChat)(first.id),
+            isTrue,
+          );
+          final restored = GroupChatStore(file).load();
+          expect(
+            restored.chats.map((chat) => chat.id),
+            clear ? [first.id, second.id] : [second.id],
+          );
+          if (clear) {
+            final kept = container
+                .read(groupChatsProvider)
+                .snapshot
+                .chats
+                .first
+                .toJson();
+            expect(jsonDecode(file.readAsStringSync())['chats'].first, kept);
+            expect(
+              restored.chats.first
+                  .copyWith(updatedAt: first.updatedAt)
+                  .toJson(),
+              first.toJson(),
+            );
+          }
+          expect(restored.messagesFor(first.id), isEmpty);
+          expect(restored.messagesFor(second.id).single.text, 'Keep this');
+          expect(
+            container
+                .read(groupChatsProvider)
+                .snapshot
+                .chats
+                .map((chat) => chat.id),
+            clear ? [first.id, second.id] : [second.id],
+          );
+        },
+      );
 
-    test(
-      'a failed deletion keeps the chat and messages visible and saved',
-      () async {
+      test(
+        'a failed deletion keeps the chat and messages visible and saved',
+        () async {
+          final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
+          final store = _FailingGroupStore(file);
+          final chat = GroupChat.create(
+            id: 'keep',
+            workspaceId: 'ws',
+            name: 'Keep',
+          );
+          store.save(
+            GroupChatsSnapshot(
+              chats: [chat],
+              messages: {
+                chat.id: [
+                  GroupMessage.user(chatId: chat.id, text: 'Keep this'),
+                ],
+              },
+            ),
+          );
+          final raw = file.readAsStringSync();
+          final container = buildContainer(store: store);
+          final notifier = await loaded(container);
+          store.failWrites = true;
+          expect(
+            await (clear ? notifier.clearChat : notifier.removeChat)(chat.id),
+            isFalse,
+          );
+          expect(
+            container.read(groupChatsProvider).snapshot.chats.single.id,
+            chat.id,
+          );
+          expect(
+            container
+                .read(groupChatsProvider)
+                .snapshot
+                .messagesFor(chat.id)
+                .single
+                .text,
+            'Keep this',
+          );
+          expect(file.readAsStringSync(), raw);
+          expect(container.read(groupChatsProvider).errorMessage, isNotNull);
+          store.failWrites = false;
+          expect(
+            await (clear ? notifier.clearChat : notifier.removeChat)(chat.id),
+            isTrue,
+          );
+        },
+      );
+
+      test('a newer room store cannot be deleted or downgraded', () async {
         final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
-        final store = _FailingGroupStore(file);
-        final chat = GroupChat.create(
-          id: 'keep',
-          workspaceId: 'ws',
-          name: 'Keep',
-        );
-        store.save(
-          GroupChatsSnapshot(
-            chats: [chat],
-            messages: {
-              chat.id: [GroupMessage.user(chatId: chat.id, text: 'Keep this')],
-            },
-          ),
-        );
-        final raw = file.readAsStringSync();
-        final container = buildContainer(store: store);
-        final notifier = await loaded(container);
-        store.failWrites = true;
-        expect(await notifier.removeChat(chat.id), isFalse);
+        file.parent.createSync(recursive: true);
+        const raw = '{"version":99,"chats":[{"id":"future"}],"messages":{}}';
+        file.writeAsStringSync(raw);
+        final notifier = await loaded(buildContainer());
         expect(
-          container.read(groupChatsProvider).snapshot.chats.single.id,
-          chat.id,
-        );
-        expect(
-          container
-              .read(groupChatsProvider)
-              .snapshot
-              .messagesFor(chat.id)
-              .single
-              .text,
-          'Keep this',
+          await (clear ? notifier.clearChat : notifier.removeChat)('future'),
+          isFalse,
         );
         expect(file.readAsStringSync(), raw);
-        expect(container.read(groupChatsProvider).errorMessage, isNotNull);
-        store.failWrites = false;
-        expect(await notifier.removeChat(chat.id), isTrue);
-      },
-    );
-
-    test('a newer room store cannot be deleted or downgraded', () async {
-      final file = File(p.join(tempDir.path, 'group_chat', 'chats.json'));
-      file.parent.createSync(recursive: true);
-      const raw = '{"version":99,"chats":[{"id":"future"}],"messages":{}}';
-      file.writeAsStringSync(raw);
-      final notifier = await loaded(buildContainer());
-      expect(await notifier.removeChat('future'), isFalse);
-      expect(file.readAsStringSync(), raw);
+      });
     });
-  });
+  }
 
   group('directChatWith', () {
     test('creates one 1:1 room and reuses it', () async {

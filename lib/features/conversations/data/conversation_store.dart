@@ -7,13 +7,15 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:installm/features/conversations/domain/conversation.dart';
 import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/core/services/app_storage_service.dart';
 
 /// Current schema version of the on-disk conversation store.
 ///
 /// Version 2 removed the per-conversation document scope
 /// (`documentCollectionId`, `documentsEnabled`): retrieval always follows the
 /// app-wide active collection now, so a conversation no longer stores one.
-const int conversationStoreSchemaVersion = 2;
+// Version 3 resolves managed attachment paths after the resource-root move.
+const int conversationStoreSchemaVersion = 3;
 
 /// Oldest schema version this build can still read.
 ///
@@ -41,11 +43,14 @@ const int conversationStoreMinimumSchemaVersion = 1;
 /// without deleting user data. Files from an older schema version are migrated
 /// on read (see [conversationStoreMinimumSchemaVersion]).
 class ConversationStore {
-  ConversationStore({Directory? rootDirectory}) : _providedRoot = rootDirectory;
+  ConversationStore({Directory? rootDirectory, AppStorageService? appStorage})
+    : _providedRoot = rootDirectory,
+      _appStorage = appStorage ?? AppStorageService();
 
   static const String _indexFileName = 'index.json';
 
   final Directory? _providedRoot;
+  final AppStorageService _appStorage;
   Directory? _root;
   bool _rootUnavailable = false;
   Future<void> _writeQueue = Future<void>.value();
@@ -381,6 +386,50 @@ class ConversationStore {
         );
         return null;
       }
+      // Change raw JSON, rather than round-tripping through domain parsers:
+      // unknown fields and malformed/partial messages must survive migration.
+      // Re-resolve on v3 reads too: iOS can change its sandbox UUID on restore.
+      try {
+        var pathsChanged = false;
+        final rawMessages = payload['messages'];
+        if (rawMessages is List) {
+          for (final raw in rawMessages) {
+            if (raw is! Map) continue;
+            pathsChanged =
+                await _resolvePaths(raw, ['imagePath']) || pathsChanged;
+            final attachments = raw['attachments'];
+            if (attachments is List) {
+              for (final attachment in attachments) {
+                if (attachment is! Map) continue;
+                pathsChanged =
+                    await _resolvePaths(attachment, [
+                      'path',
+                      'extractedTextPath',
+                    ]) ||
+                    pathsChanged;
+              }
+            }
+          }
+        }
+        if (version != conversationStoreSchemaVersion || pathsChanged) {
+          final original = File('${file.path}.pre-storage-v3');
+          if (!await original.exists()) await file.copy(original.path);
+          // Retain the existing v1 -> v2 migration while preserving unknown data.
+          final metadata = payload['conversation'];
+          if (metadata is Map && version == 1) {
+            metadata.remove('documentCollectionId');
+            metadata.remove('documentsEnabled');
+          }
+          payload['schemaVersion'] = conversationStoreSchemaVersion;
+          await _writeJsonAtomic(file, payload);
+        }
+      } catch (_) {
+        // A failed preservation/move/write never prevents reading history or
+        // triggers a domain re-serialization that would drop partial entries.
+        debugPrint(
+          'ConversationStore: storage migration pending; retry on read.',
+        );
+      }
       final rawConversation = payload['conversation'];
       if (rawConversation is! Map) return null;
       final conversation = Conversation.fromJson(
@@ -404,20 +453,6 @@ class ConversationStore {
         conversation: conversation,
         messages: messages,
       );
-      if (version != conversationStoreSchemaVersion) {
-        // Migrate in place. Re-serializing the conversation is the migration:
-        // keys an older version carried and this one no longer has are simply
-        // not written back, and everything else is preserved. A failure here
-        // does not spoil the read the caller asked for.
-        try {
-          await _writeConversationFile(root, conversation, messages);
-        } catch (error) {
-          debugPrint(
-            'ConversationStore: could not migrate $conversationId from schema '
-            'version $version: $error',
-          );
-        }
-      }
       return stored;
     } catch (error) {
       debugPrint(
@@ -425,6 +460,20 @@ class ConversationStore {
       );
       return null;
     }
+  }
+
+  Future<bool> _resolvePaths(Map entry, List<String> keys) async {
+    var changed = false;
+    for (final key in keys) {
+      final old = entry[key];
+      if (old is! String || old.isEmpty) continue;
+      final resolved = await _appStorage.resolveAttachmentPath(old);
+      if (resolved != old) {
+        entry[key] = resolved;
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   Future<void> _writeConversationFile(
@@ -446,9 +495,6 @@ class ConversationStore {
     final temporary = File('${file.path}.tmp');
     try {
       await temporary.writeAsString(jsonEncode(payload), flush: true);
-      if (await file.exists()) {
-        await file.delete();
-      }
       await temporary.rename(file.path);
     } finally {
       if (await temporary.exists()) {

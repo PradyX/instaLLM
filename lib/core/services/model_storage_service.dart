@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/core/services/app_storage_service.dart';
 
 class DownloadMetadata {
   final int totalSize;
@@ -56,6 +56,10 @@ class ChunkState {
 }
 
 class ModelStorageService {
+  ModelStorageService({AppStorageService? appStorage})
+    : _appStorage = appStorage ?? AppStorageService();
+
+  final AppStorageService _appStorage;
   final Dio _dio = Dio(
     BaseOptions(
       followRedirects: true,
@@ -64,17 +68,11 @@ class ModelStorageService {
   );
 
   Future<String> getModelDir() async {
-    final appDocDir = await getApplicationDocumentsDirectory();
-    final modelDir = Directory(p.join(appDocDir.path, 'models'));
-    await modelDir.create(recursive: true);
-    return modelDir.path;
+    return _appStorage.directory('models');
   }
 
   Future<String> getAttachmentsDir() async {
-    final appDocDir = await getApplicationDocumentsDirectory();
-    final attachmentsDir = Directory(p.join(appDocDir.path, 'attachments'));
-    await attachmentsDir.create(recursive: true);
-    return attachmentsDir.path;
+    return _appStorage.directory('attachments');
   }
 
   /// Target file name for a copied attachment.
@@ -207,8 +205,7 @@ class ModelStorageService {
   }
 
   Future<bool> isModelDownloaded(String fileName) async {
-    final dir = await getModelDir();
-    return isModelPathDownloaded(p.join(dir, fileName));
+    return isModelPathDownloaded(await getLocalFilePath(fileName));
   }
 
   /// Resolves the absolute path of a model's main GGUF file.
@@ -268,8 +265,7 @@ class ModelStorageService {
   }
 
   Future<int> getLocalFileSize(String fileName) async {
-    final dir = await getModelDir();
-    final file = File(p.join(dir, fileName));
+    final file = File(await getLocalFilePath(fileName));
     if (!await file.exists()) return 0;
     return file.length();
   }
@@ -547,8 +543,7 @@ class ModelStorageService {
   }
 
   Future<String> getLocalFilePath(String fileName) async {
-    final dir = await getModelDir();
-    return p.join(dir, fileName);
+    return _appStorage.modelPath(fileName);
   }
 
   Future<void> _downloadSingleStream({

@@ -189,6 +189,13 @@ Settings uses spacing between its controls without divider lines. Settings → V
 - Conversations are stored locally as versioned JSON (`conversations/` under the app support directory).
 - Existing per-model chats from older versions are migrated into conversations automatically on first launch; the original secure-storage backup (`model_chat_threads_v1`) is left untouched.
 
+### Managed resource storage
+
+- macOS, Linux and Windows use `<documents>/InstaLLM/{models,attachments,vault}`. Android and iOS use `{models,attachments,vault}` directly inside the platform's app-private documents directory; no desktop path is hard-coded on mobile. The managed vault directory is prepared here; registration and journal controls are separate work.
+- Desktop legacy `models` and `attachments` directories migrate on first resource access. Same-volume renames avoid copying model weights. Cross-volume copies are compared byte-for-byte with bounded buffers before removing their source; a versioned journal permits restart after interruption and discards only its recorded unfinished copy. Conflicting destinations, links and unreadable ownership records stop migration without overwriting files. Completed and remaining source files stay readable while new resource writes wait for successful migration.
+- External model/projector references, including references inside the old model directory, stay in place. Unrelated Documents files and external folders are untouched. The versioned migration marker is local; nothing is uploaded.
+- Conversation schema v3 resolves managed attachment paths with their conversation subfolder intact. Original JSON is preserved as `.pre-storage-v3` before rewriting; partial/unknown fields survive and newer schemas stay untouched. External and missing paths are never matched to another chat by filename. iOS restored sandbox paths are resolved against the current private documents directory on subsequent reads. Existing support-directory stores remain in place.
+
 ### Context and memory
 
 - Every request is assembled against a token budget derived from the model's context window, the tokens reserved for the answer and the safety margin; the system prompt always stays, and older turns are dropped oldest-first only when the budget runs out.

@@ -599,20 +599,43 @@ build_ios_simulator() {
   fi
 }
 
-print_summary() {
-  log "Android libraries:"
-  find "${PROJECT_DIR}/android/app/src/main/jniLibs" -maxdepth 2 -type f | sort
+# Lists one target's built libraries without failing the whole script.
+#
+# These directories are only created for the targets that were built (and the
+# Android one is gitignored), so a missing directory means "not built here"
+# rather than an error. Under `set -euo pipefail` an unguarded `find` on a
+# missing path would abort after a successful build and report it as a failure.
+print_summary_directory() {
+  local label="$1"
+  local dir="$2"
+  shift 2
+  local -a find_args=("$@")
 
-  log "Linux libraries:"
-  if [[ -d "${PROJECT_DIR}/linux/lib" ]]; then
-    find "${PROJECT_DIR}/linux/lib" -maxdepth 1 -type f -name 'lib*.so' | sort
+  log "${label}:"
+  if [[ -d "${dir}" ]]; then
+    local -a found=()
+    while IFS= read -r path; do
+      found+=("${path}")
+    done < <(find "${dir}" "${find_args[@]}" -type f | sort)
+    if [[ "${#found[@]}" -gt 0 ]]; then
+      printf '%s\n' "${found[@]}"
+    else
+      printf '  (none built in %s)\n' "${dir}"
+    fi
+  else
+    printf '  (not built: %s does not exist)\n' "${dir}"
   fi
+}
 
-  log "iOS device libraries:"
-  find "${PROJECT_DIR}/ios" -maxdepth 1 -type f -name 'lib*.dylib' | sort
-
-  log "iOS simulator libraries:"
-  find "${PROJECT_DIR}/ios/Frameworks" -maxdepth 1 -type f -name '*.dylib' | sort
+print_summary() {
+  print_summary_directory \
+    "Android libraries" "${PROJECT_DIR}/android/app/src/main/jniLibs" -maxdepth 2
+  print_summary_directory \
+    "Linux libraries" "${PROJECT_DIR}/linux/lib" -maxdepth 1 -name 'lib*.so'
+  print_summary_directory \
+    "iOS device libraries" "${PROJECT_DIR}/ios" -maxdepth 1 -name 'lib*.dylib'
+  print_summary_directory \
+    "iOS simulator libraries" "${PROJECT_DIR}/ios/Frameworks" -maxdepth 1 -name '*.dylib'
 }
 
 main() {

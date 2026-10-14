@@ -79,8 +79,15 @@ You can override the target triple with `LLMFIT_TARGET` if you already have the 
 cd /path/to/InstaLLM
 flutter clean
 flutter pub get
-flutter run -d linux
+scripts/run_linux.sh
 ```
+
+`scripts/run_linux.sh` creates `.env` from `.env.example` when it is missing — the
+app reads that file at startup and exits without it — and reports a missing
+`linux/lib` runtime with the build command from step 1, so the app never opens
+with chat silently unable to load a model. Pass `--check-only` to check the
+prerequisites without launching, and any other arguments through to
+`flutter run`. A bare `flutter run -d linux` still works once both are in place.
 
 ## 4. Build The Release Bundle
 

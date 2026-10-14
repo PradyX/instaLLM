@@ -51,15 +51,17 @@ final workspacesProvider =
 /// a boundary to filter by from the start.
 class WorkspacesNotifier extends StateNotifier<WorkspacesState> {
   WorkspacesNotifier(this._ref) : super(const WorkspacesState()) {
-    _load();
+    whenReady = _load();
   }
 
   final Ref _ref;
+  late final Future<void> whenReady;
 
   Future<void> _load() async {
     try {
       final store = await _ref.read(workspaceStoreProvider.future);
       final snapshot = store.load();
+      if (!mounted) return;
       final effective = snapshot.workspaces.isEmpty
           ? WorkspacesSnapshot(
               workspaces: [Workspace.create(name: 'My workspace')],
@@ -78,6 +80,7 @@ class WorkspacesNotifier extends StateNotifier<WorkspacesState> {
         store.save(withActive);
       }
     } catch (error) {
+      if (!mounted) return;
       final fallback = Workspace.create(name: 'My workspace');
       state = WorkspacesState(
         snapshot: WorkspacesSnapshot(

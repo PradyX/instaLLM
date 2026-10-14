@@ -49,6 +49,7 @@ class MemoryFact {
     required String text,
     required DateTime updatedAt,
     DateTime? expiresAt,
+    bool? globalOptIn,
   }) => MemoryFact(
     id: id,
     scope: scope,
@@ -58,7 +59,7 @@ class MemoryFact {
     createdAt: createdAt,
     updatedAt: updatedAt,
     expiresAt: expiresAt,
-    globalOptIn: globalOptIn,
+    globalOptIn: globalOptIn ?? this.globalOptIn,
   );
 
   Map<String, dynamic> toJson() => {

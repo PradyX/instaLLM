@@ -28,6 +28,55 @@ common:
   yes: "Yes"
   no: "No"
 
+memory:
+  title: Memory
+  subtitle: Facts you choose to remember on this device
+  empty: No saved facts yet.
+  help: 'In chat: remember X or forget X. For workspace facts: remember in workspace: X. Global recording requires remember globally: X or the explicit choice below.'
+  add: Add fact
+  edit: Edit fact
+  save: Save
+  delete: Delete
+  deleteTitle: Delete this saved fact?
+  deleteHint: The fact will be removed from saved memory. Chat messages and conversation summaries are kept.
+  fact: Fact
+  scope: Scope
+  conversation: Conversation
+  workspace: Workspace
+  global: Global
+  owner: Save in
+  userStated: User-stated
+  inferred: Inferred
+  botRecorded: Bot-recorded
+  expired: Expired
+  globalDisabled: Global recall off
+  globalConsent: Use this fact across all workspaces
+  globalHint: This choice applies only to this fact. Bots also need Global memory scope to recall it.
+  expires: Expires on (optional, YYYY-MM-DD)
+  dateError: Enter a valid date as YYYY-MM-DD.
+  textError: Enter one fact of up to 1000 characters.
+  ownerError: Choose a conversation or workspace.
+  saveError: Could not save memory. Check available storage and try again.
+  noMatch: No exact saved fact matches in this scope. Check Settings → Memory.
+  ambiguous: Several saved facts match. Delete the one you mean in Settings → Memory.
+  remembered: Saved in memory.
+  forgotten: Removed from saved memory. Chat history and summaries are kept.
+  globalRequired: Choose global use for this fact before saving it.
+  workspaceRequired: Choose a workspace before saving a workspace fact.
+  noModelHint: 'Remember a fact, or install a model to chat…'
+  noWorkspace: Workspace memory is unavailable. Check Settings → Workspaces.
+  unavailableOwner: Saved scope
+  retry: Try again
+  commands: Chat commands
+  actions: Fact actions
+  unsupported: Saved memory uses an unsupported format. Update InstaLLM to edit it; the file has been left untouched.
+  unsupportedEdit: Saved memory uses an unsupported format. Update InstaLLM before editing it.
+  readError: Could not read saved memory. Check access to the app support folder and try again. Local chat remains available.
+  storageError: Could not save memory. Check free space and access to the app support folder, then try again. Existing facts were kept.
+  consentError: Confirm sharing this fact across all workspaces before saving it.
+  ownerTextError: Enter one fact of up to 1000 characters and choose its conversation or workspace.
+  missingFact: This memory fact no longer exists.
+
 botCreation:
   title: New bot
   name: Name

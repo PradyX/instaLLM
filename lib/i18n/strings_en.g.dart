@@ -44,6 +44,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$login$en login = Translations$login$en._(_root);
 	late final Translations$home$en home = Translations$home$en._(_root);
 	late final Translations$common$en common = Translations$common$en._(_root);
+	late final Translations$memory$en memory = Translations$memory$en._(_root);
 	late final Translations$botCreation$en botCreation = Translations$botCreation$en._(_root);
 	late final Translations$botManagement$en botManagement = Translations$botManagement$en._(_root);
 	late final Translations$roomMentions$en roomMentions = Translations$roomMentions$en._(_root);
@@ -146,6 +147,156 @@ class Translations$common$en {
 
 	/// en: 'No'
 	String get no => 'No';
+}
+
+// Path: memory
+class Translations$memory$en {
+	Translations$memory$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Memory'
+	String get title => 'Memory';
+
+	/// en: 'Facts you choose to remember on this device'
+	String get subtitle => 'Facts you choose to remember on this device';
+
+	/// en: 'No saved facts yet.'
+	String get empty => 'No saved facts yet.';
+
+	/// en: 'In chat: remember X or forget X. For workspace facts: remember in workspace: X. Global recording requires remember globally: X or the explicit choice below.'
+	String get help => 'In chat: remember X or forget X. For workspace facts: remember in workspace: X. Global recording requires remember globally: X or the explicit choice below.';
+
+	/// en: 'Add fact'
+	String get add => 'Add fact';
+
+	/// en: 'Edit fact'
+	String get edit => 'Edit fact';
+
+	/// en: 'Save'
+	String get save => 'Save';
+
+	/// en: 'Delete'
+	String get delete => 'Delete';
+
+	/// en: 'Delete this saved fact?'
+	String get deleteTitle => 'Delete this saved fact?';
+
+	/// en: 'The fact will be removed from saved memory. Chat messages and conversation summaries are kept.'
+	String get deleteHint => 'The fact will be removed from saved memory. Chat messages and conversation summaries are kept.';
+
+	/// en: 'Fact'
+	String get fact => 'Fact';
+
+	/// en: 'Scope'
+	String get scope => 'Scope';
+
+	/// en: 'Conversation'
+	String get conversation => 'Conversation';
+
+	/// en: 'Workspace'
+	String get workspace => 'Workspace';
+
+	/// en: 'Global'
+	String get global => 'Global';
+
+	/// en: 'Save in'
+	String get owner => 'Save in';
+
+	/// en: 'User-stated'
+	String get userStated => 'User-stated';
+
+	/// en: 'Inferred'
+	String get inferred => 'Inferred';
+
+	/// en: 'Bot-recorded'
+	String get botRecorded => 'Bot-recorded';
+
+	/// en: 'Expired'
+	String get expired => 'Expired';
+
+	/// en: 'Global recall off'
+	String get globalDisabled => 'Global recall off';
+
+	/// en: 'Use this fact across all workspaces'
+	String get globalConsent => 'Use this fact across all workspaces';
+
+	/// en: 'This choice applies only to this fact. Bots also need Global memory scope to recall it.'
+	String get globalHint => 'This choice applies only to this fact. Bots also need Global memory scope to recall it.';
+
+	/// en: 'Expires on (optional, YYYY-MM-DD)'
+	String get expires => 'Expires on (optional, YYYY-MM-DD)';
+
+	/// en: 'Enter a valid date as YYYY-MM-DD.'
+	String get dateError => 'Enter a valid date as YYYY-MM-DD.';
+
+	/// en: 'Enter one fact of up to 1000 characters.'
+	String get textError => 'Enter one fact of up to 1000 characters.';
+
+	/// en: 'Choose a conversation or workspace.'
+	String get ownerError => 'Choose a conversation or workspace.';
+
+	/// en: 'Could not save memory. Check available storage and try again.'
+	String get saveError => 'Could not save memory. Check available storage and try again.';
+
+	/// en: 'No exact saved fact matches in this scope. Check Settings → Memory.'
+	String get noMatch => 'No exact saved fact matches in this scope. Check Settings → Memory.';
+
+	/// en: 'Several saved facts match. Delete the one you mean in Settings → Memory.'
+	String get ambiguous => 'Several saved facts match. Delete the one you mean in Settings → Memory.';
+
+	/// en: 'Saved in memory.'
+	String get remembered => 'Saved in memory.';
+
+	/// en: 'Removed from saved memory. Chat history and summaries are kept.'
+	String get forgotten => 'Removed from saved memory. Chat history and summaries are kept.';
+
+	/// en: 'Choose global use for this fact before saving it.'
+	String get globalRequired => 'Choose global use for this fact before saving it.';
+
+	/// en: 'Choose a workspace before saving a workspace fact.'
+	String get workspaceRequired => 'Choose a workspace before saving a workspace fact.';
+
+	/// en: 'Remember a fact, or install a model to chat…'
+	String get noModelHint => 'Remember a fact, or install a model to chat…';
+
+	/// en: 'Workspace memory is unavailable. Check Settings → Workspaces.'
+	String get noWorkspace => 'Workspace memory is unavailable. Check Settings → Workspaces.';
+
+	/// en: 'Saved scope'
+	String get unavailableOwner => 'Saved scope';
+
+	/// en: 'Try again'
+	String get retry => 'Try again';
+
+	/// en: 'Chat commands'
+	String get commands => 'Chat commands';
+
+	/// en: 'Fact actions'
+	String get actions => 'Fact actions';
+
+	/// en: 'Saved memory uses an unsupported format. Update InstaLLM to edit it; the file has been left untouched.'
+	String get unsupported => 'Saved memory uses an unsupported format. Update InstaLLM to edit it; the file has been left untouched.';
+
+	/// en: 'Saved memory uses an unsupported format. Update InstaLLM before editing it.'
+	String get unsupportedEdit => 'Saved memory uses an unsupported format. Update InstaLLM before editing it.';
+
+	/// en: 'Could not read saved memory. Check access to the app support folder and try again. Local chat remains available.'
+	String get readError => 'Could not read saved memory. Check access to the app support folder and try again. Local chat remains available.';
+
+	/// en: 'Could not save memory. Check free space and access to the app support folder, then try again. Existing facts were kept.'
+	String get storageError => 'Could not save memory. Check free space and access to the app support folder, then try again. Existing facts were kept.';
+
+	/// en: 'Confirm sharing this fact across all workspaces before saving it.'
+	String get consentError => 'Confirm sharing this fact across all workspaces before saving it.';
+
+	/// en: 'Enter one fact of up to 1000 characters and choose its conversation or workspace.'
+	String get ownerTextError => 'Enter one fact of up to 1000 characters and choose its conversation or workspace.';
+
+	/// en: 'This memory fact no longer exists.'
+	String get missingFact => 'This memory fact no longer exists.';
 }
 
 // Path: botCreation
@@ -577,6 +728,53 @@ extension on Translations {
 			'common.ok' => 'OK',
 			'common.yes' => 'Yes',
 			'common.no' => 'No',
+			'memory.title' => 'Memory',
+			'memory.subtitle' => 'Facts you choose to remember on this device',
+			'memory.empty' => 'No saved facts yet.',
+			'memory.help' => 'In chat: remember X or forget X. For workspace facts: remember in workspace: X. Global recording requires remember globally: X or the explicit choice below.',
+			'memory.add' => 'Add fact',
+			'memory.edit' => 'Edit fact',
+			'memory.save' => 'Save',
+			'memory.delete' => 'Delete',
+			'memory.deleteTitle' => 'Delete this saved fact?',
+			'memory.deleteHint' => 'The fact will be removed from saved memory. Chat messages and conversation summaries are kept.',
+			'memory.fact' => 'Fact',
+			'memory.scope' => 'Scope',
+			'memory.conversation' => 'Conversation',
+			'memory.workspace' => 'Workspace',
+			'memory.global' => 'Global',
+			'memory.owner' => 'Save in',
+			'memory.userStated' => 'User-stated',
+			'memory.inferred' => 'Inferred',
+			'memory.botRecorded' => 'Bot-recorded',
+			'memory.expired' => 'Expired',
+			'memory.globalDisabled' => 'Global recall off',
+			'memory.globalConsent' => 'Use this fact across all workspaces',
+			'memory.globalHint' => 'This choice applies only to this fact. Bots also need Global memory scope to recall it.',
+			'memory.expires' => 'Expires on (optional, YYYY-MM-DD)',
+			'memory.dateError' => 'Enter a valid date as YYYY-MM-DD.',
+			'memory.textError' => 'Enter one fact of up to 1000 characters.',
+			'memory.ownerError' => 'Choose a conversation or workspace.',
+			'memory.saveError' => 'Could not save memory. Check available storage and try again.',
+			'memory.noMatch' => 'No exact saved fact matches in this scope. Check Settings → Memory.',
+			'memory.ambiguous' => 'Several saved facts match. Delete the one you mean in Settings → Memory.',
+			'memory.remembered' => 'Saved in memory.',
+			'memory.forgotten' => 'Removed from saved memory. Chat history and summaries are kept.',
+			'memory.globalRequired' => 'Choose global use for this fact before saving it.',
+			'memory.workspaceRequired' => 'Choose a workspace before saving a workspace fact.',
+			'memory.noModelHint' => 'Remember a fact, or install a model to chat…',
+			'memory.noWorkspace' => 'Workspace memory is unavailable. Check Settings → Workspaces.',
+			'memory.unavailableOwner' => 'Saved scope',
+			'memory.retry' => 'Try again',
+			'memory.commands' => 'Chat commands',
+			'memory.actions' => 'Fact actions',
+			'memory.unsupported' => 'Saved memory uses an unsupported format. Update InstaLLM to edit it; the file has been left untouched.',
+			'memory.unsupportedEdit' => 'Saved memory uses an unsupported format. Update InstaLLM before editing it.',
+			'memory.readError' => 'Could not read saved memory. Check access to the app support folder and try again. Local chat remains available.',
+			'memory.storageError' => 'Could not save memory. Check free space and access to the app support folder, then try again. Existing facts were kept.',
+			'memory.consentError' => 'Confirm sharing this fact across all workspaces before saving it.',
+			'memory.ownerTextError' => 'Enter one fact of up to 1000 characters and choose its conversation or workspace.',
+			'memory.missingFact' => 'This memory fact no longer exists.',
 			'botCreation.title' => 'New bot',
 			'botCreation.name' => 'Name',
 			'botCreation.create' => 'Create',

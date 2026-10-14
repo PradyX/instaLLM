@@ -48,6 +48,15 @@ import 'package:installm/features/tools/application/tool_activity_mapping.dart';
 import 'package:installm/features/tools/application/tool_follow_up_prompt.dart';
 import 'package:installm/features/tools/application/tool_registry.dart';
 import 'package:installm/features/tools/application/tools_providers.dart';
+import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/features/memory/application/memory_controller.dart';
+import 'package:installm/features/memory/application/memory_commands.dart';
+import 'package:installm/features/memory/domain/memory_command.dart';
+import 'package:installm/features/memory/domain/memory_prompt.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart'
+    show activeWorkspaceIdProvider;
+import 'package:installm/i18n/strings.g.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'home_controller.g.dart';
@@ -238,13 +247,31 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
   // The tool contract is only sent to a model whose template can carry tool
   // calls, so the projection charges for it exactly when a request would.
   final toolContractIncluded = window.model.supportsToolCalling;
+  final savedMemory = ref.watch(memoryProvider);
+  final conversation = ref
+      .watch(conversationControllerProvider)
+      .activeConversation;
+  final facts = ref
+      .read(memoryProvider.notifier)
+      .promptFacts(
+        scope: BotMemoryScope.global,
+        conversationId: conversation?.id ?? '',
+        workspaceId:
+            savedMemory.conversationWorkspaces[conversation?.id] ??
+            (savedMemory.errorMessage == null && !savedMemory.isReadOnly
+                ? ref.watch(activeWorkspaceIdProvider)
+                : null),
+      );
   return projectConversationContext(
     messages: ref.watch(homeControllerProvider),
-    systemPrompt: composePersonaSystemPrompt(
-      persona: window.persona,
-      toolContract: toolContractIncluded
-          ? ref.watch(toolRegistryProvider).describeForPrompt()
-          : '',
+    systemPrompt: withMemoryFacts(
+      composePersonaSystemPrompt(
+        persona: window.persona,
+        toolContract: toolContractIncluded
+            ? ref.watch(toolRegistryProvider).describeForPrompt()
+            : '',
+      ),
+      facts,
     ),
     policy: policy,
     toolContractIncluded: toolContractIncluded,
@@ -267,6 +294,7 @@ final composerDraftProvider = StateProvider<String?>((ref) => null);
 
 @riverpod
 class HomeController extends _$HomeController {
+  bool _disposed = false;
   String? _activeConversationId;
   bool _conversationStateHydrated = false;
   bool _suppressNextConversationLoad = false;
@@ -320,13 +348,104 @@ class HomeController extends _$HomeController {
   /// model without a tool template cannot act on them — it would only pay for
   /// text it was never trained to follow.
   String _systemPromptFor(LlmModel model) {
-    if (!model.supportsToolCalling) {
-      return composePersonaSystemPrompt(persona: _activePersona);
-    }
-    return composePersonaSystemPrompt(
-      persona: _activePersona,
-      toolContract: ref.read(toolRegistryProvider).describeForPrompt(),
+    final memory = ref.read(memoryProvider.notifier);
+    final facts = memory.promptFacts(
+      scope: BotMemoryScope.global,
+      conversationId: _activeConversationId ?? '',
+      workspaceId: ref
+          .read(memoryProvider)
+          .conversationWorkspaces[_activeConversationId],
     );
+    return withMemoryFacts(
+      composePersonaSystemPrompt(
+        persona: _activePersona,
+        toolContract: model.supportsToolCalling
+            ? ref.read(toolRegistryProvider).describeForPrompt()
+            : '',
+      ),
+      facts,
+    );
+  }
+
+  Future<void> _prepareSavedMemory(String conversationId) async {
+    final memory = ref.read(memoryProvider.notifier);
+    await memory.whenReady;
+    if (_disposed) return;
+    final workspaces = ref.read(workspacesProvider.notifier);
+    await workspaces.whenReady;
+    if (!_isCurrentMemoryConversation(conversationId)) return;
+    final workspaceId = ref.read(activeWorkspaceIdProvider);
+    if (workspaceId != null) {
+      await memory.bindConversation(conversationId, workspaceId);
+    }
+  }
+
+  bool _isCurrentMemoryConversation(String id) =>
+      !_disposed &&
+      _activeConversationId == id &&
+      ref.read(conversationControllerProvider).activeConversationId == id;
+
+  Future<void> _runMemoryCommand(
+    MemoryCommand command,
+    String original, {
+    List<Message>? baseMessages,
+  }) async {
+    final statusController = ref.read(homeGenerationStatusProvider.notifier);
+    _setStatus(text: t.memory.title, isGenerating: true);
+    try {
+      final id = await _ensureActiveConversation();
+      if (id == null || _disposed) return;
+      await _cancelMemoryRefresh();
+      await _prepareSavedMemory(id);
+      if (!_isCurrentMemoryConversation(id)) return;
+      if (baseMessages != null) {
+        await _deleteRemovedAttachments(
+          previousMessages: List<Message>.from(state),
+          nextMessages: baseMessages,
+        );
+        if (!_isCurrentMemoryConversation(id)) return;
+        state = List<Message>.from(baseMessages);
+      }
+      final response = await applyMemoryCommand(
+        ref.read(memoryProvider.notifier),
+        command,
+        conversationId: id,
+        workspaceId: ref.read(memoryProvider).conversationWorkspaces[id],
+      );
+      if (!_isCurrentMemoryConversation(id)) return;
+      state = [
+        ...state,
+        Message.create(
+          conversationId: id,
+          role: MessageRole.user,
+          content: original,
+        ),
+        Message.create(
+          conversationId: id,
+          role: MessageRole.system,
+          content: response,
+          modelName: t.memory.title,
+        ),
+      ];
+      await ref
+          .read(conversationControllerProvider.notifier)
+          .maybeAutoTitleFromMessage(id, original);
+      await _persistConversation();
+    } catch (_) {
+      if (!_disposed) _appendAssistantError(t.memory.saveError);
+    } finally {
+      if (statusController.mounted) {
+        statusController.state = statusController.state.copyWith(
+          statusText: '',
+          isGenerating: false,
+        );
+      }
+      if (!_disposed) {
+        await _switchToConversation(
+          ref.read(conversationControllerProvider).activeConversationId,
+        );
+      }
+    }
   }
 
   /// What [model]'s own chat template writes where its reply begins.
@@ -346,6 +465,8 @@ class HomeController extends _$HomeController {
 
   @override
   List<Message> build() {
+    _disposed = false;
+    ref.onDispose(() => _disposed = true);
     ref.listen<String?>(
       conversationControllerProvider.select(
         (state) => state.activeConversationId,
@@ -403,6 +524,7 @@ class HomeController extends _$HomeController {
       (m) => m.id == assistantMessageId && !m.isUser,
     );
     if (assistantIndex < 0) return;
+    if (state[assistantIndex].role == MessageRole.system) return;
 
     int userIndex = -1;
     for (int i = assistantIndex - 1; i >= 0; i--) {
@@ -456,9 +578,15 @@ class HomeController extends _$HomeController {
 
     final trimmed = promptText.trim();
     if (trimmed.isEmpty) return;
+    final command = imagePaths.isEmpty ? MemoryCommand.parse(trimmed) : null;
+    if (command != null && appendUserMessage) {
+      await _runMemoryCommand(command, trimmed, baseMessages: baseMessages);
+      return;
+    }
 
     final selectionState = ref.read(modelSelectionControllerProvider);
     final selectedModel = selectionState.selectedModel;
+    final statusController = ref.read(homeGenerationStatusProvider.notifier);
 
     final conversationId = await _ensureActiveConversation();
     if (conversationId == null) return;
@@ -562,15 +690,23 @@ class HomeController extends _$HomeController {
 
       await Future<void>.delayed(const Duration(milliseconds: 220));
 
+      await _prepareSavedMemory(conversationId);
+      if (!_isCurrentMemoryConversation(conversationId)) return;
+
       if (selectedModel != null && selectedModel.isDownloaded) {
         await _generateNativeResponse(selectedModel);
       } else {
         await _addPlaceholderResponse();
       }
     } catch (e) {
-      _appendAssistantError('Error generating response: $e');
+      if (!_disposed) _appendAssistantError('Error generating response: $e');
     } finally {
-      _setStatus(text: '', isGenerating: false);
+      if (statusController.mounted) {
+        statusController.state = statusController.state.copyWith(
+          statusText: '',
+          isGenerating: false,
+        );
+      }
       _stopRequestedByUser = false;
       unawaited(_persistConversation());
     }
@@ -623,6 +759,7 @@ class HomeController extends _$HomeController {
   }
 
   Future<void> _persistConversation() async {
+    if (_disposed) return;
     final conversationId = _activeConversationId;
     if (conversationId == null) return;
     try {

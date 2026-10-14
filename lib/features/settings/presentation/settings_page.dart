@@ -76,6 +76,12 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.contextBudget),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.psychology_outlined),
+                  title: Text(t.memory.title),
+                  subtitle: Text(t.memory.subtitle),
+                  onTap: () => context.push(AppRoutes.memory),
+                ),
+                ListTile(
                   leading: const Icon(Icons.folder_copy_outlined),
                   title: const Text('Workspaces'),
                   subtitle: const Text(

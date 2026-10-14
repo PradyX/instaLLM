@@ -12,7 +12,12 @@ class FailingStore extends MemoryStore {
   FailingStore(super.file);
   bool fail = false;
   @override
-  bool save(List<MemoryFact> facts) => !fail && super.save(facts);
+  bool save(
+    List<MemoryFact> facts, {
+    Map<String, String>? conversationWorkspaces,
+  }) =>
+      !fail &&
+      super.save(facts, conversationWorkspaces: conversationWorkspaces);
 }
 
 void main() {

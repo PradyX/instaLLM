@@ -16,6 +16,7 @@ import 'package:installm/features/mcp/presentation/mcp_page.dart';
 import 'package:installm/features/skills/presentation/skills_page.dart';
 import 'package:installm/features/workspaces/presentation/workspaces_page.dart';
 import 'package:installm/features/backup/presentation/backup_page.dart';
+import 'package:installm/features/memory/presentation/memory_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -32,6 +33,7 @@ abstract class AppRoutes {
   static const conversations = '/conversations';
   static const inferenceProfiles = '/inference-profiles';
   static const contextBudget = '/context-budget';
+  static const memory = '/memory';
   static const personas = '/personas';
   static const voiceConversation = '/voice/conversation';
   static const workspaces = '/workspaces';
@@ -71,6 +73,10 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.settings,
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.memory,
+        builder: (context, state) => const MemoryPage(),
       ),
       GoRoute(
         path: AppRoutes.backup,

@@ -4,6 +4,7 @@ import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart';
 import 'package:installm/features/memory/data/memory_store.dart';
 import 'package:installm/features/memory/domain/memory_fact.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 final memoryStoreProvider = FutureProvider<MemoryStore>(
   (ref) => MemoryStore.open(),
@@ -15,12 +16,14 @@ class MemoryState {
     this.isReady = false,
     this.isReadOnly = false,
     this.errorMessage,
+    this.conversationWorkspaces = const {},
   });
 
   final List<MemoryFact> facts;
   final bool isReady;
   final bool isReadOnly;
   final String? errorMessage;
+  final Map<String, String> conversationWorkspaces;
 }
 
 final memoryProvider = StateNotifierProvider<MemoryNotifier, MemoryState>(
@@ -36,6 +39,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
   final Ref _ref;
   late final Future<void> whenReady;
   MemoryStore? _store;
+  String? get errorMessage => state.errorMessage;
 
   Future<void> _load() async {
     try {
@@ -45,27 +49,21 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
       if (!mounted) return;
       state = MemoryState(
         facts: facts,
+        conversationWorkspaces: store.conversationWorkspaces,
         isReady: true,
         isReadOnly: store.isReadOnly,
-        errorMessage: store.isReadOnly
-            ? 'Saved memory uses an unsupported format. Update InstaLLM '
-                  'to edit it; the file has been left untouched.'
-            : null,
+        errorMessage: store.isReadOnly ? t.memory.unsupported : null,
       );
     } catch (_) {
       if (!mounted) return;
-      state = const MemoryState(
-        isReady: true,
-        errorMessage:
-            'Could not read saved memory. Check access to the '
-            'app support folder and try again. Local chat remains available.',
-      );
+      state = MemoryState(isReady: true, errorMessage: t.memory.readError);
     }
   }
 
   bool _error(String message) {
     state = MemoryState(
       facts: state.facts,
+      conversationWorkspaces: state.conversationWorkspaces,
       isReady: state.isReady,
       isReadOnly: _store?.isReadOnly ?? state.isReadOnly,
       errorMessage: message,
@@ -73,17 +71,24 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     return false;
   }
 
-  bool _save(List<MemoryFact> facts) {
-    if (_store == null || !_store!.save(facts)) {
+  bool _save(
+    List<MemoryFact> facts, {
+    Map<String, String>? conversationWorkspaces,
+  }) {
+    final bindings = conversationWorkspaces ?? state.conversationWorkspaces;
+    if (_store == null ||
+        !_store!.save(facts, conversationWorkspaces: bindings)) {
       return _error(
         _store?.isReadOnly == true
-            ? 'Saved memory uses an unsupported format. Update InstaLLM '
-                  'before editing it.'
-            : 'Could not save memory. Check free space and access to the '
-                  'app support folder, then try again. Existing facts were kept.',
+            ? t.memory.unsupportedEdit
+            : t.memory.storageError,
       );
     }
-    state = MemoryState(facts: List.unmodifiable(facts), isReady: true);
+    state = MemoryState(
+      facts: List.unmodifiable(facts),
+      isReady: true,
+      conversationWorkspaces: Map.unmodifiable(bindings),
+    );
     return true;
   }
 
@@ -98,9 +103,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     await whenReady;
     if (!mounted) return null;
     if (scope == MemoryScope.global && !globalOptIn) {
-      _error(
-        'Confirm sharing this fact across all workspaces before saving it.',
-      );
+      _error(t.memory.consentError);
       return null;
     }
     final now = DateTime.now();
@@ -118,27 +121,25 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
         globalOptIn: globalOptIn,
       );
     } on ArgumentError {
-      _error(
-        'Enter one fact of up to ${MemoryFact.maxTextCharacters} '
-        'characters and choose its conversation or workspace.',
-      );
+      _error(t.memory.ownerTextError);
       return null;
     }
     return _save([...state.facts, fact]) ? fact : null;
   }
 
-  /// Editing preserves scope, provenance, and the fact's original consent.
+  /// Editing preserves scope/provenance; consent changes must be explicit.
   /// Omitting expiry keeps it; [clearExpiry] explicitly removes it.
   Future<bool> edit(
     String id, {
     required String text,
     DateTime? expiresAt,
     bool clearExpiry = false,
+    bool? globalOptIn,
   }) async {
     await whenReady;
     if (!mounted) return false;
     final index = state.facts.indexWhere((fact) => fact.id == id);
-    if (index < 0) return _error('This memory fact no longer exists.');
+    if (index < 0) return _error(t.memory.missingFact);
     final existing = state.facts[index];
     final MemoryFact updated;
     try {
@@ -147,12 +148,10 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
         text: text,
         updatedAt: now.isBefore(existing.updatedAt) ? existing.updatedAt : now,
         expiresAt: clearExpiry ? null : expiresAt ?? existing.expiresAt,
+        globalOptIn: globalOptIn,
       );
     } on ArgumentError {
-      return _error(
-        'Enter one fact of up to '
-        '${MemoryFact.maxTextCharacters} characters.',
-      );
+      return _error(t.memory.textError);
     }
     return _save([...state.facts]..[index] = updated);
   }
@@ -161,9 +160,49 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     await whenReady;
     if (!mounted) return false;
     if (!state.facts.any((fact) => fact.id == id)) {
-      return _error('This memory fact no longer exists.');
+      return _error(t.memory.missingFact);
     }
     return _save(state.facts.where((fact) => fact.id != id).toList());
+  }
+
+  /// A conversation keeps the workspace first chosen for memory. Selecting a
+  /// different workspace later never silently changes this boundary.
+  Future<bool> bindConversation(String id, String workspaceId) async {
+    await whenReady;
+    if (!mounted) return false;
+    if (state.conversationWorkspaces.containsKey(id)) return true;
+    if (id.isEmpty || workspaceId.isEmpty) return false;
+    return _save(
+      state.facts,
+      conversationWorkspaces: {
+        ...state.conversationWorkspaces,
+        id: workspaceId,
+      },
+    );
+  }
+
+  Future<String> forgetText({
+    required String text,
+    required MemoryScope scope,
+    String? ownerId,
+  }) async {
+    await whenReady;
+    String normalized(String value) =>
+        value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+    if (!mounted) return t.memory.saveError;
+    final matches = state.facts
+        .where(
+          (fact) =>
+              fact.scope == scope &&
+              fact.ownerId == ownerId &&
+              normalized(fact.text) == normalized(text),
+        )
+        .toList();
+    if (matches.isEmpty) return t.memory.noMatch;
+    if (matches.length > 1) return t.memory.ambiguous;
+    return await forget(matches.single.id)
+        ? t.memory.forgotten
+        : state.errorMessage ?? t.memory.saveError;
   }
 
   /// Bot scope is a recall ceiling. Narrower facts accompany the current
@@ -171,7 +210,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
   String promptFacts({
     required BotMemoryScope scope,
     required String conversationId,
-    required String workspaceId,
+    String? workspaceId,
     int maxTokens = 256,
     DateTime? now,
   }) {

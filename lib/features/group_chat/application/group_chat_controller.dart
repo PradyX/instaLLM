@@ -15,6 +15,9 @@ import 'package:installm/features/kanban/application/kanban_controller.dart';
 import 'package:installm/features/kanban/application/kanban_tools.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/memory/application/memory_controller.dart';
+import 'package:installm/features/memory/application/memory_commands.dart';
+import 'package:installm/features/memory/domain/memory_command.dart';
+import 'package:installm/i18n/strings.g.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
@@ -348,6 +351,36 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   Future<void> sendUserMessage(String chatId, String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.runningChatIds.contains(chatId)) return;
+    final command = MemoryCommand.parse(trimmed);
+    final commandChat = _chatById(chatId);
+    if (command != null && commandChat != null) {
+      state = state.copyWith(runningChatIds: {...state.runningChatIds, chatId});
+      try {
+        final response = await applyMemoryCommand(
+          _ref.read(memoryProvider.notifier),
+          command,
+          conversationId: chatId,
+          workspaceId: commandChat.workspaceId,
+        );
+        _append(GroupMessage.user(chatId: chatId, text: trimmed));
+        _append(
+          GroupMessage.bot(
+            chatId: chatId,
+            botId: 'installm-memory',
+            botName: t.memory.title,
+            text: response,
+          ),
+        );
+        await _persist();
+      } finally {
+        state = state.copyWith(
+          runningChatIds: state.runningChatIds
+              .where((id) => id != chatId)
+              .toSet(),
+        );
+      }
+      return;
+    }
     await _ref.read(botsProvider.notifier).whenReady;
     final chat = _chatById(chatId);
     if (chat == null) return;

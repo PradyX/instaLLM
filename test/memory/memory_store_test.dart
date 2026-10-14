@@ -83,11 +83,14 @@ void main() {
       MemoryStore(file).load().map((entry) => entry.toJson()),
       facts.map((entry) => entry.toJson()),
     );
-    expect(jsonDecode(file.readAsStringSync())['version'], 1);
+    expect(
+      jsonDecode(file.readAsStringSync())['version'],
+      MemoryStore.currentVersion,
+    );
     expect(file.parent.listSync(), hasLength(1));
   });
 
-  test('unversioned migration preserves payload before a v1 write', () {
+  test('unversioned migration preserves payload before a v2 write', () {
     write({
       'facts': [fact().toJson()],
       'legacyField': 'retain this',
@@ -101,6 +104,55 @@ void main() {
     expect(store.save(loaded), isTrue);
     expect(backups(), hasLength(1));
   });
+
+  test(
+    'v1 migration preserves facts, dates and consent while adding bindings',
+    () {
+      final facts = [
+        fact(),
+        fact(
+          id: 'global',
+          scope: MemoryScope.global,
+          ownerId: null,
+          globalOptIn: true,
+        ),
+      ];
+      write({
+        'version': 1,
+        'facts': facts.map((fact) => fact.toJson()).toList(),
+      });
+      final original = file.readAsStringSync();
+      final loaded = store.load();
+      expect(store.conversationWorkspaces, isEmpty);
+      expect(store.save(loaded, conversationWorkspaces: {'c1': 'ws1'}), isTrue);
+      expect(backups().single.readAsStringSync(), original);
+      final restored = MemoryStore(file);
+      expect(
+        restored.load().map((fact) => fact.toJson()),
+        facts.map((fact) => fact.toJson()),
+      );
+      expect(restored.conversationWorkspaces, {'c1': 'ws1'});
+      expect(restored.save(restored.load()), isTrue);
+      restored.load();
+      expect(restored.conversationWorkspaces, {'c1': 'ws1'});
+    },
+  );
+
+  test(
+    'partial bindings retain usable owners and preserve malformed entries',
+    () {
+      write({
+        'version': 2,
+        'facts': [fact().toJson()],
+        'conversationWorkspaces': {'c1': 'ws1', 'c2': null, '': 'ws2'},
+      });
+      final original = file.readAsStringSync();
+      final loaded = store.load();
+      expect(store.conversationWorkspaces, {'c1': 'ws1'});
+      expect(store.save(loaded), isTrue);
+      expect(backups().single.readAsStringSync(), original);
+    },
+  );
 
   test('partial and duplicate entries are preserved before rewrite', () {
     write({

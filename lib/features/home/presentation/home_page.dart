@@ -36,6 +36,7 @@ import 'package:installm/features/model_selection/presentation/model_selection_s
 import 'package:installm/features/tools/application/tool_approval_controller.dart';
 import 'package:installm/features/tools/application/tool_registry.dart';
 import 'package:installm/features/tools/presentation/tool_approval_dialog.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// What tapping an empty-state suggestion does before its prompt is prepared.
 ///
@@ -209,8 +210,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     if (generationStatus.isGenerating) return;
 
     final selectionState = ref.read(modelSelectionControllerProvider);
-    final hasDownloadedModel = selectionState.models.any((m) => m.isDownloaded);
-    if (!hasDownloadedModel) return;
 
     final selectedModel = selectionState.selectedModel;
     final text = _messageController.text.trim();
@@ -620,7 +619,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   return ChatBubble(
                                     message: message,
                                     onRegenerate:
-                                        (!isGenerating && !message.isUser)
+                                        (!isGenerating && message.isAssistant)
                                         ? () => _regenerateMessage(message)
                                         : null,
                                     onEditResend:
@@ -963,7 +962,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     LlmModel? selectedModel,
     List<LlmModel> downloadedModels,
   ) {
-    final canCompose = hasDownloadedModel && !isGenerating;
+    final canCompose = !isGenerating;
     final progressText = generationText.isEmpty
         ? 'Assistant is responding...'
         : generationText;
@@ -1012,7 +1011,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             controller: _messageController,
             enabled: canCompose,
             hintText: !hasDownloadedModel
-                ? 'Download a model to start chatting...'
+                ? t.memory.noModelHint
                 : isGenerating
                 ? 'Wait for current response...'
                 : canAttachImage

@@ -34,7 +34,7 @@ InstaLLM brings **personal AI to your devices** — lightweight, private, and fu
 
 - Local inference with GGUF models (no server required for generation)
 - **Vision Model Support**: Multimodal chat with image support (projector-based)
-- **On-device Benchmarking**: Integrated `llmfit` to measure local performance
+- **On-device Benchmarking**: run the same prompt across your downloaded models and compare measured speed
 - Live token streaming in chat with `Thinking...` + progressive output
 - Stop generation anytime
 - **Multiple local conversations**: create, rename, search, pin and delete chats
@@ -307,7 +307,6 @@ Install and unlock a supported keyring if you want the platform-backed secure st
 ## Credits
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp) - High-performance LLM inference in C/C++.
-- [llmfit](https://github.com/PradyX/llmfit) - LLM benchmarking tool.
 
 ## License
 

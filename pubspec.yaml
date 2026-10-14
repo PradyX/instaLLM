@@ -82,7 +82,6 @@ flutter:
     - .env
     - README.md
     - assets/icons/
-    - assets/tools/llmfit/
 
 flutter_launcher_icons:
   android: true

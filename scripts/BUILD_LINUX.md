@@ -4,7 +4,6 @@ This guide covers the Linux-specific pieces that are easy to miss:
 
 - desktop toolchain prerequisites
 - bundled `llama.cpp` runtime libraries for InstaLLM vision support
-- bundled `llmfit` benchmark CLI assets
 
 For the platform-agnostic native runtime background, also see `scripts/BUILD_LLAMA_CPP_PREBUILTS.md`.
 
@@ -29,8 +28,6 @@ On Arch Linux, the equivalent build packages are typically:
 sudo pacman -S --needed clang cmake ninja pkgconf gtk3 libsecret jsoncpp patchelf
 ```
 
-If you want to build the bundled `llmfit` binary too, install Rust with `rustup` and make sure `cargo` is on your `PATH`.
-
 ## 1. Build The Linux Runtime Libraries
 
 InstaLLM bundles Linux shared libraries from `linux/lib/`.
@@ -54,26 +51,7 @@ linux/lib/libggml-cpu.so
 
 `libmtmd.so` is the important one for multimodal/vision support. If it is missing, text inference may still work, but projector-based models will not.
 
-## 2. Build The Linux `llmfit` Asset
-
-InstaLLM can also bundle a Linux `llmfit` CLI for the benchmark screen.
-Build the host-architecture binary with:
-
-```bash
-cd /path/to/InstaLLM
-scripts/build_llmfit_linux.sh
-```
-
-This writes one of:
-
-```text
-assets/tools/llmfit/linux/x64/llmfit
-assets/tools/llmfit/linux/arm64/llmfit
-```
-
-You can override the target triple with `LLMFIT_TARGET` if you already have the matching Rust toolchain installed.
-
-## 3. Run The App During Development
+## 2. Run The App During Development
 
 ```bash
 cd /path/to/InstaLLM
@@ -89,7 +67,7 @@ with chat silently unable to load a model. Pass `--check-only` to check the
 prerequisites without launching, and any other arguments through to
 `flutter run`. A bare `flutter run -d linux` still works once both are in place.
 
-## 4. Build The Release Bundle
+## 3. Build The Release Bundle
 
 ```bash
 cd /path/to/InstaLLM
@@ -109,7 +87,7 @@ The executable inside the bundle is:
 bundle/installm
 ```
 
-## 5. Create An Installable Archive
+## 4. Create An Installable Archive
 
 To package the Linux bundle into a release archive:
 
@@ -131,7 +109,7 @@ build/linux/x64/release/installm-linux-x64.tar.gz
 build/linux/arm64/release/installm-linux-arm64.tar.gz
 ```
 
-## 6. Install On A Linux Machine
+## 5. Install On A Linux Machine
 
 On the target machine, install the runtime libraries your distro needs.
 
@@ -174,7 +152,7 @@ sudo tar -xzf installm-linux-x64.tar.gz -C /opt/installm --strip-components=1
 sudo ln -sf /opt/installm/installm /usr/local/bin/installm
 ```
 
-## 7. Add A Desktop Launcher
+## 6. Add A Desktop Launcher
 
 InstaLLM's installed icon inside the Flutter bundle is typically:
 

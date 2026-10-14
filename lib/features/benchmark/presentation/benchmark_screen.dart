@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +7,6 @@ import 'package:installm/features/benchmark/application/benchmark_service.dart';
 import 'package:installm/features/benchmark/application/model_comparison_controller.dart';
 import 'package:installm/features/benchmark/application/model_comparison_service.dart';
 import 'package:installm/features/benchmark/domain/comparison_set.dart';
-import 'package:installm/features/benchmark/domain/llmfit_benchmark_result.dart';
 import 'package:installm/features/benchmark/domain/local_benchmark_result.dart';
 import 'package:installm/features/benchmark/domain/model_comparison_export.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
@@ -24,17 +21,11 @@ class BenchmarkScreen extends ConsumerStatefulWidget {
 }
 
 class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
-  final _llmfitVerticalController = ScrollController();
-  final _llmfitHorizontalController = ScrollController();
-
   List<LocalBenchmarkResult> _localResults = const [];
   List<BenchmarkRunRecord> _history = const [];
   bool _isLoadingHistory = true;
-  LlmfitBenchmarkResult? _llmfitResult;
   bool _isRunningLocal = false;
-  bool _isRunningLlmfit = false;
   String? _localError;
-  String? _llmfitError;
 
   @override
   void initState() {
@@ -92,13 +83,6 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
       if (!mounted) return;
       _showSnackBar('Could not clear benchmark history: $error');
     }
-  }
-
-  @override
-  void dispose() {
-    _llmfitVerticalController.dispose();
-    _llmfitHorizontalController.dispose();
-    super.dispose();
   }
 
   Future<void> _runLocalBenchmark(List<LlmModel> models) async {
@@ -159,36 +143,6 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
     }
   }
 
-  Future<void> _runLlmfitBenchmark() async {
-    setState(() {
-      _isRunningLlmfit = true;
-      _llmfitError = null;
-      _llmfitResult = null;
-    });
-
-    try {
-      final result = await ref
-          .read(benchmarkServiceProvider)
-          .runLlmfitBenchmark();
-      if (!mounted) return;
-      setState(() {
-        _llmfitResult = result;
-        _llmfitError = result.errorMessage;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _llmfitError = 'Failed to run llmfit: $error';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRunningLlmfit = false;
-        });
-      }
-    }
-  }
-
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
@@ -203,12 +157,10 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
           ..sort(_compareModelsByParamSize);
     final generationStatus = ref.watch(homeGenerationStatusProvider);
     final comparisonBusy = ref.watch(modelComparisonControllerProvider).isBusy;
-    final showLlmfitTab = !Platform.isIOS;
 
     final tabs = <Widget>[
       const Tab(text: 'Local Benchmark'),
       const Tab(text: 'Compare'),
-      if (showLlmfitTab) const Tab(text: 'LLMFit Benchmark'),
     ];
     final views = <Widget>[
       _buildLocalBenchmarkTab(
@@ -217,11 +169,10 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
         generationStatus.isGenerating,
       ),
       const _ModelComparisonTab(),
-      if (showLlmfitTab) _buildLlmfitBenchmarkTab(context),
     ];
 
     return PopScope(
-      canPop: !_isRunningLocal && !_isRunningLlmfit && !comparisonBusy,
+      canPop: !_isRunningLocal && !comparisonBusy,
       child: DefaultTabController(
         length: tabs.length,
         child: Scaffold(
@@ -439,201 +390,6 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
     );
   }
 
-  Widget _buildLlmfitBenchmarkTab(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final outputText = _llmfitResult?.output ?? '';
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: colorScheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        Icons.terminal_rounded,
-                        color: colorScheme.onSecondaryContainer,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'LLMFit CLI',
-                            style: textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Runs `llmfit --cli` as a subprocess and shows the captured terminal output below.',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (Platform.isAndroid || Platform.isIOS) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    'This action is only supported on desktop platforms where the `llmfit` binary can be launched from the app process.',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: _isRunningLlmfit ? null : _runLlmfitBenchmark,
-                  icon: _isRunningLlmfit
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.play_arrow_rounded),
-                  label: Text(
-                    _isRunningLlmfit ? 'Running LLMFit...' : 'Run LLMFit',
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (_llmfitError != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _NoticeCard(
-              icon: Icons.error_outline_rounded,
-              text: _llmfitError!,
-              isError: true,
-            ),
-          ),
-        if (_isRunningLlmfit)
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Card(
-              clipBehavior: Clip.antiAlias,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Collecting llmfit output...',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const LinearProgressIndicator(),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.only(top: 16),
-          child: Card(
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CLI Output',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    height: 360,
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.outlineVariant.withValues(
-                          alpha: 0.8,
-                        ),
-                      ),
-                    ),
-                    child: outputText.trim().isEmpty
-                        ? Center(
-                            child: Text(
-                              'Run LLMFit to see captured terminal output here.',
-                              style: textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : LayoutBuilder(
-                            builder: (context, constraints) {
-                              return Scrollbar(
-                                controller: _llmfitVerticalController,
-                                thumbVisibility: true,
-                                child: SingleChildScrollView(
-                                  controller: _llmfitVerticalController,
-                                  child: Scrollbar(
-                                    controller: _llmfitHorizontalController,
-                                    thumbVisibility: true,
-                                    notificationPredicate: (notification) {
-                                      return notification.metrics.axis ==
-                                          Axis.horizontal;
-                                    },
-                                    child: SingleChildScrollView(
-                                      controller: _llmfitHorizontalController,
-                                      scrollDirection: Axis.horizontal,
-                                      child: ConstrainedBox(
-                                        constraints: BoxConstraints(
-                                          minWidth: constraints.maxWidth,
-                                        ),
-                                        child: SelectableText(
-                                          outputText,
-                                          style: textTheme.bodySmall?.copyWith(
-                                            fontFamily: _monospaceFontFamily(),
-                                            height: 1.35,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   int _compareModelsByParamSize(LlmModel a, LlmModel b) {
     final aSize = _toNumericParameterSize(a.parameterSize);
     final bSize = _toNumericParameterSize(b.parameterSize);
@@ -658,12 +414,6 @@ class _BenchmarkScreenState extends ConsumerState<BenchmarkScreen> {
       'T' => number * 1e12,
       _ => number,
     };
-  }
-
-  String _monospaceFontFamily() {
-    if (Platform.isMacOS || Platform.isIOS) return 'Menlo';
-    if (Platform.isWindows) return 'Consolas';
-    return 'monospace';
   }
 }
 

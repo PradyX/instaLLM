@@ -103,8 +103,8 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.folder_open),
-                  title: const Text('Vault'),
-                  subtitle: const Text('Human-readable project knowledge'),
+                  title: Text(t.vault.title),
+                  subtitle: Text(t.vault.description),
                   onTap: () => context.push(AppRoutes.vaults),
                 ),
               ],

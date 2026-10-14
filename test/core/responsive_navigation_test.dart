@@ -1083,6 +1083,7 @@ void main() {
         () => find.byType(SettingsPage).evaluate().isNotEmpty,
       );
       expect(find.byType(SettingsPage), findsOneWidget);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.text('About'),
         400,
@@ -1094,6 +1095,8 @@ void main() {
             .first,
       );
       expect(find.text('Benchmark'), findsNothing);
+      await tester.ensureVisible(find.text('About'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('About'));
       await tester.pump();
       await tester.pumpAndSettle();

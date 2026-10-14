@@ -12,6 +12,7 @@ import 'package:installm/features/about/presentation/about_page.dart';
 import 'package:installm/features/workspaces/presentation/workspace_detail_page.dart';
 import 'package:installm/features/kanban/presentation/kanban_page.dart';
 import 'package:installm/features/vault/presentation/vaults_page.dart';
+import 'package:installm/features/vault/presentation/vault_page.dart';
 import 'package:installm/features/mcp/presentation/mcp_page.dart';
 import 'package:installm/features/skills/presentation/skills_page.dart';
 import 'package:installm/features/workspaces/presentation/workspaces_page.dart';
@@ -40,6 +41,7 @@ abstract class AppRoutes {
   static const skills = '/skills';
   static const mcp = '/mcp';
   static const vaults = '/vaults';
+  static const vaultManage = '/vaults/manage';
   static const kanban = '/kanban';
   static const workspace = '/workspace';
 
@@ -130,6 +132,10 @@ GoRouter appRouter(Ref ref) {
 
       GoRoute(
         path: AppRoutes.vaults,
+        builder: (context, state) => const VaultPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.vaultManage,
         builder: (context, state) => const VaultsPage(),
       ),
       GoRoute(

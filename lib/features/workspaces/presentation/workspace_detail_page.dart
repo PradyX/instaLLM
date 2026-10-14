@@ -111,7 +111,7 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
                       'Link a folder to keep research, plans and tasks as notes.',
                     ),
                     trailing: TextButton(
-                      onPressed: () => context.push(AppRoutes.vaults),
+                      onPressed: () => context.push(AppRoutes.vaultManage),
                       child: const Text('Link'),
                     ),
                   )

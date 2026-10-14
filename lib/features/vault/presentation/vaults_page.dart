@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/features/vault/domain/vault_registration.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/i18n/strings.g.dart';
 
 /// Registered vaults and their workspace links.
 ///
@@ -18,7 +19,7 @@ class VaultsPage extends ConsumerWidget {
     if (dir == null || !context.mounted) return;
     final name = dir
         .split(RegExp(r'[/\\]'))
-        .lastWhere((part) => part.isNotEmpty, orElse: () => 'Vault');
+        .lastWhere((part) => part.isNotEmpty, orElse: () => t.vault.title);
     final vault = await ref
         .read(vaultsProvider.notifier)
         .registerVault(name, dir);
@@ -26,7 +27,9 @@ class VaultsPage extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          vault == null ? 'Could not save the vault.' : 'Registered $name.',
+          vault == null
+              ? t.vault.registryError
+              : t.vault.registered(name: name),
         ),
       ),
     );
@@ -38,37 +41,37 @@ class VaultsPage extends ConsumerWidget {
     VaultRegistration vault,
     String workspaceId,
   ) async {
-    final controller = TextEditingController(text: 'Projects/installm');
+    var draft = 'Projects/installm';
     final projectPath = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Link workspace folder'),
-        content: TextField(
-          controller: controller,
+        title: Text(t.vault.linkTitle),
+        content: TextFormField(
+          initialValue: draft,
+          onChanged: (value) => draft = value,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Folder inside the vault',
+          decoration: InputDecoration(
+            labelText: t.vault.folder,
             hintText: 'Projects/installm',
           ),
-          onSubmitted: (value) => Navigator.of(context).pop(value),
+          onFieldSubmitted: (value) => Navigator.of(context).pop(value),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.vault.cancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Link'),
+            onPressed: () => Navigator.of(context).pop(draft),
+            child: Text(t.vault.link),
           ),
         ],
       ),
     );
-    controller.dispose();
     if (projectPath == null || projectPath.trim().isEmpty || !context.mounted) {
       return;
     }
-    final created = await ref
+    await ref
         .read(vaultsProvider.notifier)
         .linkWorkspace(
           workspaceId: workspaceId,
@@ -79,12 +82,91 @@ class VaultsPage extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          created.isEmpty
-              ? 'Workspace linked.'
-              : 'Workspace linked. Created ${created.join(', ')}.',
+          ref.read(vaultsProvider).errorMessage == null
+              ? t.vault.linked
+              : t.vault.linkError,
         ),
       ),
     );
+  }
+
+  Future<void> _rename(
+    BuildContext context,
+    WidgetRef ref,
+    VaultRegistration vault,
+  ) async {
+    var draft = vault.name;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.vault.renameTitle),
+        content: TextFormField(
+          initialValue: draft,
+          autofocus: true,
+          decoration: InputDecoration(labelText: t.vault.name),
+          onChanged: (value) => draft = value,
+          onFieldSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(t.vault.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, draft),
+            child: Text(t.vault.save),
+          ),
+        ],
+      ),
+    );
+    if (name == null || name.trim().isEmpty || !context.mounted) return;
+    final saved = await ref
+        .read(vaultsProvider.notifier)
+        .renameVault(vault.id, name);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(saved ? t.vault.renamed : t.vault.registryError),
+        ),
+      );
+    }
+  }
+
+  Future<void> _remove(
+    BuildContext context,
+    WidgetRef ref,
+    VaultRegistration vault,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.vault.removeTitle),
+        content: Text(t.vault.removeDescription(name: vault.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(t.vault.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(t.vault.remove),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await ref.read(vaultsProvider.notifier).removeVault(vault.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(vaultsProvider).snapshot.vaultById(vault.id) == null
+                ? t.vault.removed
+                : t.vault.registryError,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -94,30 +176,26 @@ class VaultsPage extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Vaults')),
+      appBar: AppBar(title: Text(t.vault.manage)),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _register(context, ref),
+        onPressed: state.isReady && !state.isReadOnly
+            ? () => _register(context, ref)
+            : null,
         icon: const Icon(Icons.create_new_folder_outlined),
-        label: const Text('Register vault'),
+        label: Text(t.vault.register),
       ),
       body: !state.isReady
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
               children: [
-                Text(
-                  'A vault is the shared knowledge layer: notes bots read '
-                  'and write as Markdown. Vaults stay local — the app never '
-                  'syncs anything itself; point it at a folder your own sync '
-                  'already keeps up to date.',
-                  style: textTheme.bodySmall,
-                ),
+                Text(t.vault.description, style: textTheme.bodySmall),
                 const SizedBox(height: 12),
                 if (state.vaults.isEmpty)
-                  const Center(
+                  Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
-                      child: Text('No vaults registered yet.'),
+                      child: Text(t.vault.noVaults),
                     ),
                   ),
                 for (final vault in state.vaults)
@@ -144,34 +222,54 @@ class VaultsPage extends ConsumerWidget {
                                         binding!.projectPath,
                                         overflow: TextOverflow.ellipsis,
                                       )
-                                    : const Text('Not linked'),
+                                    : Text(t.vault.notLinked),
                                 trailing: linked
                                     ? TextButton(
-                                        onPressed: () => ref
-                                            .read(vaultsProvider.notifier)
-                                            .unlinkWorkspace(workspace.id),
-                                        child: const Text('Unlink'),
+                                        onPressed: state.isReadOnly
+                                            ? null
+                                            : () => ref
+                                                  .read(vaultsProvider.notifier)
+                                                  .unlinkWorkspace(
+                                                    workspace.id,
+                                                  ),
+                                        child: Text(t.vault.unlink),
                                       )
                                     : TextButton(
-                                        onPressed: () => _link(
-                                          context,
-                                          ref,
-                                          vault,
-                                          workspace.id,
-                                        ),
-                                        child: const Text('Link'),
+                                        onPressed: state.isReadOnly
+                                            ? null
+                                            : () => _link(
+                                                context,
+                                                ref,
+                                                vault,
+                                                workspace.id,
+                                              ),
+                                        child: Text(t.vault.link),
                                       ),
                               );
                             },
                           ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton.icon(
-                            onPressed: () => ref
-                                .read(vaultsProvider.notifier)
-                                .removeVault(vault.id),
-                            icon: const Icon(Icons.delete_outline),
-                            label: const Text('Remove vault'),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: Wrap(
+                              spacing: 8,
+                              children: [
+                                TextButton(
+                                  onPressed: state.isReadOnly
+                                      ? null
+                                      : () => _rename(context, ref, vault),
+                                  child: Text(t.vault.rename),
+                                ),
+                                if (!vault.isManaged)
+                                  TextButton(
+                                    onPressed: state.isReadOnly
+                                        ? null
+                                        : () => _remove(context, ref, vault),
+                                    child: Text(t.vault.remove),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),

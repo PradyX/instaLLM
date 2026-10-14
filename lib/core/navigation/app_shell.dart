@@ -21,10 +21,28 @@ import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/application/profile_images_controller.dart';
 import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
+import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/i18n/strings.g.dart';
 
 /// Which top-level surface the sidebar highlights.
-enum AppSection { chats, bots, rooms, board, more }
+enum AppSection { chats, bots, rooms, vault, board, more }
+
+/// Lets an owning page protect unsaved work before shell actions replace it.
+class ShellNavigationGuard extends InheritedWidget {
+  const ShellNavigationGuard({
+    super.key,
+    required this.canLeave,
+    required super.child,
+  });
+  final Future<bool> Function() canLeave;
+
+  static Future<bool>? check(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<ShellNavigationGuard>()?.canLeave();
+
+  @override
+  bool updateShouldNotify(ShellNavigationGuard oldWidget) =>
+      canLeave != oldWidget.canLeave;
+}
 
 /// The shared desk: a Hermes-style left sidebar beside every top-level
 /// surface, so bots, rooms and the board live one tap away instead of
@@ -122,6 +140,10 @@ class ShellChatLeading extends ConsumerWidget {
                 onPressed: isGenerating
                     ? null
                     : () async {
+                        final leave = ShellNavigationGuard.check(context);
+                        if (leave != null && !await leave || !context.mounted) {
+                          return;
+                        }
                         final router = GoRouter.of(context);
                         final controller = ref.read(
                           conversationControllerProvider.notifier,
@@ -428,18 +450,39 @@ class AppNavigationPanel extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        child: _BoardTile(
-                          current: section == AppSection.board,
-                          onOpened: onNavigate,
+                  SliverLayoutBuilder(
+                    builder: (context, constraints) {
+                      final remaining =
+                          constraints.viewportMainAxisExtent -
+                          constraints.precedingScrollExtent;
+                      return SliverToBoxAdapter(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: remaining > 0 ? remaining : 0,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                            child: Align(
+                              alignment: Alignment.bottomCenter,
+                              heightFactor: 1,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _VaultTile(
+                                    current: section == AppSection.vault,
+                                    onOpened: onNavigate,
+                                  ),
+                                  _BoardTile(
+                                    current: section == AppSection.board,
+                                    onOpened: onNavigate,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -595,7 +638,11 @@ class _ChatRows extends ConsumerWidget {
               title: summary.conversation.title,
               onPressed: isGenerating
                   ? null
-                  : () {
+                  : () async {
+                      final leave = ShellNavigationGuard.check(context);
+                      if (leave != null && !await leave || !context.mounted) {
+                        return;
+                      }
                       // A conversation is what the page shows when no room is
                       // open, so choosing one here also leaves the room.
                       showConversation(ref);
@@ -620,6 +667,8 @@ Future<void> _createBot(
   WidgetRef ref, {
   VoidCallback? onCreated,
 }) async {
+  final leave = ShellNavigationGuard.check(context);
+  if (leave != null && !await leave || !context.mounted) return;
   final bots = ref.read(botsProvider.notifier);
   final profiles = ref.read(profileImagesProvider.notifier);
   final chats = ref.read(groupChatsProvider.notifier);
@@ -674,6 +723,8 @@ Future<void> _createRoom(
   String workspaceId, {
   VoidCallback? onCreated,
 }) async {
+  final leave = ShellNavigationGuard.check(context);
+  if (leave != null && !await leave || !context.mounted) return;
   final rooms = ref.read(groupChatsProvider.notifier);
   final activeRoom = ref.read(activeRoomIdProvider.notifier);
   final name = await NamePromptDialog.show(
@@ -763,6 +814,10 @@ class BotChatRows extends ConsumerWidget {
       onPressed: workspaceId == null
           ? null
           : () async {
+              final leave = ShellNavigationGuard.check(context);
+              if (leave != null && !await leave || !context.mounted) {
+                return;
+              }
               final chat = await ref
                   .read(groupChatsProvider.notifier)
                   .directChatWith(workspaceId: workspaceId!, botId: bot.id);
@@ -847,7 +902,11 @@ class RoomChatRows extends ConsumerWidget {
                       '${chat.memberBotIds.length}',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
-              onPressed: () {
+              onPressed: () async {
+                final leave = ShellNavigationGuard.check(context);
+                if (leave != null && !await leave || !context.mounted) {
+                  return;
+                }
                 showRoom(ref, chat.id);
                 onOpened?.call();
                 context.go(AppRoutes.home);
@@ -886,6 +945,41 @@ class RoomChatRows extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The Vault with its registered-folder count.
+class _VaultTile extends ConsumerWidget {
+  const _VaultTile({required this.current, this.onOpened});
+  final bool current;
+  final VoidCallback? onOpened;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vaults = ref.watch(vaultsProvider);
+    return ListTile(
+      key: const ValueKey('navigation-vault'),
+      dense: true,
+      selected: current,
+      selectedTileColor: Theme.of(
+        context,
+      ).colorScheme.primaryContainer.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      leading: const Icon(Icons.folder_open_outlined, size: 18),
+      title: Text(t.vault.title),
+      trailing: vaults.isReady
+          ? Tooltip(
+              message: t.vault.registeredCount(count: vaults.vaults.length),
+              child: Text(
+                '${vaults.vaults.length}',
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+            )
+          : null,
+      onTap: () {
+        onOpened?.call();
+        context.push(AppRoutes.vaults);
+      },
     );
   }
 }

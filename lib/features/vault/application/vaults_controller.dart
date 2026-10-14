@@ -197,6 +197,16 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     if (!await _persist(snapshot) || !mounted) return;
   }
 
+  Future<bool> renameVault(String vaultId, String name) async {
+    await whenReady;
+    if (!mounted || state.isReadOnly || name.trim().isEmpty) return false;
+    final vault = state.snapshot.vaultById(vaultId);
+    if (vault == null) return false;
+    return _persist(
+      state.snapshot.upsertVault(vault.copyWith(name: name.trim())),
+    );
+  }
+
   /// Links [workspaceId] to [vaultId] at [projectPath], scaffolds the
   /// standard folders and mirrors the link onto the workspace entity.
   Future<List<String>> linkWorkspace({

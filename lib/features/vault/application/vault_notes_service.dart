@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:path/path.dart' as p;
 import 'package:installm/features/vault/domain/vault_paths.dart';
@@ -10,6 +11,7 @@ enum VaultNoteError {
   outsideProject('Outside the project folder.'),
   notFound('Note not found.'),
   conflict('The note changed since it was read.'),
+  tooLarge('This note is too large to open safely in the app.'),
   io('Could not reach the file.');
 
   const VaultNoteError(this.message);
@@ -94,21 +96,39 @@ class VaultNotesService {
     required VaultPaths paths,
     required VaultPermissions permissions,
     required String relativePath,
+    int? maxBytes,
   }) async {
     if (!permissions.canRead) return (null, VaultNoteError.denied);
     final absolute = _readPath(paths, permissions, relativePath);
     if (absolute == null) return (null, VaultNoteError.outsideProject);
-    if (await _containsLink(paths, absolute)) {
-      return (null, VaultNoteError.outsideProject);
-    }
     final file = File(absolute);
-    if (!await file.exists()) return (null, VaultNoteError.notFound);
     try {
+      if (await _containsLink(paths, absolute)) {
+        return (null, VaultNoteError.outsideProject);
+      }
+      if (!await file.exists()) return (null, VaultNoteError.notFound);
       final stat = await file.stat();
+      String content;
+      if (maxBytes == null) {
+        content = await file.readAsString();
+      } else {
+        if (stat.size > maxBytes) return (null, VaultNoteError.tooLarge);
+        final handle = await file.open();
+        try {
+          final bytes = await handle.read(maxBytes + 1);
+          if (bytes.length > maxBytes) return (null, VaultNoteError.tooLarge);
+          content = utf8.decode(bytes);
+        } finally {
+          await handle.close();
+        }
+      }
+      if ((await file.stat()).modified != stat.modified) {
+        return (null, VaultNoteError.conflict);
+      }
       return (
         VaultNote(
           relativePath: paths.relativeToProject(absolute) ?? relativePath,
-          content: await file.readAsString(),
+          content: content,
           modified: stat.modified,
         ),
         null,
@@ -189,7 +209,7 @@ class VaultNotesService {
       }
       if (exists &&
           expectedContent != null &&
-          await file.readAsString() != expectedContent) {
+          !await _matchesContent(file, expectedContent)) {
         return VaultNoteError.conflict;
       }
       await file.parent.create(recursive: true);
@@ -201,7 +221,7 @@ class VaultNotesService {
         if (createOnly && await file.exists() ||
             expectedContent != null &&
                 (!await file.exists() ||
-                    await file.readAsString() != expectedContent)) {
+                    !await _matchesContent(file, expectedContent))) {
           await temp.delete();
           return VaultNoteError.conflict;
         }
@@ -243,22 +263,86 @@ class VaultNotesService {
     return false;
   }
 
+  Future<bool> _matchesContent(File file, String expected) async {
+    final bytes = utf8.encode(expected).length;
+    final length = await file.length();
+    // UTF-8 readers remove an optional three-byte BOM. Bound the comparison
+    // before decoding a file that may have grown since the editor opened it.
+    if (length != bytes && length != bytes + 3) return false;
+    final handle = await file.open();
+    try {
+      final content = await handle.read(bytes + 4);
+      if (content.length != bytes && content.length != bytes + 3) return false;
+      return utf8.decode(content) == expected;
+    } finally {
+      await handle.close();
+    }
+  }
+
   Future<VaultNoteError?> deleteNote({
     required VaultPaths paths,
     required VaultPermissions permissions,
     required String relativePath,
+    DateTime? expectedModified,
+    String? expectedContent,
+  }) async {
+    final key = paths.projectFile(relativePath);
+    if (key == null) return VaultNoteError.outsideProject;
+    final previous = _writeQueues[key] ?? Future<VaultNoteError?>.value();
+    final next = previous
+        .catchError((_) => null)
+        .then(
+          (_) => _deleteNote(
+            paths: paths,
+            permissions: permissions,
+            relativePath: relativePath,
+            expectedModified: expectedModified,
+            expectedContent: expectedContent,
+          ),
+        );
+    _writeQueues[key] = next;
+    try {
+      return await next;
+    } catch (_) {
+      return VaultNoteError.io;
+    } finally {
+      if (identical(_writeQueues[key], next)) _writeQueues.remove(key);
+    }
+  }
+
+  Future<VaultNoteError?> _deleteNote({
+    required VaultPaths paths,
+    required VaultPermissions permissions,
+    required String relativePath,
+    DateTime? expectedModified,
+    String? expectedContent,
   }) async {
     if (!permissions.canDelete) return VaultNoteError.denied;
     final absolute = paths.projectFile(relativePath);
     if (absolute == null) return VaultNoteError.outsideProject;
     final file = File(absolute);
+    if (await _containsLink(paths, absolute)) {
+      return VaultNoteError.outsideProject;
+    }
     if (!await file.exists()) return VaultNoteError.notFound;
     try {
+      if (expectedModified != null &&
+              (await file.stat()).modified != expectedModified ||
+          expectedContent != null &&
+              !await _matchesContent(file, expectedContent)) {
+        return VaultNoteError.conflict;
+      }
       await file.delete();
       return null;
     } catch (_) {
       return VaultNoteError.io;
     }
+  }
+
+  /// Directory browsing must use the same child-link boundary as note IO.
+  Future<bool> isSafePath(VaultPaths paths, String relativePath) async {
+    final absolute = paths.projectFile(relativePath);
+    return absolute != null && !await _containsLink(paths, absolute);
   }
 
   /// Lists Markdown notes under [folder] (project-relative, default root).

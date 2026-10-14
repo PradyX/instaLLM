@@ -707,6 +707,165 @@ class Translations$vault$en {
 
 	// Translations
 
+	/// en: 'Vault'
+	String get title => 'Vault';
+
+	/// en: 'Manage vaults'
+	String get manage => 'Manage vaults';
+
+	/// en: 'Local Markdown notes and bot journals'
+	String get description => 'Local Markdown notes and bot journals';
+
+	/// en: 'Menu'
+	String get menu => 'Menu';
+
+	/// en: 'Refresh'
+	String get refresh => 'Refresh';
+
+	/// en: 'Find a note by name'
+	String get search => 'Find a note by name';
+
+	/// en: 'Select a note to read it.'
+	String get selectNote => 'Select a note to read it.';
+
+	/// en: 'No Markdown notes in this folder.'
+	String get emptyFolder => 'No Markdown notes in this folder.';
+
+	/// en: 'Choose a vault to browse its notes.'
+	String get emptyVault => 'Choose a vault to browse its notes.';
+
+	/// en: 'No matching notes.'
+	String get noResults => 'No matching notes.';
+
+	/// en: 'Showing a limited list. Search more specifically or open a smaller folder.'
+	String get limit => 'Showing a limited list. Search more specifically or open a smaller folder.';
+
+	/// en: 'Edit'
+	String get edit => 'Edit';
+
+	/// en: 'Save'
+	String get save => 'Save';
+
+	/// en: 'Cancel'
+	String get cancel => 'Cancel';
+
+	/// en: 'Delete'
+	String get delete => 'Delete';
+
+	/// en: 'Delete note?'
+	String get deleteTitle => 'Delete note?';
+
+	/// en: 'Delete ${name} from this vault? Other notes, chats and bots are kept.'
+	String deleteDescription({required Object name}) => 'Delete ${name} from this vault? Other notes, chats and bots are kept.';
+
+	/// en: 'Note saved.'
+	String get saved => 'Note saved.';
+
+	/// en: 'Note deleted.'
+	String get deleted => 'Note deleted.';
+
+	/// en: 'Back to files'
+	String get backToFiles => 'Back to files';
+
+	/// en: 'Discard changes?'
+	String get discardTitle => 'Discard changes?';
+
+	/// en: 'Your unsaved edits will be discarded. The file on disk is kept.'
+	String get discardDescription => 'Your unsaved edits will be discarded. The file on disk is kept.';
+
+	/// en: 'Discard'
+	String get discard => 'Discard';
+
+	/// en: 'This note changed on disk. Your draft is kept. Copy your edits or reload the note before saving or deleting.'
+	String get conflict => 'This note changed on disk. Your draft is kept. Copy your edits or reload the note before saving or deleting.';
+
+	/// en: 'Could not read this folder or note. Check folder access and refresh, or choose the folder again in Manage vaults.'
+	String get unavailable => 'Could not read this folder or note. Check folder access and refresh, or choose the folder again in Manage vaults.';
+
+	/// en: 'This folder or note no longer exists. Refresh the vault.'
+	String get missing => 'This folder or note no longer exists. Refresh the vault.';
+
+	/// en: 'The vault registration changed or access is unavailable. Choose a vault again.'
+	String get denied => 'The vault registration changed or access is unavailable. Choose a vault again.';
+
+	/// en: 'Linked or outside folders cannot be accessed here. Choose the original folder instead.'
+	String get unsafePath => 'Linked or outside folders cannot be accessed here. Choose the original folder instead.';
+
+	/// en: 'This note exceeds the 512 KB editor limit. Edit it outside the app; its contents are kept.'
+	String get tooLarge => 'This note exceeds the 512 KB editor limit. Edit it outside the app; its contents are kept.';
+
+	/// en: 'Image: ${label}'
+	String image({required Object label}) => 'Image: ${label}';
+
+	/// en: '${count} vaults'
+	String registeredCount({required Object count}) => '${count} vaults';
+
+	/// en: 'Register folder'
+	String get register => 'Register folder';
+
+	/// en: 'Prepare managed vault'
+	String get prepare => 'Prepare managed vault';
+
+	/// en: 'Managed'
+	String get managed => 'Managed';
+
+	/// en: 'External folder'
+	String get external => 'External folder';
+
+	/// en: 'Rename'
+	String get rename => 'Rename';
+
+	/// en: 'Rename vault'
+	String get renameTitle => 'Rename vault';
+
+	/// en: 'Name'
+	String get name => 'Name';
+
+	/// en: 'Remove registration'
+	String get remove => 'Remove registration';
+
+	/// en: 'Remove vault registration?'
+	String get removeTitle => 'Remove vault registration?';
+
+	/// en: 'Remove ${name} and its workspace links from the app? All files in its folder are kept.'
+	String removeDescription({required Object name}) => 'Remove ${name} and its workspace links from the app? All files in its folder are kept.';
+
+	/// en: 'Link'
+	String get link => 'Link';
+
+	/// en: 'Unlink'
+	String get unlink => 'Unlink';
+
+	/// en: 'Link workspace folder'
+	String get linkTitle => 'Link workspace folder';
+
+	/// en: 'Folder inside the vault'
+	String get folder => 'Folder inside the vault';
+
+	/// en: 'Not linked'
+	String get notLinked => 'Not linked';
+
+	/// en: 'No vaults registered yet.'
+	String get noVaults => 'No vaults registered yet.';
+
+	/// en: 'Could not save the vault registry. Your previous records are kept.'
+	String get registryError => 'Could not save the vault registry. Your previous records are kept.';
+
+	/// en: 'Could not link this folder. Check its path and permissions.'
+	String get linkError => 'Could not link this folder. Check its path and permissions.';
+
+	/// en: 'Workspace linked.'
+	String get linked => 'Workspace linked.';
+
+	/// en: 'Registered ${name}.'
+	String registered({required Object name}) => 'Registered ${name}.';
+
+	/// en: 'Vault renamed.'
+	String get renamed => 'Vault renamed.';
+
+	/// en: 'Registration removed. Files are kept.'
+	String get removed => 'Registration removed. Files are kept.';
+
 	/// en: 'Vault registry'
 	String get backupTitle => 'Vault registry';
 
@@ -900,6 +1059,59 @@ extension on Translations {
 			'appearance.loadError' => 'Could not load appearance preferences. Try restarting the app.',
 			'appearance.saveError' => 'Could not save appearance preferences. Check available storage and try again.',
 			'appearance.newerVersion' => 'These appearance preferences need a newer app version. Update the app to change them.',
+			'vault.title' => 'Vault',
+			'vault.manage' => 'Manage vaults',
+			'vault.description' => 'Local Markdown notes and bot journals',
+			'vault.menu' => 'Menu',
+			'vault.refresh' => 'Refresh',
+			'vault.search' => 'Find a note by name',
+			'vault.selectNote' => 'Select a note to read it.',
+			'vault.emptyFolder' => 'No Markdown notes in this folder.',
+			'vault.emptyVault' => 'Choose a vault to browse its notes.',
+			'vault.noResults' => 'No matching notes.',
+			'vault.limit' => 'Showing a limited list. Search more specifically or open a smaller folder.',
+			'vault.edit' => 'Edit',
+			'vault.save' => 'Save',
+			'vault.cancel' => 'Cancel',
+			'vault.delete' => 'Delete',
+			'vault.deleteTitle' => 'Delete note?',
+			'vault.deleteDescription' => ({required Object name}) => 'Delete ${name} from this vault? Other notes, chats and bots are kept.',
+			'vault.saved' => 'Note saved.',
+			'vault.deleted' => 'Note deleted.',
+			'vault.backToFiles' => 'Back to files',
+			'vault.discardTitle' => 'Discard changes?',
+			'vault.discardDescription' => 'Your unsaved edits will be discarded. The file on disk is kept.',
+			'vault.discard' => 'Discard',
+			'vault.conflict' => 'This note changed on disk. Your draft is kept. Copy your edits or reload the note before saving or deleting.',
+			'vault.unavailable' => 'Could not read this folder or note. Check folder access and refresh, or choose the folder again in Manage vaults.',
+			'vault.missing' => 'This folder or note no longer exists. Refresh the vault.',
+			'vault.denied' => 'The vault registration changed or access is unavailable. Choose a vault again.',
+			'vault.unsafePath' => 'Linked or outside folders cannot be accessed here. Choose the original folder instead.',
+			'vault.tooLarge' => 'This note exceeds the 512 KB editor limit. Edit it outside the app; its contents are kept.',
+			'vault.image' => ({required Object label}) => 'Image: ${label}',
+			'vault.registeredCount' => ({required Object count}) => '${count} vaults',
+			'vault.register' => 'Register folder',
+			'vault.prepare' => 'Prepare managed vault',
+			'vault.managed' => 'Managed',
+			'vault.external' => 'External folder',
+			'vault.rename' => 'Rename',
+			'vault.renameTitle' => 'Rename vault',
+			'vault.name' => 'Name',
+			'vault.remove' => 'Remove registration',
+			'vault.removeTitle' => 'Remove vault registration?',
+			'vault.removeDescription' => ({required Object name}) => 'Remove ${name} and its workspace links from the app? All files in its folder are kept.',
+			'vault.link' => 'Link',
+			'vault.unlink' => 'Unlink',
+			'vault.linkTitle' => 'Link workspace folder',
+			'vault.folder' => 'Folder inside the vault',
+			'vault.notLinked' => 'Not linked',
+			'vault.noVaults' => 'No vaults registered yet.',
+			'vault.registryError' => 'Could not save the vault registry. Your previous records are kept.',
+			'vault.linkError' => 'Could not link this folder. Check its path and permissions.',
+			'vault.linked' => 'Workspace linked.',
+			'vault.registered' => ({required Object name}) => 'Registered ${name}.',
+			'vault.renamed' => 'Vault renamed.',
+			'vault.removed' => 'Registration removed. Files are kept.',
 			'vault.backupTitle' => 'Vault registry',
 			'vault.backupDescription' => 'Folder registrations, external folder paths and workspace links; Markdown files stay in their folders',
 			'vault.restored' => ({required Object count}) => '${count} Vault registration(s) restored',

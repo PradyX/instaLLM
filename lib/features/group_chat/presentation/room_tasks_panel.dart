@@ -12,9 +12,15 @@ import 'package:installm/features/workspaces/application/workspaces_controller.d
 import 'package:installm/i18n/strings.g.dart';
 
 class RoomTasksPanel extends ConsumerStatefulWidget {
-  const RoomTasksPanel({super.key, required this.room, this.onOpenBoard});
+  const RoomTasksPanel({
+    super.key,
+    required this.room,
+    this.onOpenBoard,
+    this.compact = false,
+  });
   final GroupChat room;
   final VoidCallback? onOpenBoard;
+  final bool compact;
 
   @override
   ConsumerState<RoomTasksPanel> createState() => _RoomTasksPanelState();
@@ -22,6 +28,15 @@ class RoomTasksPanel extends ConsumerStatefulWidget {
 
 class _RoomTasksPanelState extends ConsumerState<RoomTasksPanel> {
   final _busy = <String>{};
+  bool _expanded = false;
+
+  Future<void> _openBoard() async {
+    final router = GoRouter.of(context);
+    if (await _activateWorkspace() && mounted) {
+      widget.onOpenBoard?.call();
+      router.go(AppRoutes.kanban);
+    }
+  }
 
   Future<void> _change(String key, Future<void> Function() action) async {
     if (_busy.contains(key)) return;
@@ -107,6 +122,197 @@ class _RoomTasksPanelState extends ConsumerState<RoomTasksPanel> {
               task.relatedMessages.any(messageIds.contains),
         )
         .toList();
+    final contents = <Widget>[
+      if (data.isLoading && !data.hasValue) const LinearProgressIndicator(),
+      if (data.hasError)
+        Padding(
+          padding: const EdgeInsets.all(8),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(t.roomBoard.loadError),
+              TextButton(
+                onPressed: () {
+                  ref.invalidate(workspaceTasksProvider(room.workspaceId));
+                  if (ref.read(activeWorkspaceIdProvider) == room.workspaceId) {
+                    ref.read(kanbanProvider.notifier).reload();
+                  }
+                },
+                child: Text(t.profileImages.retry),
+              ),
+            ],
+          ),
+        ),
+      if (linked.isNotEmpty)
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            children: [
+              for (final task in linked)
+                Padding(
+                  key: ValueKey('room-task-${task.id}'),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            alignment: Alignment.centerLeft,
+                          ),
+                          onPressed: () async {
+                            if (await _activateWorkspace() && context.mounted) {
+                              await ref.read(kanbanProvider.notifier).reload();
+                              if (context.mounted) {
+                                await showBoardTaskDetails(
+                                  context,
+                                  ref,
+                                  task.id,
+                                );
+                              }
+                            }
+                          },
+                          child: Text(
+                            '${task.id} · ${task.title}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      PopupMenuButton<TaskStatus>(
+                        key: ValueKey('room-task-status-${task.id}'),
+                        tooltip: t.roomBoard.changeStatus,
+                        enabled: !_busy.contains(task.id) && !data.hasError,
+                        initialValue: task.status,
+                        onSelected: (status) => _change(
+                          task.id,
+                          () => ref
+                              .read(roomBoardServiceProvider)
+                              .moveTask(room, task.id, status),
+                        ),
+                        itemBuilder: (_) => [
+                          for (final status in TaskStatus.values)
+                            PopupMenuItem(
+                              value: status,
+                              child: Text(status.label),
+                            ),
+                        ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                task.status.label,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                              const Icon(Icons.expand_more, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+    ];
+    final onLink = !data.hasValue || data.hasError || _busy.contains('link')
+        ? null
+        : () => _link(all.where((task) => !linked.contains(task)).toList());
+    if (widget.compact) {
+      final colors = Theme.of(context).colorScheme;
+      final text = Theme.of(context).textTheme;
+      final toggle = TextButton(
+        onPressed: () => setState(() => _expanded = !_expanded),
+        style: TextButton.styleFrom(
+          foregroundColor: colors.onSurface,
+          padding: EdgeInsets.zero,
+          alignment: Alignment.centerLeft,
+        ),
+        child: Semantics(
+          expanded: _expanded,
+          child: Wrap(
+            spacing: 9,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                t.roomBoard.linkedTasks,
+                style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+              ),
+              Text(
+                '${linked.length}',
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      );
+      final link = Tooltip(
+        message: t.roomBoard.linkTask,
+        child: TextButton.icon(
+          onPressed: onLink,
+          style: TextButton.styleFrom(padding: EdgeInsets.zero),
+          icon: const Icon(Icons.add, size: 16),
+          label: Text(t.roomBoard.linkTask),
+        ),
+      );
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Divider(
+            height: 1,
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth <
+                    MediaQuery.textScalerOf(context).scale(290)) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      toggle,
+                      Align(alignment: Alignment.centerRight, child: link),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: toggle),
+                    const SizedBox(width: 12),
+                    link,
+                  ],
+                );
+              },
+            ),
+          ),
+          Divider(
+            height: 1,
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 12),
+            if (linked.isEmpty && data.hasValue && !data.hasError)
+              Text(
+                t.roomBoard.emptyLinkedTasks,
+                style: text.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            ...contents,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: _openBoard,
+                child: Text(t.roomBoard.openBoard),
+              ),
+            ),
+          ],
+        ],
+      );
+    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Card(
@@ -121,130 +327,14 @@ class _RoomTasksPanelState extends ConsumerState<RoomTasksPanel> {
           leading: IconButton(
             tooltip: t.roomBoard.openBoard,
             icon: const Icon(Icons.view_kanban_outlined),
-            onPressed: () async {
-              final router = GoRouter.of(context);
-              if (await _activateWorkspace() && mounted) {
-                widget.onOpenBoard?.call();
-                router.go(AppRoutes.kanban);
-              }
-            },
+            onPressed: _openBoard,
           ),
           trailing: IconButton(
             tooltip: t.roomBoard.linkTask,
             icon: const Icon(Icons.add_link),
-            onPressed: !data.hasValue || data.hasError || _busy.contains('link')
-                ? null
-                : () => _link(
-                    all.where((task) => !linked.contains(task)).toList(),
-                  ),
+            onPressed: onLink,
           ),
-          children: [
-            if (data.isLoading && !data.hasValue)
-              const LinearProgressIndicator(),
-            if (data.hasError)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(t.roomBoard.loadError),
-                    TextButton(
-                      onPressed: () {
-                        ref.invalidate(
-                          workspaceTasksProvider(room.workspaceId),
-                        );
-                        if (ref.read(activeWorkspaceIdProvider) ==
-                            room.workspaceId) {
-                          ref.read(kanbanProvider.notifier).reload();
-                        }
-                      },
-                      child: Text(t.profileImages.retry),
-                    ),
-                  ],
-                ),
-              ),
-            if (linked.isNotEmpty)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  children: [
-                    for (final task in linked)
-                      Padding(
-                        key: ValueKey('room-task-${task.id}'),
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextButton(
-                                style: TextButton.styleFrom(
-                                  alignment: Alignment.centerLeft,
-                                ),
-                                onPressed: () async {
-                                  if (await _activateWorkspace() &&
-                                      context.mounted) {
-                                    await ref
-                                        .read(kanbanProvider.notifier)
-                                        .reload();
-                                    if (context.mounted) {
-                                      await showBoardTaskDetails(
-                                        context,
-                                        ref,
-                                        task.id,
-                                      );
-                                    }
-                                  }
-                                },
-                                child: Text(
-                                  '${task.id} · ${task.title}',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                            PopupMenuButton<TaskStatus>(
-                              key: ValueKey('room-task-status-${task.id}'),
-                              tooltip: t.roomBoard.changeStatus,
-                              enabled:
-                                  !_busy.contains(task.id) && !data.hasError,
-                              initialValue: task.status,
-                              onSelected: (status) => _change(
-                                task.id,
-                                () => ref
-                                    .read(roomBoardServiceProvider)
-                                    .moveTask(room, task.id, status),
-                              ),
-                              itemBuilder: (_) => [
-                                for (final status in TaskStatus.values)
-                                  PopupMenuItem(
-                                    value: status,
-                                    child: Text(status.label),
-                                  ),
-                              ],
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      task.status.label,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.labelMedium,
-                                    ),
-                                    const Icon(Icons.expand_more, size: 16),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-          ],
+          children: contents,
         ),
       ),
     );

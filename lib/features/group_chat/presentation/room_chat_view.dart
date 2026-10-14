@@ -447,9 +447,18 @@ class RoomHeaderTitle extends ConsumerWidget {
 /// Opens the settings for whatever is on screen: a bot's own settings for a
 /// direct room, the room's mode, members and rounds for a group room.
 Future<void> showRoomSettings(BuildContext context, String chatId) {
+  final direct = ProviderScope.containerOf(context, listen: false)
+      .read(groupChatsProvider)
+      .snapshot
+      .chats
+      .any((room) => room.id == chatId && room.isDirect);
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: direct,
+    constraints: direct ? const BoxConstraints(maxWidth: 552) : null,
+    backgroundColor: direct ? Colors.transparent : null,
+    elevation: direct ? 0 : null,
     builder: (context) => RoomSettingsSheet(chatId: chatId),
   );
 }
@@ -555,6 +564,185 @@ class RoomSettingsSheet extends ConsumerWidget {
                   chat.memberBotIds.contains(bot.id)),
         );
 
+    if (room.isDirect) {
+      final colors = Theme.of(context).colorScheme;
+      final text = Theme.of(context).textTheme;
+      final profileKey = botProfileKey(room.directBotId!);
+      final edit = bot == null
+          ? null
+          : TextButton(
+              onPressed: bots.isReadOnly
+                  ? null
+                  : () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => BotEditorPage(botId: bot.id),
+                      ),
+                    ),
+              style: TextButton.styleFrom(
+                backgroundColor: colors.primary.withValues(alpha: 0.09),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+              child: Text(t.botManagement.edit),
+            );
+      final identity = Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ProfileAvatar(profileKey: profileKey, size: 58),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  bot?.name ?? room.name,
+                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                TextButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => ProfileImagePicker(profileKey: profileKey),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.centerLeft,
+                    textStyle: text.labelLarge,
+                  ),
+                  child: Text(t.profileImages.change),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            MediaQuery.viewInsetsOf(context).bottom + 16,
+          ),
+          child: Material(
+            color:
+                (colors.brightness == Brightness.light
+                        ? colors.surfaceContainerLowest
+                        : colors.surfaceContainerLow)
+                    .withAlpha(255),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: colors.outlineVariant.withValues(alpha: 0.5),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          bot == null && bots.isReady
+                              ? t.roomManagement.chatSettings
+                              : t.botManagement.settings,
+                          style: text.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: t.common.close,
+                        onPressed: () => Navigator.of(context).pop(),
+                        color: colors.onSurfaceVariant,
+                        icon: const Icon(Icons.close, size: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stack =
+                          constraints.maxWidth <
+                          MediaQuery.textScalerOf(context).scale(310);
+                      if (edit == null) return identity;
+                      if (stack) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            identity,
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: edit,
+                            ),
+                          ],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: identity),
+                          const SizedBox(width: 14),
+                          edit,
+                        ],
+                      );
+                    },
+                  ),
+                  if (bot == null && bots.isReady) ...[
+                    const SizedBox(height: 12),
+                    Text(t.botManagement.unavailable, style: text.bodySmall),
+                  ],
+                  const SizedBox(height: 28),
+                  RoomTasksPanel(
+                    room: room,
+                    compact: true,
+                    onOpenBoard: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(height: 22),
+                  Text(
+                    t.common.manage,
+                    style: text.labelSmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _SettingsActionRow(
+                    title: t.roomManagement.clear,
+                    description: bot == null
+                        ? t.roomManagement.clearSavedSummary
+                        : t.roomManagement.clearSummary,
+                    onPressed:
+                        state.isReadOnly ||
+                            state.runningChatIds.contains(room.id)
+                        ? null
+                        : () => _clearChat(context, ref),
+                  ),
+                  if (bot != null)
+                    _SettingsActionRow(
+                      title: t.botManagement.delete,
+                      description: t.botManagement.deleteSummary,
+                      destructive: true,
+                      onPressed: bots.isReadOnly || botRunning
+                          ? null
+                          : () => _deleteBot(context, ref, bot.id),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: EdgeInsets.only(
         left: 16,
@@ -579,18 +767,6 @@ class RoomSettingsSheet extends ConsumerWidget {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
-                if (bot != null)
-                  TextButton.icon(
-                    onPressed: bots.isReadOnly
-                        ? null
-                        : () => Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => BotEditorPage(botId: bot.id),
-                            ),
-                          ),
-                    icon: const Icon(Icons.tune_rounded, size: 18),
-                    label: Text(t.botManagement.edit),
-                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -601,20 +777,6 @@ class RoomSettingsSheet extends ConsumerWidget {
               fallback: room.isDirect ? null : const Icon(Icons.forum_outlined),
             ),
             const SizedBox(height: 12),
-            if (room.isDirect) ...[
-              Text(
-                bot == null && bots.isReady
-                    ? t.botManagement.unavailable
-                    : '${bot?.name ?? room.name} answers every line here — no @mentions, '
-                          'no rounds to tune.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              RoomTasksPanel(
-                room: room,
-                onOpenBoard: () => Navigator.of(context).pop(),
-              ),
-            ],
             if (!room.isDirect) ...[
               DropdownButtonFormField<SpeakerMode>(
                 initialValue: room.mode,
@@ -706,23 +868,75 @@ class RoomSettingsSheet extends ConsumerWidget {
                   icon: const Icon(Icons.cleaning_services_outlined),
                   label: Text(t.roomManagement.clear),
                 ),
-                if (bot != null)
-                  OutlinedButton.icon(
-                    onPressed: bots.isReadOnly || botRunning
-                        ? null
-                        : () => _deleteBot(context, ref, bot.id),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.error,
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(t.botManagement.delete),
-                  ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsActionRow extends StatelessWidget {
+  const _SettingsActionRow({
+    required this.title,
+    required this.description,
+    required this.onPressed,
+    this.destructive = false,
+  });
+
+  final String title;
+  final String description;
+  final VoidCallback? onPressed;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(9),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: text.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: onPressed == null
+                            ? colors.onSurface.withValues(alpha: 0.38)
+                            : destructive
+                            ? colors.error
+                            : colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: text.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: colors.onSurfaceVariant,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -126,6 +126,9 @@ class Translations$common$en {
 	/// en: 'Cancel'
 	String get cancel => 'Cancel';
 
+	/// en: 'Manage'
+	String get manage => 'Manage';
+
 	/// en: 'Error'
 	String get error => 'Error';
 
@@ -234,6 +237,9 @@ class Translations$botManagement$en {
 	/// en: 'Could not delete the bot. Check available storage and try again.'
 	String get deleteError => 'Could not delete the bot. Check available storage and try again.';
 
+	/// en: 'Your chat history is kept.'
+	String get deleteSummary => 'Your chat history is kept.';
+
 	/// en: 'Chat history'
 	String get historyOnly => 'Chat history';
 
@@ -276,6 +282,12 @@ class Translations$roomManagement$en {
 	/// en: 'Clear chat'
 	String get clear => 'Clear chat';
 
+	/// en: 'Remove messages. Keep this bot.'
+	String get clearSummary => 'Remove messages. Keep this bot.';
+
+	/// en: 'Remove messages. Keep this chat.'
+	String get clearSavedSummary => 'Remove messages. Keep this chat.';
+
 	/// en: 'Clear this chat?'
 	String get clearTitle => 'Clear this chat?';
 
@@ -308,6 +320,9 @@ class Translations$roomBoard$en {
 
 	/// en: 'Linked tasks'
 	String get linkedTasks => 'Linked tasks';
+
+	/// en: 'No linked tasks yet.'
+	String get emptyLinkedTasks => 'No linked tasks yet.';
 
 	/// en: 'Linked rooms'
 	String get linkedRooms => 'Linked rooms';
@@ -362,6 +377,9 @@ class Translations$profileImages$en {
 
 	/// en: 'Choose'
 	String get choose => 'Choose';
+
+	/// en: 'Change image'
+	String get change => 'Change image';
 
 	/// en: 'Choose a Petdex profile image'
 	String get pickerTitle => 'Choose a Petdex profile image';
@@ -552,6 +570,7 @@ extension on Translations {
 			'home.settings' => 'Settings',
 			'home.logout' => 'Logout',
 			'common.cancel' => 'Cancel',
+			'common.manage' => 'Manage',
 			'common.error' => 'Error',
 			'common.success' => 'Success',
 			'common.close' => 'Close',
@@ -582,6 +601,7 @@ extension on Translations {
 			'botManagement.deleteTitle' => 'Delete this bot?',
 			'botManagement.deleteHint' => 'The bot will be removed from your list. Its chats and messages stay readable in Rooms.',
 			'botManagement.deleteError' => 'Could not delete the bot. Check available storage and try again.',
+			'botManagement.deleteSummary' => 'Your chat history is kept.',
 			'botManagement.historyOnly' => 'Chat history',
 			'botManagement.unavailable' => 'This bot is no longer active. Its chat history is preserved.',
 			'botManagement.emptyHistory' => 'No messages in this saved chat.',
@@ -590,11 +610,14 @@ extension on Translations {
 			'roomManagement.settings' => 'Room settings',
 			'roomManagement.chatSettings' => 'Chat settings',
 			'roomManagement.clear' => 'Clear chat',
+			'roomManagement.clearSummary' => 'Remove messages. Keep this bot.',
+			'roomManagement.clearSavedSummary' => 'Remove messages. Keep this chat.',
 			'roomManagement.clearTitle' => 'Clear this chat?',
 			'roomManagement.clearHint' => 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.',
 			'roomManagement.clearError' => 'Could not clear the chat. Finish any running reply, check available storage and try again.',
 			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',
+			'roomBoard.emptyLinkedTasks' => 'No linked tasks yet.',
 			'roomBoard.linkedRooms' => 'Linked rooms',
 			'roomBoard.linkTask' => 'Link task',
 			'roomBoard.openBoard' => 'Open board',
@@ -610,6 +633,7 @@ extension on Translations {
 			'profileImages.noSaved' => 'No saved portraits yet.',
 			'profileImages.title' => 'Profile image',
 			'profileImages.choose' => 'Choose',
+			'profileImages.change' => 'Change image',
 			'profileImages.pickerTitle' => 'Choose a Petdex profile image',
 			'profileImages.search' => 'Search pets by name',
 			'profileImages.networkHint' => 'Browse Petdex online. Confirmed portraits are saved for offline use.',

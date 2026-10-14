@@ -40,6 +40,8 @@
 
 ## Work and validation
 
+- For any user-requested visual redesign, present four meaningfully different mockups first and wait for the user's approval before editing the app UI. Once a mockup is approved, implement that choice without requesting the same approval again. Routine bug fixes that preserve the accepted design do not need a new mockup cycle.
+- Preferred design language: the approved [compact bot settings mockup](mockups/bot_settings_compact.html). Use compact neutral surfaces, clear typography and hierarchy, generous but controlled spacing, subtle single dividers, flat rows and restrained accent colour. Group avatar/name with a quiet Change image action and right-aligned Edit control; avoid oversized controls, decorative nested cards, long explanatory text and prominent outlined destructive pills. Reserve red emphasis for Delete; keep Clear chat neutral. Adapt this language to light/dark themes, narrow layouts and large text using the app's theme tokens. Treat the mockup as a visual reference, not a replacement for existing functionality or persistence safeguards.
 - Inspect the owning modules, data flow, persistence, runtime APIs, platform code, and tests before proposing changes.
 - Before significant implementation, give a concise plan covering affected files, data/migrations, platforms, risks, and tests. For large architecture changes, stop after the plan for approval; small scoped fixes need no extra approval cycle.
 - Implement the smallest coherent change. Avoid unrelated cleanup, whole-file formatting, and needless public-interface changes.

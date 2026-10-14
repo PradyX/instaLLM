@@ -333,7 +333,10 @@ void main() {
             .relatedRoomIds
             .contains(room.id),
       );
-      await tester.tap(find.byTooltip('Open board'));
+      expect(find.text('Open board'), findsNothing);
+      await tester.tap(find.text('Linked tasks'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open board'));
       await until(tester, () => find.byType(KanbanPage).evaluate().isNotEmpty);
       expect(find.byType(RoomSettingsSheet), findsNothing);
       expect(tester.takeException(), isNull);

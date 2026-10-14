@@ -20,6 +20,7 @@ home:
 
 common:
   cancel: Cancel
+  manage: Manage
   error: "Error"
   success: "Success"
   close: "Close"
@@ -57,6 +58,7 @@ botManagement:
   deleteTitle: Delete this bot?
   deleteHint: The bot will be removed from your list. Its chats and messages stay readable in Rooms.
   deleteError: Could not delete the bot. Check available storage and try again.
+  deleteSummary: Your chat history is kept.
   historyOnly: Chat history
   unavailable: This bot is no longer active. Its chat history is preserved.
   emptyHistory: No messages in this saved chat.
@@ -69,6 +71,8 @@ roomManagement:
   settings: Room settings
   chatSettings: Chat settings
   clear: Clear chat
+  clearSummary: Remove messages. Keep this bot.
+  clearSavedSummary: Remove messages. Keep this chat.
   clearTitle: Clear this chat?
   clearHint: This permanently clears its messages. The bot, chat settings and Board tasks are kept.
   clearError: Could not clear the chat. Finish any running reply, check available storage and try again.
@@ -78,6 +82,7 @@ modelRepository:
 
 roomBoard:
   linkedTasks: Linked tasks
+  emptyLinkedTasks: No linked tasks yet.
   linkedRooms: Linked rooms
   linkTask: Link task
   openBoard: Open board
@@ -95,6 +100,7 @@ profileImages:
   noSaved: No saved portraits yet.
   title: "Profile image"
   choose: "Choose"
+  change: Change image
   pickerTitle: "Choose a Petdex profile image"
   search: "Search pets by name"
   networkHint: "Browse Petdex online. Confirmed portraits are saved for offline use."

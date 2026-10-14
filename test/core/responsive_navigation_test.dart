@@ -463,12 +463,31 @@ void main() {
         expect(find.byTooltip('Link task'), findsNothing);
         await tester.tap(find.byTooltip('Settings'));
         await tester.pumpAndSettle();
-        final title = tester.getRect(find.text('Bot settings'));
+        expect(find.text('Bot settings'), findsOneWidget);
+        final sheet = find.byType(RoomSettingsSheet);
+        final title = tester.getRect(
+          find.descendant(of: sheet, matching: find.text('Planner')),
+        );
         final edit = tester.getRect(
           find.widgetWithText(TextButton, 'Edit bot'),
         );
-        expect(edit.left, greaterThanOrEqualTo(title.right));
-        expect(edit.center.dy, closeTo(title.center.dy, 1));
+        if (!narrow) {
+          expect(edit.left, greaterThanOrEqualTo(title.right));
+        }
+        expect(
+          edit.top,
+          greaterThan(tester.getRect(find.text('Bot settings')).bottom),
+        );
+        expect(
+          find.descendant(of: sheet, matching: find.byType(Card)),
+          findsNothing,
+        );
+        expect(
+          find.descendant(of: sheet, matching: find.byType(OutlinedButton)),
+          findsNothing,
+        );
+        expect(find.text('Change image'), findsOneWidget);
+        expect(find.textContaining('answers every line'), findsNothing);
         expect(find.text(original.description), findsNothing);
         expect(find.byTooltip('Link task'), findsOneWidget);
         await tester.tap(find.text('Edit bot'));

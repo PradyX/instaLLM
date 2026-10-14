@@ -14,6 +14,7 @@ import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart';
 import 'package:installm/features/kanban/application/kanban_tools.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/memory/application/memory_controller.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
@@ -439,6 +440,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// answers without them, the way it does in a normal chat.
   Future<void> _answerAsBot(GroupChat chat, Bot bot) async {
     final prompt = await _assemblePrompt(chat, bot);
+    final pendingPrompt = '${prompt.systemPrompt}\n\n${prompt.goal}'.trim();
     final model = roomAnswerModel(
       chat: chat,
       bot: bot,
@@ -454,7 +456,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           text:
               'No model is installed, so I cannot answer yet. The prompt '
               'below is ready — paste my reply to continue.',
-          pendingPrompt: prompt,
+          pendingPrompt: pendingPrompt,
         ),
       );
       await _persist();
@@ -498,10 +500,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           .read(agentLoopServiceProvider)
           .run(
             model: model,
-            goal: prompt,
+            goal: prompt.goal,
             registry: registry,
             maxIterations: 6,
-            systemPrompt: BotPrompt.assemble(bot: bot),
+            systemPrompt: prompt.systemPrompt,
             assistantPrefill: assistantPrefill,
           );
       final answer = run.answer.trim().isEmpty
@@ -524,16 +526,29 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           text:
               'I could not run just now ($error). '
               'Paste my reply to continue, or try again.',
-          pendingPrompt: prompt,
+          pendingPrompt: pendingPrompt,
         ),
       );
     }
     await _persist();
   }
 
-  /// What one bot hears: soul, relevant skills, shared memory, recent room
-  /// and assigned task — as the goal of its run.
-  Future<String> _assemblePrompt(GroupChat chat, Bot bot) async {
+  /// Stable instructions and facts stay in the system prefix; the goal is
+  /// the recent room and assigned task. Both are charged by the agent loop.
+  Future<({String systemPrompt, String goal})> _assemblePrompt(
+    GroupChat chat,
+    Bot bot,
+  ) async {
+    var projectMemory = '';
+    if (bot.memoryScope != BotMemoryScope.none) {
+      final memory = _ref.read(memoryProvider.notifier);
+      await memory.whenReady;
+      projectMemory = memory.promptFacts(
+        scope: bot.memoryScope,
+        conversationId: chat.id,
+        workspaceId: chat.workspaceId,
+      );
+    }
     final messages = state.snapshot.messagesFor(chat.id);
     final recent = messages.length > recentHistoryLines
         ? messages.sublist(messages.length - recentHistoryLines)
@@ -625,14 +640,14 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       if (memory.isNotEmpty) 'Relevant project notes:\n$memory',
       'Recent room:\n${room.toString().trim()}',
     ];
-    return [
-      BotPrompt.assemble(
+    return (
+      systemPrompt: BotPrompt.assemble(
         bot: bot,
         skillSections: skillSections,
-        projectMemory: '',
+        projectMemory: projectMemory,
       ),
-      ...parts,
-    ].join('\n\n');
+      goal: parts.join('\n\n'),
+    );
   }
 
   String? _latestBotText(String chatId, String botId) {

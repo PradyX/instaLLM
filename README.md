@@ -195,6 +195,8 @@ Settings uses spacing between its controls without divider lines. Settings → V
 - The readout above the composer shows the input budget in use and says when older or shortened messages were trimmed to fit; tap it for the window and reservation details.
 - Token counts are estimates (~4 characters per token plus per-message overhead) because the bundled runtime exposes no tokenizer, so the budget is kept conservative on purpose.
 
+Memory 2.0 is in progress. Its foundation stores explicitly recorded facts in versioned local `memory/facts.json` under the app support directory, separately from conversation summaries. Facts carry conversation/room or workspace ownership, provenance and optional expiry. Bot recall follows its memory scope: None recalls no facts; Conversation recalls that room; Workspace also recalls that workspace; Global also recalls facts individually approved for global use. Expired facts stay stored but are excluded from prompts. Recall includes source labels, uses a 256-token fact budget, and is charged within the agent's system prompt. Writes preserve damaged/partial payloads and refuse unsupported formats. No automatic extraction, network transmission or sync is introduced. Chat remember/forget commands and Settings → Memory are still pending; the explicit operations currently exist in the application service. These facts are not included in the existing backup sections yet.
+
 ### Inference Profiles
 
 - Open **Inference Profiles** in the drawer to see what the active profile resolves to on this device, and to switch between profiles.

@@ -62,6 +62,31 @@ Uint8List _sprite({bool preview = true}) {
 }
 
 void main() {
+  test(
+    'starter portraits prefer curated art and omit duplicate image aliases',
+    () {
+      final pets = List.generate(
+        8,
+        (i) => PetdexPet(
+          slug: 'pet-$i',
+          name: 'Pet $i',
+          spritesheetUrl: 'https://assets.petdex.dev/pets/pet-$i/sprite.webp',
+        ),
+      );
+      final alias = PetdexPet(
+        slug: 'boba-alias',
+        name: 'Another name',
+        spritesheetUrl: _boba.spritesheetUrl,
+      );
+      final featured = PetdexService.featured([...pets, _boba, alias, _boba]);
+      expect(featured, hasLength(6));
+      expect(featured.first, _boba);
+      expect(featured, isNot(contains(alias)));
+      expect(featured.map((pet) => pet.spritesheetUrl).toSet(), hasLength(6));
+      expect(PetdexService.featured([_boba, alias]), [_boba]);
+    },
+  );
+
   late Directory directory;
   setUp(
     () async =>

@@ -74,6 +74,25 @@ class PetdexService {
         .toList(growable: false);
   }
 
+  /// A small starting selection for the explicitly opened bot creation sheet.
+  /// Metadata is cheap; only visible portraits are fetched by the widgets.
+  static List<PetdexPet> featured(List<PetdexPet> pets) {
+    final curated = pets.where(
+      (pet) =>
+          pet.spritesheetUrl.startsWith('https://assets.petdex.dev/curated/'),
+    );
+    final seenSlugs = <String>{};
+    final seenImages = <String>{};
+    return curated
+        .followedBy(pets)
+        .where(
+          (pet) =>
+              seenSlugs.add(pet.slug) && seenImages.add(pet.spritesheetUrl),
+        )
+        .take(6)
+        .toList(growable: false);
+  }
+
   File cachedFile(PetdexPet pet) =>
       File(p.join(_directory.path, 'images', '${pet.slug}.png'));
 

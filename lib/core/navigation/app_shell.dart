@@ -6,7 +6,6 @@ import 'package:installm/core/navigation/navigation_panel_widgets.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
 import 'package:installm/core/widgets/name_prompt_dialog.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
-import 'package:installm/features/bots/presentation/bot_editor_page.dart';
 import 'package:installm/features/bots/presentation/create_bot_dialog.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/conversations/domain/conversation.dart';
@@ -612,8 +611,7 @@ class _ChatRows extends ConsumerWidget {
   }
 }
 
-/// Creates a bot, then opens its editor: a new bot is shaped before it is
-/// talked to, and it appears in the Bots section from then on.
+/// Creates a bot from the complete draft, then opens its chat.
 ///
 /// This replaces the roster page that used to own creation — the sidebar is
 /// the bot list now, and a bot's chat is a chat on the app's chat page.
@@ -623,34 +621,50 @@ Future<void> _createBot(
   VoidCallback? onCreated,
 }) async {
   final bots = ref.read(botsProvider.notifier);
-  final draft = await showDialog<BotDraft>(
-    context: context,
-    builder: (_) => const CreateBotDialog(),
+  final profiles = ref.read(profileImagesProvider.notifier);
+  final chats = ref.read(groupChatsProvider.notifier);
+  final workspaceId = ref.read(workspacesProvider).active?.id;
+  final selection = ref.read(activeRoomIdProvider.notifier);
+  final router = GoRouter.of(context);
+  // Resizing replaces the page Scaffold and its drawer, but the sheet's
+  // Navigator and the application controllers still own the creation draft.
+  final navigator = Navigator.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final draft = await showCreateBotSheet(context);
+  if (draft == null || !navigator.mounted) return;
+  final bot = await bots.createBot(
+    draft.name,
+    templateId: draft.templateId,
+    soul: draft.soul,
   );
-  if (draft == null || !context.mounted) return;
-  final bot = await bots.createBot(draft.name, templateId: draft.templateId);
-  if (!context.mounted) return;
+  if (!navigator.mounted) return;
   if (bot == null) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(t.botCreation.saveError)));
+    messenger.showSnackBar(SnackBar(content: Text(t.botCreation.saveError)));
     return;
   }
   if (draft.portrait != null) {
-    final saved = await ref
-        .read(profileImagesProvider.notifier)
-        .select(botProfileKey(bot.id), draft.portrait);
-    if (!context.mounted) return;
+    final saved = await profiles.select(botProfileKey(bot.id), draft.portrait);
+    if (!navigator.mounted) return;
     if (!saved) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.profileImages.saveError)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(t.profileImages.saveError)),
+      );
+    }
+  }
+  if (workspaceId != null) {
+    final chat = await chats.directChatWith(
+      workspaceId: workspaceId,
+      botId: bot.id,
+    );
+    if (!navigator.mounted) return;
+    if (chat != null) {
+      selection.state = chat.id;
+    } else {
+      messenger.showSnackBar(SnackBar(content: Text(t.botCreation.chatError)));
     }
   }
   onCreated?.call();
-  await Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (context) => BotEditorPage(botId: bot.id)),
-  );
+  router.go(AppRoutes.home);
 }
 
 /// Creates a room in [workspaceId] and opens it on the chat page.

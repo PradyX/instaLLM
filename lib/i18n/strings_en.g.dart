@@ -156,17 +156,50 @@ class Translations$botCreation$en {
 	/// en: 'New bot'
 	String get title => 'New bot';
 
-	/// en: 'Bot name'
-	String get name => 'Bot name';
+	/// en: 'Name'
+	String get name => 'Name';
 
 	/// en: 'Create'
 	String get create => 'Create';
 
-	/// en: 'Start with'
-	String get startWith => 'Start with';
+	/// en: 'Template'
+	String get template => 'Template';
 
-	/// en: 'Blank bot'
-	String get blank => 'Blank bot';
+	/// en: 'None'
+	String get noTemplate => 'None';
+
+	/// en: 'Optional. Choose a role, then make it your own.'
+	String get templateHint => 'Optional. Choose a role, then make it your own.';
+
+	/// en: 'Soul'
+	String get soul => 'Soul';
+
+	/// en: 'Describe how your bot should behave and answer.'
+	String get soulHint => 'Describe how your bot should behave and answer.';
+
+	/// en: 'You are a helpful assistant. Give clear, practical answers. Ask for clarification when needed.'
+	String get starterSoul => 'You are a helpful assistant.\nGive clear, practical answers.\nAsk for clarification when needed.';
+
+	/// en: 'Keep the bot icon or choose a pet.'
+	String get defaultPortrait => 'Keep the bot icon or choose a pet.';
+
+	/// en: 'Search pets'
+	String get searchPortraits => 'Search pets';
+
+	/// en: 'Petdex portraits load online.'
+	String get portraitHint => 'Petdex portraits load online.';
+
+	/// en: 'Portraits are unavailable. You can still create your bot.'
+	String get portraitsOffline => 'Portraits are unavailable. You can still create your bot.';
+
+	/// en: 'Previous portraits'
+	String get previousPortraits => 'Previous portraits';
+
+	/// en: 'Next portraits'
+	String get nextPortraits => 'Next portraits';
+
+	/// en: 'Bot saved. Tap it in Bots to open its chat again.'
+	String get chatError => 'Bot saved. Tap it in Bots to open its chat again.';
 
 	/// en: 'No bots yet. Use + to create your own.'
 	String get empty => 'No bots yet. Use + to create your own.';
@@ -508,10 +541,21 @@ extension on Translations {
 			'common.yes' => 'Yes',
 			'common.no' => 'No',
 			'botCreation.title' => 'New bot',
-			'botCreation.name' => 'Bot name',
+			'botCreation.name' => 'Name',
 			'botCreation.create' => 'Create',
-			'botCreation.startWith' => 'Start with',
-			'botCreation.blank' => 'Blank bot',
+			'botCreation.template' => 'Template',
+			'botCreation.noTemplate' => 'None',
+			'botCreation.templateHint' => 'Optional. Choose a role, then make it your own.',
+			'botCreation.soul' => 'Soul',
+			'botCreation.soulHint' => 'Describe how your bot should behave and answer.',
+			'botCreation.starterSoul' => 'You are a helpful assistant.\nGive clear, practical answers.\nAsk for clarification when needed.',
+			'botCreation.defaultPortrait' => 'Keep the bot icon or choose a pet.',
+			'botCreation.searchPortraits' => 'Search pets',
+			'botCreation.portraitHint' => 'Petdex portraits load online.',
+			'botCreation.portraitsOffline' => 'Portraits are unavailable. You can still create your bot.',
+			'botCreation.previousPortraits' => 'Previous portraits',
+			'botCreation.nextPortraits' => 'Next portraits',
+			'botCreation.chatError' => 'Bot saved. Tap it in Bots to open its chat again.',
 			'botCreation.empty' => 'No bots yet. Use + to create your own.',
 			'botCreation.saveError' => 'Could not create the bot. Check available storage and try again.',
 			'botManagement.edit' => 'Edit bot',

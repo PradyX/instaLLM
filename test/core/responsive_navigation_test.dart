@@ -14,7 +14,7 @@ import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/bots/data/bot_store.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/bot_editor_page.dart';
-import 'package:installm/features/bots/presentation/create_bot_dialog.dart';
+import 'package:installm/features/profile_images/application/profile_images_controller.dart';
 import 'package:installm/features/conversations/data/conversation_store.dart';
 import 'package:installm/features/conversations/domain/conversation.dart';
 import 'package:installm/features/conversations/presentation/conversation_controller.dart';
@@ -88,7 +88,10 @@ void main() {
       ),
     );
     container = ProviderContainer(
-      overrides: [conversationStoreProvider.overrideWithValue(conversations)],
+      overrides: [
+        conversationStoreProvider.overrideWithValue(conversations),
+        petdexCatalogProvider.overrideWith((_) async => []),
+      ],
     );
     router = GoRouter(
       routes: [
@@ -236,22 +239,21 @@ void main() {
       await tester.ensureVisible(find.byTooltip('New bot'));
       await tester.tap(find.byTooltip('New bot'));
       await tester.pumpAndSettle();
-      expect(find.text('Blank bot'), findsOneWidget);
+      expect(find.text('None'), findsOneWidget);
       await tester.enterText(
-        find.descendant(
-          of: find.byType(CreateBotDialog),
-          matching: find.byType(TextField),
-        ),
+        find.byKey(const ValueKey('bot-name')),
         'My planning bot',
       );
-      await tester.tap(find.byType(DropdownButtonFormField<String?>));
+      await tester.ensureVisible(find.byKey(const ValueKey('bot-template')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('bot-template')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Planner').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Create'));
       await pumpUntil(
         tester,
-        () => find.byType(BotEditorPage).evaluate().isNotEmpty,
+        () => find.byType(RoomChatView).evaluate().isNotEmpty,
       );
       final bot = container.read(botsProvider).bots.single;
       expect(bot.name, 'My planning bot');
@@ -789,7 +791,7 @@ void main() {
     expect(find.byType(RoomChatView), findsOneWidget);
   });
 
-  testWidgets('bot creation in the drawer closes it and opens the editor', (
+  testWidgets('bot creation in the drawer closes it and opens its chat', (
     tester,
   ) async {
     await pumpHome(tester);
@@ -799,21 +801,60 @@ void main() {
     await tester.tap(find.byTooltip('New bot'));
     await tester.pumpAndSettle();
     await tester.enterText(
-      find.descendant(
-        of: find.byType(CreateBotDialog),
-        matching: find.byType(TextField),
-      ),
+      find.byKey(const ValueKey('bot-name')),
       'Mobile bot',
     );
     await tester.pump();
     await tester.tap(find.text('Create'));
     await pumpUntil(
       tester,
-      () => find.byType(BotEditorPage).evaluate().isNotEmpty,
+      () => find.byType(RoomChatView).evaluate().isNotEmpty,
     );
     expect(scaffold.isDrawerOpen, isFalse);
-    expect(find.text('Edit Mobile bot'), findsOneWidget);
+    expect(container.read(activeRoomProvider)?.name, 'Mobile bot');
+    expect(find.byType(BotEditorPage), findsNothing);
   });
+
+  testWidgets(
+    'creation survives resizing from the drawer to the wide sidebar',
+    (tester) async {
+      await pumpHome(tester);
+      await openDrawer(tester);
+      await tester.ensureVisible(find.byTooltip('New bot'));
+      await tester.tap(find.byTooltip('New bot'));
+      await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(1400, 1100);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('bot-name')),
+        'Resized bot',
+      );
+      await tester.ensureVisible(find.byKey(const ValueKey('bot-soul')));
+      await tester.enterText(
+        find.byKey(const ValueKey('bot-soul')),
+        'My instructions.',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Create'));
+      await pumpUntil(
+        tester,
+        () => container.read(activeRoomProvider)?.name == 'Resized bot',
+      );
+      final bot = container
+          .read(botsProvider)
+          .bots
+          .singleWhere((bot) => bot.name == 'Resized bot');
+      expect(bot.soul, 'My instructions.');
+      expect(
+        BotStore(
+          File('${directory.path}/bots/bots.json'),
+        ).load().allBots.singleWhere((saved) => saved.id == bot.id).soul,
+        'My instructions.',
+      );
+      expect(find.byType(BotEditorPage), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final (label, route) in [
     ('See all', AppRoutes.conversations),

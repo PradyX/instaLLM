@@ -99,10 +99,7 @@ void main() {
         Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              draft = await showDialog<BotDraft>(
-                context: context,
-                builder: (_) => const CreateBotDialog(),
-              );
+              draft = await showCreateBotSheet(context);
             },
             child: const Text('New bot'),
           ),
@@ -111,15 +108,15 @@ void main() {
       );
       await tester.tap(find.text('New bot'));
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byType(TextField));
-      await tester.enterText(find.byType(TextField), 'My bot');
+      await tester.ensureVisible(find.byKey(const ValueKey('bot-name')));
+      await tester.enterText(find.byKey(const ValueKey('bot-name')), 'My bot');
       await tester.pump();
       await tester.ensureVisible(find.text('Create'));
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();
       expect(draft!.name, 'My bot');
       expect(draft!.templateId, isNull);
-      expect(service.catalogRequests, 0);
+      expect(service.catalogRequests, 1);
       expect(tester.takeException(), isNull);
     },
   );
@@ -133,10 +130,7 @@ void main() {
         Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              draft = await showDialog<BotDraft>(
-                context: context,
-                builder: (_) => const CreateBotDialog(),
-              );
+              draft = await showCreateBotSheet(context);
             },
             child: const Text('New bot'),
           ),
@@ -144,19 +138,19 @@ void main() {
       );
       await tester.tap(find.text('New bot'));
       await tester.pumpAndSettle();
-      expect(service.catalogRequests, 0);
-      await tester.enterText(find.byType(TextField), 'My bot');
-      await tester.tap(find.text('Choose'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).last, 'Boba');
+      expect(service.catalogRequests, 1);
+      await tester.enterText(find.byKey(const ValueKey('bot-name')), 'My bot');
+      await tester.enterText(
+        find.byKey(const ValueKey('bot-portrait-search')),
+        'Boba',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: find.byType(Card), matching: find.text('Boba')),
-      );
+      await tester.tap(find.byKey(const ValueKey('bot-portrait-boba')));
       await tester.pumpAndSettle();
       expect(service.store.load(), isEmpty);
-      expect(find.byType(PetdexAvatar), findsOneWidget);
+      expect(find.byTooltip('Use default icon'), findsOneWidget);
+      expect(find.byType(ProfileImagePicker), findsNothing);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
       expect(draft, isNull);
@@ -164,15 +158,17 @@ void main() {
 
       await tester.tap(find.text('New bot'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), 'Portrait bot');
-      await tester.tap(find.text('Choose'));
-      await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField).last, 'Boba');
+      await tester.enterText(
+        find.byKey(const ValueKey('bot-name')),
+        'Portrait bot',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('bot-portrait-search')),
+        'Boba',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.descendant(of: find.byType(Card), matching: find.text('Boba')),
-      );
+      await tester.tap(find.byKey(const ValueKey('bot-portrait-boba')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();

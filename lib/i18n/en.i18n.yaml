@@ -29,10 +29,24 @@ common:
 
 botCreation:
   title: New bot
-  name: Bot name
+  name: Name
   create: Create
-  startWith: Start with
-  blank: Blank bot
+  template: Template
+  noTemplate: None
+  templateHint: Optional. Choose a role, then make it your own.
+  soul: Soul
+  soulHint: Describe how your bot should behave and answer.
+  starterSoul: |-
+    You are a helpful assistant.
+    Give clear, practical answers.
+    Ask for clarification when needed.
+  defaultPortrait: Keep the bot icon or choose a pet.
+  searchPortraits: Search pets
+  portraitHint: Petdex portraits load online.
+  portraitsOffline: Portraits are unavailable. You can still create your bot.
+  previousPortraits: Previous portraits
+  nextPortraits: Next portraits
+  chatError: Bot saved. Tap it in Bots to open its chat again.
   empty: No bots yet. Use + to create your own.
   saveError: Could not create the bot. Check available storage and try again.
 

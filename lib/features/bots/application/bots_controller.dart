@@ -123,29 +123,30 @@ class BotsNotifier extends StateNotifier<BotsState> {
     return createBot(template.name, templateId: templateId);
   }
 
-  Future<Bot?> createBot(String name, {String? templateId}) => _mutate(
-    () async {
-      final template = templateId == null ? null : BuiltInBots.byId(templateId);
-      if (templateId != null && template == null) return null;
-      final bot = Bot.create(
-        id: IdGenerator.generate('bot'),
-        name: name,
-        icon: template?.icon ?? '🤖',
-        description: template?.description ?? '',
-        soul: template?.soul ?? '',
-        modelId: template?.modelId,
-        contextPolicyId: template?.contextPolicyId,
-        inferenceProfileId: template?.inferenceProfileId,
-        skillIds: template?.skillIds ?? const [],
-        mcpServerIds: template?.mcpServerIds ?? const [],
-        toolPermissions: template?.toolPermissions ?? const {},
-        memoryScope: template?.memoryScope ?? BotMemoryScope.workspace,
-        workspaceIds: template?.workspaceIds ?? const [],
-      );
-      final saved = await _persist([...state.bots, bot]);
-      return saved ? bot : null;
-    },
-  );
+  Future<Bot?> createBot(String name, {String? templateId, String? soul}) =>
+      _mutate(() async {
+        final template = templateId == null
+            ? null
+            : BuiltInBots.byId(templateId);
+        if (templateId != null && template == null) return null;
+        final bot = Bot.create(
+          id: IdGenerator.generate('bot'),
+          name: name,
+          icon: template?.icon ?? '🤖',
+          description: template?.description ?? '',
+          soul: soul ?? template?.soul ?? '',
+          modelId: template?.modelId,
+          contextPolicyId: template?.contextPolicyId,
+          inferenceProfileId: template?.inferenceProfileId,
+          skillIds: template?.skillIds ?? const [],
+          mcpServerIds: template?.mcpServerIds ?? const [],
+          toolPermissions: template?.toolPermissions ?? const {},
+          memoryScope: template?.memoryScope ?? BotMemoryScope.workspace,
+          workspaceIds: template?.workspaceIds ?? const [],
+        );
+        final saved = await _persist([...state.bots, bot]);
+        return saved ? bot : null;
+      });
 
   Future<bool> updateBot(Bot bot) => _mutate(() async {
     if (bot.isBuiltIn) return false;

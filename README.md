@@ -212,13 +212,15 @@ Settings uses spacing between its controls without divider lines. Settings → V
 
 ### Bot and room profile images
 
-The bot list starts empty. Use **Bots → +** to create a blank bot or start from an optional Researcher, Planner, Coder or Tester template. Templates create ordinary editable bots; they are never added automatically. Open a bot, then **Settings → Edit bot** to change it or delete it. Deleting a bot keeps its chat history readable in **Rooms**. Previous default-bot chats are also retained there, and old task assignments remain visible as unavailable until you clear or reassign them. To remove a room or retained bot chat and its messages, open that chat, then choose **Settings → Delete chat** and confirm; bots and Board tasks are kept.
+The bot list starts empty. **Bots → +** opens one sheet: **Profile image → Name → Template (optional) → Soul**. Browse six starter portraits in the sliding row or search pets in the same sheet. Keep the default icon to create offline. Template defaults to **None**; Researcher, Planner, Coder and Tester are optional starting points. Soul starts with three editable lines. Switching templates preserves your draft for each choice and keeps your name. **Create** saves the bot and opens its chat.
 
-Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. Bot creation and the editor also offer this control. Previously chosen default-bot portraits stay attached to their retained chats.
+Templates create ordinary editable bots; they are never added automatically. Open a bot, then **Settings → Edit bot** to change it or delete it. Deleting a bot keeps its chat history readable in **Rooms**. Previous default-bot chats are also retained there, and old task assignments remain visible as unavailable until you clear or reassign them. To remove a room or retained bot chat and its messages, open that chat, then choose **Settings → Delete chat** and confirm; bots and Board tasks are kept.
+
+Open a bot or room, then **Settings → Profile image → Choose** to search [Petdex](https://petdex.dev) and pick a portrait. The editor also offers this control. Bot creation uses the inline portrait picker above; cancelling the sheet saves no bot or profile choice. Previously chosen default-bot portraits stay attached to their retained chats.
 
 Bots without a chosen image use the same rounded bot mark as the homepage.
 
-Search uses Petdex's public catalog; only images visible in search results or selected as profiles are cached. Selected images are retained, and older search images are limited to 100. **Use default icon** restores the original icon. An unavailable image falls back to that icon without interrupting chat. These requests carry no prompts, conversation text, bot/room names or model/device metadata.
+Search uses Petdex's public catalog and filters it locally. Opening bot creation loads the catalog and up to six starter portraits; other profile pickers wait for a search. Only visible results/starter portraits or selected profiles are cached. Selected images are retained, and older browsed images are limited to 100. **Use default icon** restores the original icon. An unavailable image falls back to that icon without interrupting chat or preventing bot creation. Requests carry no search terms, prompts, conversation text, Soul instructions, bot/room names or model/device metadata.
 
 ## Troubleshooting
 

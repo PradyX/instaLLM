@@ -91,6 +91,32 @@ void main() {
     expect(container.read(botsProvider).bots, hasLength(1));
   });
 
+  test(
+    'creation persists edited Soul and respects an explicitly cleared Soul',
+    () async {
+      final notifier = await loaded(open());
+      final edited = await notifier.createBot(
+        'My planner',
+        templateId: BuiltInBots.plannerId,
+        soul: 'Use my own planning rules.',
+      );
+      final cleared = await notifier.createBot(
+        'No instructions',
+        templateId: BuiltInBots.coderId,
+        soul: '',
+      );
+      final restored = BotStore(file).load();
+      expect(
+        restored.allBots.singleWhere((b) => b.id == edited!.id).soul,
+        'Use my own planning rules.',
+      );
+      expect(
+        restored.allBots.singleWhere((b) => b.id == cleared!.id).soul,
+        isEmpty,
+      );
+    },
+  );
+
   test('deleting the last bot survives a restart without reseeding', () async {
     final notifier = await loaded(open());
     final bot = await notifier.duplicateTemplate(BuiltInBots.coderId);

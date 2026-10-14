@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/kanban/data/task_repository.dart';
 import 'package:installm/features/kanban/domain/task.dart';
 import 'package:installm/features/kanban/domain/task_note_codec.dart';
-import 'package:installm/features/obsidian/application/vault_notes_service.dart';
-import 'package:installm/features/obsidian/domain/vault_paths.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/application/vault_notes_service.dart';
+import 'package:installm/features/vault/domain/vault_paths.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 
 void main() {
   late Directory directory;

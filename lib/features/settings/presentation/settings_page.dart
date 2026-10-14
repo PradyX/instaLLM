@@ -97,7 +97,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.folder_open),
-                  title: const Text('Obsidian vaults'),
+                  title: const Text('Vault'),
                   subtitle: const Text('Human-readable project knowledge'),
                   onTap: () => context.push(AppRoutes.vaults),
                 ),

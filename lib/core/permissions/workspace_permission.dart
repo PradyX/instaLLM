@@ -1,5 +1,5 @@
 /// One shared permission system for native tools, skills, MCP, bots,
-/// Obsidian, Kanban and workflows (Road Map 2 §15).
+/// The vault, Kanban and workflows (Road Map 2 §15).
 ///
 /// A decision always considers bot + workspace + capability + resource, and
 /// resolves to a single level. The ordering is Denied < Ask < Allowed.

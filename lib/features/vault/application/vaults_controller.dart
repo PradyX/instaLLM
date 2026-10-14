@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:installm/features/obsidian/application/vault_notes_service.dart';
-import 'package:installm/features/obsidian/data/vault_store.dart';
-import 'package:installm/features/obsidian/domain/vault_paths.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/application/vault_notes_service.dart';
+import 'package:installm/features/vault/data/vault_store.dart';
+import 'package:installm/features/vault/domain/vault_paths.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
 /// Vault registry file, opened once per session.
@@ -144,8 +144,8 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
             .read(workspacesProvider.notifier)
             .updateWorkspace(
               workspace.copyWith(
-                obsidianVaultId: vaultId,
-                obsidianProjectPath: projectPath.trim(),
+                vaultId: vaultId,
+                vaultProjectPath: projectPath.trim(),
               ),
             );
       }

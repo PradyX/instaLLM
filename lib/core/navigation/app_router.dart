@@ -11,7 +11,7 @@ import 'package:installm/features/voice/presentation/voice_conversation_page.dar
 import 'package:installm/features/about/presentation/about_page.dart';
 import 'package:installm/features/workspaces/presentation/workspace_detail_page.dart';
 import 'package:installm/features/kanban/presentation/kanban_page.dart';
-import 'package:installm/features/obsidian/presentation/vaults_page.dart';
+import 'package:installm/features/vault/presentation/vaults_page.dart';
 import 'package:installm/features/mcp/presentation/mcp_page.dart';
 import 'package:installm/features/skills/presentation/skills_page.dart';
 import 'package:installm/features/workspaces/presentation/workspaces_page.dart';

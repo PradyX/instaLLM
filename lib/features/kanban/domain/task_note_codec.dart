@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:installm/features/kanban/domain/task.dart';
 
-/// Converts tasks to and from Obsidian-friendly Markdown notes (§9.2).
+/// Converts tasks to and from vault-friendly Markdown notes (§9.2).
 ///
 /// ```markdown
 /// ---

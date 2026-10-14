@@ -1,7 +1,7 @@
 import 'package:installm/core/utils/id_generator.dart';
-import 'package:installm/features/obsidian/domain/vault_paths.dart';
+import 'package:installm/features/vault/domain/vault_paths.dart';
 
-/// One registered Obsidian vault (Road Map 2 §8.1).
+/// One registered vault (Road Map 2 §8.1).
 ///
 /// The vault root and the workspace-relative directory are stored
 /// separately: shared project documents reference `Plans/x.md`, never an

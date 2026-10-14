@@ -11,8 +11,8 @@ class Workspace {
     required this.id,
     required this.name,
     this.description = '',
-    this.obsidianVaultId,
-    this.obsidianProjectPath = '',
+    this.vaultId,
+    this.vaultProjectPath = '',
     this.repositoryPath,
     this.defaultModelId,
     this.defaultContextPolicyId,
@@ -45,10 +45,13 @@ class Workspace {
   final String description;
 
   /// Registered vault this workspace reads/writes, if any.
-  final String? obsidianVaultId;
+  ///
+  /// Stored as `vaultId` since 2026-10-14; a workspace written by an earlier
+  /// build under `obsidianVaultId` is still read and keeps its link.
+  final String? vaultId;
 
   /// Workspace-relative directory inside the vault (e.g. `Projects/installm`).
-  final String obsidianProjectPath;
+  final String vaultProjectPath;
 
   /// Local Git checkout bots work in, if any. Device-specific, never synced.
   final String? repositoryPath;
@@ -69,8 +72,8 @@ class Workspace {
       id: id,
       name: name.trim().isEmpty ? 'Untitled workspace' : name.trim(),
       description: description.trim(),
-      obsidianVaultId: obsidianVaultId,
-      obsidianProjectPath: obsidianProjectPath.trim(),
+      vaultId: vaultId,
+      vaultProjectPath: vaultProjectPath.trim(),
       repositoryPath: repositoryPath,
       defaultModelId: defaultModelId,
       defaultContextPolicyId: defaultContextPolicyId,
@@ -86,9 +89,9 @@ class Workspace {
   Workspace copyWith({
     String? name,
     String? description,
-    String? obsidianVaultId,
+    String? vaultId,
     bool clearVault = false,
-    String? obsidianProjectPath,
+    String? vaultProjectPath,
     String? repositoryPath,
     bool clearRepository = false,
     String? defaultModelId,
@@ -103,10 +106,8 @@ class Workspace {
       id: id,
       name: name ?? this.name,
       description: description ?? this.description,
-      obsidianVaultId: clearVault
-          ? null
-          : (obsidianVaultId ?? this.obsidianVaultId),
-      obsidianProjectPath: obsidianProjectPath ?? this.obsidianProjectPath,
+      vaultId: clearVault ? null : (vaultId ?? this.vaultId),
+      vaultProjectPath: vaultProjectPath ?? this.vaultProjectPath,
       repositoryPath: clearRepository
           ? null
           : (repositoryPath ?? this.repositoryPath),
@@ -130,8 +131,8 @@ class Workspace {
       'id': id,
       'name': name,
       'description': description,
-      'obsidianVaultId': obsidianVaultId,
-      'obsidianProjectPath': obsidianProjectPath,
+      'vaultId': vaultId,
+      'vaultProjectPath': vaultProjectPath,
       'repositoryPath': repositoryPath,
       'defaultModelId': defaultModelId,
       'defaultContextPolicyId': defaultContextPolicyId,
@@ -161,18 +162,21 @@ class Workspace {
       return value.whereType<String>().toList(growable: false);
     }
 
+    String? readString(Object? value) => value is String ? value : null;
+
     return Workspace(
       id: id,
       name: name,
       description: json['description'] is String
           ? json['description'] as String
           : '',
-      obsidianVaultId: json['obsidianVaultId'] is String
-          ? json['obsidianVaultId'] as String
-          : null,
-      obsidianProjectPath: json['obsidianProjectPath'] is String
-          ? json['obsidianProjectPath'] as String
-          : '',
+      // The vault link was stored as `obsidianVaultId`/`obsidianProjectPath`
+      // before the 2026-10-14 rename. Both names are read so a stored workspace
+      // keeps its link; only the new names are written back.
+      vaultId: readString(json['vaultId'] ?? json['obsidianVaultId']),
+      vaultProjectPath:
+          readString(json['vaultProjectPath'] ?? json['obsidianProjectPath']) ??
+          '',
       repositoryPath: json['repositoryPath'] is String
           ? json['repositoryPath'] as String
           : null,

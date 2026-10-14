@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/git/application/git_service.dart';
-import 'package:installm/features/obsidian/application/vault_notes_service.dart';
-import 'package:installm/features/obsidian/application/vaults_controller.dart';
+import 'package:installm/features/vault/application/vault_notes_service.dart';
+import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 import 'package:go_router/go_router.dart';
 

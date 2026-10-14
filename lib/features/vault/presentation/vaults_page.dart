@@ -1,11 +1,11 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:installm/features/obsidian/application/vaults_controller.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/application/vaults_controller.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 
-/// Registered Obsidian vaults and their workspace links.
+/// Registered vaults and their workspace links.
 ///
 /// Road Map 2 Phase 2.5. The vault is the human-readable knowledge layer:
 /// research, plans, decisions, reports and tasks live there as Markdown.
@@ -94,7 +94,7 @@ class VaultsPage extends ConsumerWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Obsidian vaults')),
+      appBar: AppBar(title: const Text('Vaults')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _register(context, ref),
         icon: const Icon(Icons.create_new_folder_outlined),

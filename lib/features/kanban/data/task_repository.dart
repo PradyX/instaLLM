@@ -5,9 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:installm/core/data/versioned_json_document.dart';
 import 'package:installm/features/kanban/domain/task.dart';
 import 'package:installm/features/kanban/domain/task_note_codec.dart';
-import 'package:installm/features/obsidian/application/vault_notes_service.dart';
-import 'package:installm/features/obsidian/domain/vault_paths.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/application/vault_notes_service.dart';
+import 'package:installm/features/vault/domain/vault_paths.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 
 /// Where one workspace's tasks live, whichever side holds them.
 abstract class TaskRepository {

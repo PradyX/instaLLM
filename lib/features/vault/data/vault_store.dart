@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:installm/core/data/versioned_json_document.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 
 /// One workspace's vault binding: which vault, which folder, what is allowed.
 class WorkspaceVaultBinding {
@@ -88,9 +88,46 @@ class VaultStore {
 
   static const int currentVersion = 1;
 
+  /// Where the registry lives today.
+  static const String directoryName = 'vault';
+  static const String fileName = 'vaults.json';
+
+  /// Directory the registry was written to before the 2026-10-14 rename,
+  /// kept only so an existing file can be carried over.
+  static const String legacyDirectoryName = 'obsidian';
+
   static Future<VaultStore> open() async {
     final support = await getApplicationSupportDirectory();
-    return VaultStore(File(p.join(support.path, 'obsidian', 'vaults.json')));
+    return VaultStore(await resolveFile(support));
+  }
+
+  /// The registry file under [support], carrying a pre-rename file over once.
+  ///
+  /// Separate from [open] so the migration can be tested against a temporary
+  /// directory instead of the real app support path.
+  static Future<File> resolveFile(Directory support) async {
+    final target = File(p.join(support.path, directoryName, fileName));
+    if (target.existsSync()) return target;
+
+    final legacy = File(p.join(support.path, legacyDirectoryName, fileName));
+    // Carry the registry over only when nothing is at the new path, so a file
+    // this build already wrote is never overwritten by an older one.
+    if (legacy.existsSync()) {
+      try {
+        await target.parent.create(recursive: true);
+        try {
+          await legacy.rename(target.path);
+        } on FileSystemException {
+          // Another volume, or the rename was refused: copy instead and leave
+          // the original where it is.
+          await legacy.copy(target.path);
+        }
+      } catch (_) {
+        // Unreadable or unmovable: the registry simply starts empty, which is
+        // recoverable by registering the vault again.
+      }
+    }
+    return target;
   }
 
   final VersionedJsonDocument _document;

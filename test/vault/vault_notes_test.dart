@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:installm/features/obsidian/application/vault_notes_service.dart';
-import 'package:installm/features/obsidian/domain/vault_paths.dart';
-import 'package:installm/features/obsidian/domain/vault_registration.dart';
+import 'package:installm/features/vault/application/vault_notes_service.dart';
+import 'package:installm/features/vault/domain/vault_paths.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 
 void main() {
   late Directory vaultDir;

@@ -11,6 +11,8 @@ import 'package:installm/features/inference_profiles/data/inference_profile_stor
 import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 import 'package:installm/features/personas/data/persona_store.dart';
 import 'package:installm/features/personas/domain/persona.dart';
+import 'package:installm/features/vault/data/vault_store.dart';
+import 'package:installm/core/services/app_storage_service.dart';
 
 /// What one import did, section by section.
 ///
@@ -33,6 +35,7 @@ class BackupImportReport {
     this.benchmarkRunsSkipped = 0,
     this.knowledgeDocumentsImported = 0,
     this.knowledgeDocumentsSkipped = 0,
+    this.vaultsImported = 0,
     this.missingModels = const [],
     this.notes = const [],
   });
@@ -54,6 +57,7 @@ class BackupImportReport {
   final int benchmarkRunsSkipped;
   final int knowledgeDocumentsImported;
   final int knowledgeDocumentsSkipped;
+  final int vaultsImported;
 
   /// Models the imported conversations were written with that are not installed
   /// here; held as display names when the messages recorded one.
@@ -69,7 +73,8 @@ class BackupImportReport {
       profilesImported == 0 &&
       settingsRestored == 0 &&
       benchmarkRunsImported == 0 &&
-      knowledgeDocumentsImported == 0;
+      knowledgeDocumentsImported == 0 &&
+      vaultsImported == 0;
 }
 
 /// Reads the app's local data into one portable archive, and writes a backup
@@ -89,6 +94,8 @@ class BackupService {
     required this.writeSetting,
     required this.benchmarks,
     required this.documents,
+    this.vaults,
+    this.managedVaultRoot,
   });
 
   /// Settings the backup carries, by their stored key. Only these are exported:
@@ -106,6 +113,8 @@ class BackupService {
   final Future<void> Function(String key, String value) writeSetting;
   final BenchmarkHistory benchmarks;
   final DocumentIndexStore documents;
+  final VaultStore? vaults;
+  final Future<String> Function()? managedVaultRoot;
 
   /// Collects the selected sections from this device.
   Future<BackupArchive> capture({
@@ -201,6 +210,34 @@ class BackupService {
       );
     }
 
+    if (selection.vaults) {
+      await captureSection(BackupSection.vaults, 'Vault registry', () async {
+        final store = vaults;
+        if (store == null) throw StateError('Vault registry is unavailable.');
+        final snapshot = store.load();
+        if (store.isReadOnly) {
+          throw StateError('Vault registry format is unsupported.');
+        }
+        sections[BackupSection.vaults] = {
+          'version': VaultStore.currentVersion,
+          'vaults': [
+            for (final vault in snapshot.vaults)
+              {...vault.toJson()}
+                ..removeWhere((key, _) => vault.isManaged && key == 'rootPath'),
+          ],
+          'bindings': [
+            for (final binding in snapshot.bindings) binding.toJson(),
+          ],
+        };
+        if (snapshot.vaults.any((vault) => !vault.isManaged)) {
+          notes.add(
+            'Vault registry includes external folder paths and workspace links; Markdown files are not included.',
+          );
+        }
+        return snapshot.vaults.length;
+      });
+    }
+
     return BackupArchive(
       manifest: BackupManifest(
         appVersion: appVersion,
@@ -237,6 +274,7 @@ class BackupService {
     var benchmarkRunsSkipped = 0;
     var knowledgeDocumentsImported = 0;
     var knowledgeDocumentsSkipped = 0;
+    var vaultsImported = 0;
     // Model id to the label to report: the message's record of the name when
     // one was stored, the id otherwise.
     final missingModels = <String, String>{};
@@ -496,6 +534,108 @@ class BackupService {
       }
     }
 
+    final vaultsSection = archive.sections[BackupSection.vaults];
+    if (vaultsSection is Map) {
+      try {
+        final store = vaults;
+        if (store == null) throw StateError('Vault registry is unavailable.');
+        final version = vaultsSection['version'];
+        if (version is! int ||
+            version < 1 ||
+            version > VaultStore.currentVersion) {
+          throw StateError('Vault registry backup format is unsupported.');
+        }
+        final current = store.load();
+        if (store.isReadOnly) {
+          throw StateError('The local Vault registry is read-only.');
+        }
+        final payload = Map<String, dynamic>.from(vaultsSection);
+        final raw = payload['vaults'];
+        if (raw is! List || payload['bindings'] is! List) {
+          throw StateError('Vault registry backup is incomplete.');
+        }
+        final prepared = <Map<String, dynamic>>[];
+        for (final entry in raw) {
+          if (entry is! Map) {
+            throw StateError(
+              'Vault registry backup contains an invalid entry.',
+            );
+          }
+          final record = Map<String, dynamic>.from(entry);
+          if (record['isManaged'] == true) {
+            record['rootPath'] =
+                await (managedVaultRoot?.call() ??
+                    AppStorageService().directory('vault'));
+          }
+          prepared.add(record);
+        }
+        payload['vaults'] = prepared;
+        final incoming = VaultsSnapshot.fromJson(payload);
+        if (incoming.vaults.length != raw.length ||
+            incoming.bindings.length != (payload['bindings'] as List).length ||
+            incoming.vaults.map((v) => v.id).toSet().length !=
+                incoming.vaults.length ||
+            incoming.bindings.map((b) => b.workspaceId).toSet().length !=
+                incoming.bindings.length ||
+            incoming.vaults.where((v) => v.isManaged).length > 1) {
+          throw StateError('Vault registry backup contains invalid records.');
+        }
+        var merged = current;
+        final usable = <String>{};
+        final remapped = <String, String>{};
+        var imported = 0;
+        for (final vault in incoming.vaults) {
+          final existing = current.vaultById(vault.id);
+          final existingManaged = current.vaults
+              .where((v) => v.isManaged)
+              .firstOrNull;
+          if (vault.isManaged && existingManaged != null) {
+            if (existingManaged.rootPath != vault.rootPath) {
+              merged = merged.upsertVault(
+                existingManaged.copyWith(rootPath: vault.rootPath),
+              );
+            }
+            remapped[vault.id] = existingManaged.id;
+            usable.add(vault.id);
+          } else if (existing == null) {
+            merged = merged.upsertVault(vault);
+            usable.add(vault.id);
+            imported++;
+          } else if (existing.rootPath == vault.rootPath &&
+              existing.isManaged == vault.isManaged) {
+            usable.add(vault.id);
+          } else {
+            notes.add(
+              'A conflicting Vault registration was skipped; the existing folder link was kept.',
+            );
+          }
+        }
+        for (final binding in incoming.bindings) {
+          if (usable.contains(binding.vaultId) &&
+              current.bindingFor(binding.workspaceId) == null) {
+            merged = merged.upsertBinding(
+              binding.copyWith(vaultId: remapped[binding.vaultId]),
+            );
+          }
+        }
+        if (!store.save(merged)) {
+          throw StateError(
+            'Vault registry could not be saved. Previous registrations are preserved.',
+          );
+        }
+        vaultsImported = imported;
+        if (incoming.vaults.isNotEmpty || incoming.bindings.isNotEmpty) {
+          notes.add(
+            'Vault folder registrations restored. External folders must exist on this device; no Markdown files were copied. Existing workspace permissions were kept.',
+          );
+        }
+      } catch (_) {
+        notes.add(
+          'Vault registry was not imported. Check its format, storage permissions and local registry version.',
+        );
+      }
+    }
+
     return BackupImportReport(
       conversationsImported: conversationsImported,
       conversationsAddedAsCopies: conversationsAddedAsCopies,
@@ -510,6 +650,7 @@ class BackupService {
       benchmarkRunsSkipped: benchmarkRunsSkipped,
       knowledgeDocumentsImported: knowledgeDocumentsImported,
       knowledgeDocumentsSkipped: knowledgeDocumentsSkipped,
+      vaultsImported: vaultsImported,
       missingModels: missingModels.values.toList(growable: false),
       notes: notes,
     );

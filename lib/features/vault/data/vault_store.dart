@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -55,7 +56,12 @@ class WorkspaceVaultBinding {
     final projectPath = json['projectPath'] is String
         ? json['projectPath'] as String
         : '';
-    var permissions = VaultPermissions.defaults;
+    var permissions = const VaultPermissions(
+      canRead: false,
+      canWrite: false,
+      canCreate: false,
+      canUpdate: false,
+    );
     if (json['permissions'] is Map) {
       permissions = VaultPermissions.fromJson(
         Map<String, dynamic>.from(json['permissions'] as Map),
@@ -80,13 +86,14 @@ class WorkspaceVaultBinding {
 /// contents, never secrets) live here.
 class VaultStore {
   VaultStore(File file)
-    : _document = VersionedJsonDocument(
+    : _file = file,
+      _document = VersionedJsonDocument(
         file: file,
         currentVersion: currentVersion,
         label: 'VaultStore',
       );
 
-  static const int currentVersion = 1;
+  static const int currentVersion = 2;
 
   /// Where the registry lives today.
   static const String directoryName = 'vault';
@@ -131,22 +138,72 @@ class VaultStore {
   }
 
   final VersionedJsonDocument _document;
+  final File _file;
+  bool _invalidVersion = false;
 
   String get filePath => _document.filePath;
-  bool get isReadOnly => _document.isReadOnly;
+  bool get isReadOnly => _document.isReadOnly || _invalidVersion;
 
   VaultsSnapshot load() {
     final decoded = _document.read();
     if (decoded == null) return VaultsSnapshot.empty;
+    final version = decoded['version'];
+    _invalidVersion = version != null && (version is! int || version < 1);
+    if (_invalidVersion) return VaultsSnapshot.empty;
     return VaultsSnapshot.fromJson(decoded);
   }
 
   bool save(VaultsSnapshot snapshot) {
-    return _document.write({
+    // Check disk even for save-before-load or a newer writer during this run.
+    final current = load();
+    if (isReadOnly) return false;
+    final payload = {
       'version': currentVersion,
       'vaults': snapshot.vaults.map((v) => v.toJson()).toList(),
       'bindings': snapshot.bindings.map((b) => b.toJson()).toList(),
-    });
+    };
+    final temporary = File('${_file.path}.tmp');
+    try {
+      if (_file.existsSync()) {
+        final raw = _file.readAsStringSync();
+        final canonicalCurrent = jsonEncode({
+          'version': currentVersion,
+          'vaults': current.vaults.map((v) => v.toJson()).toList(),
+          'bindings': current.bindings.map((b) => b.toJson()).toList(),
+        });
+        Object? decoded;
+        try {
+          decoded = jsonDecode(raw);
+        } on FormatException {
+          /* Preserve below. */
+        }
+        // Preserve older, partial, corrupt or unknown data before rewriting.
+        if (decoded == null ||
+            jsonEncode(decoded) != canonicalCurrent ||
+            current.vaults.map((v) => v.id).toSet().length !=
+                current.vaults.length ||
+            current.bindings.map((b) => b.workspaceId).toSet().length !=
+                current.bindings.length) {
+          _file.copySync(
+            '${_file.path}.preserved-${DateTime.now().microsecondsSinceEpoch}',
+          );
+        }
+      }
+      _file.parent.createSync(recursive: true);
+      temporary.writeAsStringSync(jsonEncode(payload), flush: true);
+      temporary.renameSync(_file.path);
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      if (temporary.existsSync()) {
+        try {
+          temporary.deleteSync();
+        } catch (_) {
+          /* Keep the original. */
+        }
+      }
+    }
   }
 }
 

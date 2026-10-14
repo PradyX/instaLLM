@@ -54,6 +54,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$profileImages$en profileImages = Translations$profileImages$en._(_root);
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
+	late final Translations$vault$en vault = Translations$vault$en._(_root);
 }
 
 // Path: login
@@ -698,6 +699,24 @@ class Translations$appearance$en {
 	String get newerVersion => 'These appearance preferences need a newer app version. Update the app to change them.';
 }
 
+// Path: vault
+class Translations$vault$en {
+	Translations$vault$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Vault registry'
+	String get backupTitle => 'Vault registry';
+
+	/// en: 'Folder registrations, external folder paths and workspace links; Markdown files stay in their folders'
+	String get backupDescription => 'Folder registrations, external folder paths and workspace links; Markdown files stay in their folders';
+
+	/// en: '${count} Vault registration(s) restored'
+	String restored({required Object count}) => '${count} Vault registration(s) restored';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -881,6 +900,9 @@ extension on Translations {
 			'appearance.loadError' => 'Could not load appearance preferences. Try restarting the app.',
 			'appearance.saveError' => 'Could not save appearance preferences. Check available storage and try again.',
 			'appearance.newerVersion' => 'These appearance preferences need a newer app version. Update the app to change them.',
+			'vault.backupTitle' => 'Vault registry',
+			'vault.backupDescription' => 'Folder registrations, external folder paths and workspace links; Markdown files stay in their folders',
+			'vault.restored' => ({required Object count}) => '${count} Vault registration(s) restored',
 			_ => null,
 		};
 	}

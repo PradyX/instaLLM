@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:installm/core/services/app_storage_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/data/vault_store.dart';
 import 'package:installm/features/vault/domain/vault_paths.dart';
@@ -8,6 +9,9 @@ import 'package:installm/features/workspaces/application/workspaces_controller.d
 /// Vault registry file, opened once per session.
 final vaultStoreProvider = FutureProvider<VaultStore>(
   (ref) => VaultStore.open(),
+);
+final vaultStorageProvider = Provider<AppStorageService>(
+  (ref) => AppStorageService(),
 );
 
 class VaultsState {
@@ -53,23 +57,53 @@ final vaultsProvider = StateNotifierProvider<VaultsNotifier, VaultsState>(
 /// re-pointed at another device path.
 class VaultsNotifier extends StateNotifier<VaultsState> {
   VaultsNotifier(this._ref) : super(const VaultsState()) {
-    _load();
+    whenReady = _load();
   }
+  late final Future<void> whenReady;
 
   final Ref _ref;
+  VaultStore? _store;
   static const VaultNotesService _notes = VaultNotesService();
 
   Future<void> _load() async {
     try {
       final store = await _ref.read(vaultStoreProvider.future);
+      if (!mounted) return;
+      _store = store;
+      var snapshot = store.load();
+      String? storageError;
+      if (!store.isReadOnly &&
+          snapshot.vaults.any((vault) => vault.isManaged)) {
+        try {
+          final root = await _ref.read(vaultStorageProvider).directory('vault');
+          var rebased = snapshot;
+          for (final vault in snapshot.vaults) {
+            if (vault.isManaged && vault.rootPath != root) {
+              rebased = rebased.upsertVault(vault.copyWith(rootPath: root));
+            }
+          }
+          if (!identical(rebased, snapshot)) {
+            if (store.save(rebased)) {
+              snapshot = rebased;
+            } else {
+              storageError =
+                  'Could not update the managed Vault location. Previous registrations are preserved.';
+            }
+          }
+        } catch (_) {
+          storageError =
+              'Managed Vault storage is unavailable. Resolve the resource storage error and retry.';
+        }
+      }
+      if (!mounted) return;
       state = VaultsState(
-        snapshot: store.load(),
+        snapshot: snapshot,
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
             ? 'Vaults were written by a newer version of InstaLLM and are '
                   'read-only in this build.'
-            : null,
+            : storageError,
       );
     } catch (error) {
       state = state.copyWith(
@@ -79,9 +113,10 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     }
   }
 
-  Future<bool> _persist() async {
+  Future<bool> _persist([VaultsSnapshot? snapshot]) async {
     try {
-      final store = await _ref.read(vaultStoreProvider.future);
+      final store = _store;
+      if (store == null || !mounted) return false;
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:
@@ -90,7 +125,21 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
         );
         return false;
       }
-      return store.save(state.snapshot);
+      final saved = store.save(snapshot ?? state.snapshot);
+      if (saved) {
+        state = state.copyWith(
+          snapshot: snapshot ?? state.snapshot,
+          clearError: true,
+        );
+      }
+      if (!saved) {
+        state = state.copyWith(
+          isReadOnly: store.isReadOnly,
+          errorMessage:
+              'Could not save vaults. Your previous registry is preserved.',
+        );
+      }
+      return saved;
     } catch (error) {
       state = state.copyWith(errorMessage: 'Could not save vaults: $error');
       return false;
@@ -98,21 +147,54 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
   }
 
   Future<VaultRegistration?> registerVault(String name, String rootPath) async {
+    await whenReady;
+    if (!mounted || state.isReadOnly) return null;
     final vault = VaultRegistration.create(name: name, rootPath: rootPath);
-    state = state.copyWith(
-      snapshot: state.snapshot.upsertVault(vault),
-      clearError: true,
-    );
-    final saved = await _persist();
-    return saved ? vault : null;
+    final snapshot = state.snapshot.upsertVault(vault);
+    if (!await _persist(snapshot)) return null;
+    return vault;
+  }
+
+  /// Explicit first use prepares the app-owned Vault. Existing external links
+  /// and permissions remain untouched; no workspace is silently re-bound.
+  Future<VaultRegistration?> ensureManagedVault() async {
+    await whenReady;
+    if (!state.isReady || state.isReadOnly) return null;
+    try {
+      final root = await _ref.read(vaultStorageProvider).directory('vault');
+      VaultRegistration? vault;
+      for (final existing in state.vaults) {
+        if (existing.isManaged) {
+          vault = existing.rootPath == root
+              ? existing
+              : existing.copyWith(rootPath: root);
+          break;
+        }
+      }
+      vault ??= VaultRegistration.create(
+        name: 'InstaLLM',
+        rootPath: root,
+        isManaged: true,
+      );
+      final snapshot = state.snapshot.upsertVault(vault);
+      if (!await _persist(snapshot) || !mounted) return null;
+      return vault;
+    } catch (_) {
+      if (mounted) {
+        state = state.copyWith(
+          errorMessage:
+              'Could not prepare the managed Vault. Resolve the resource storage error and retry.',
+        );
+      }
+      return null;
+    }
   }
 
   Future<void> removeVault(String vaultId) async {
-    state = state.copyWith(
-      snapshot: state.snapshot.removeVault(vaultId),
-      clearError: true,
-    );
-    await _persist();
+    await whenReady;
+    if (!mounted) return;
+    final snapshot = state.snapshot.removeVault(vaultId);
+    if (!await _persist(snapshot) || !mounted) return;
   }
 
   /// Links [workspaceId] to [vaultId] at [projectPath], scaffolds the
@@ -123,6 +205,8 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     required String projectPath,
     VaultPermissions permissions = VaultPermissions.defaults,
   }) async {
+    await whenReady;
+    if (!mounted) return const [];
     final vault = state.snapshot.vaultById(vaultId);
     if (vault == null) return const [];
     final binding = WorkspaceVaultBinding(
@@ -131,11 +215,8 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
       projectPath: projectPath.trim(),
       permissions: permissions,
     );
-    state = state.copyWith(
-      snapshot: state.snapshot.upsertBinding(binding),
-      clearError: true,
-    );
-    await _persist();
+    final snapshot = state.snapshot.upsertBinding(binding);
+    if (!await _persist(snapshot) || !mounted) return const [];
 
     final workspaces = _ref.read(workspacesProvider);
     for (final workspace in workspaces.workspaces) {
@@ -165,26 +246,24 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
   }
 
   Future<void> unlinkWorkspace(String workspaceId) async {
-    state = state.copyWith(
-      snapshot: state.snapshot.removeBinding(workspaceId),
-      clearError: true,
-    );
-    await _persist();
+    await whenReady;
+    if (!mounted) return;
+    final snapshot = state.snapshot.removeBinding(workspaceId);
+    if (!await _persist(snapshot) || !mounted) return;
   }
 
   Future<void> setPermissions(
     String workspaceId,
     VaultPermissions permissions,
   ) async {
+    await whenReady;
+    if (!mounted) return;
     final binding = state.snapshot.bindingFor(workspaceId);
     if (binding == null) return;
-    state = state.copyWith(
-      snapshot: state.snapshot.upsertBinding(
-        binding.copyWith(permissions: permissions),
-      ),
-      clearError: true,
+    final snapshot = state.snapshot.upsertBinding(
+      binding.copyWith(permissions: permissions),
     );
-    await _persist();
+    if (!await _persist(snapshot) || !mounted) return;
   }
 
   /// Resolved paths for [workspaceId]'s vault link, or null when unlinked.

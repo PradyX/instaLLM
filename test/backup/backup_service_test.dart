@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/backup/application/backup_service.dart';
@@ -13,6 +14,8 @@ import 'package:installm/features/inference_profiles/data/inference_profile_stor
 import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 import 'package:installm/features/personas/data/persona_store.dart';
 import 'package:installm/features/personas/domain/persona.dart';
+import 'package:installm/features/vault/data/vault_store.dart';
+import 'package:installm/features/vault/domain/vault_registration.dart';
 
 /// One device's stores, over a temporary directory.
 class _Device {
@@ -20,6 +23,9 @@ class _Device {
 
   final Directory root;
   final Map<String, String> settings = {};
+  late final VaultStore vaults = VaultStore(
+    File('${root.path}/vault/vaults.json'),
+  );
 
   late final ConversationRepository conversations = ConversationRepository(
     ConversationStore(rootDirectory: Directory('${root.path}/conversations')),
@@ -45,6 +51,8 @@ class _Device {
     writeSetting: (key, value) async => settings[key] = value,
     benchmarks: benchmarks,
     documents: documents,
+    vaults: vaults,
+    managedVaultRoot: () async => '${root.path}/private-documents/vault',
   );
 }
 
@@ -166,6 +174,140 @@ void main() {
     );
     expect(narrowed.sections, isEmpty);
   });
+
+  test(
+    'Vault registry rebases managed roots and round-trips external bindings without note contents',
+    () async {
+      final managed = VaultRegistration.create(
+        id: 'managed',
+        name: 'InstaLLM',
+        rootPath: '${source.root.path}/desktop/InstaLLM/vault',
+        isManaged: true,
+      );
+      final external = VaultRegistration.create(
+        id: 'external',
+        name: 'External',
+        rootPath: '${temp.path}/external',
+      );
+      source.vaults.save(
+        VaultsSnapshot(
+          vaults: [managed, external],
+          bindings: const [
+            WorkspaceVaultBinding(
+              workspaceId: 'w1',
+              vaultId: 'managed',
+              projectPath: 'Project',
+            ),
+            WorkspaceVaultBinding(
+              workspaceId: 'w2',
+              vaultId: 'external',
+              projectPath: 'Notes',
+              permissions: VaultPermissions(canWrite: false),
+            ),
+          ],
+        ),
+      );
+      final archive = await source.service.capture(
+        selection: BackupSelection.everything,
+        appVersion: '1.5.0',
+      );
+      final payload = archive.sections[BackupSection.vaults] as Map;
+      expect(
+        (payload['vaults'] as List).first.containsKey('rootPath'),
+        isFalse,
+      );
+      expect(archive.encode(), isNot(contains(managed.rootPath)));
+      final report = await target.service.apply(archive, installedModelIds: {});
+      expect(report.vaultsImported, 2);
+      final restored = target.vaults.load();
+      expect(
+        restored.vaultById('managed')?.rootPath,
+        '${target.root.path}/private-documents/vault',
+      );
+      expect(restored.vaultById('external')?.rootPath, external.rootPath);
+      expect(restored.bindingFor('w2')?.permissions.canWrite, isFalse);
+      expect(
+        (await target.service.apply(
+          archive,
+          installedModelIds: {},
+        )).vaultsImported,
+        0,
+      );
+      expect(target.vaults.load().vaults, hasLength(2));
+    },
+  );
+
+  test(
+    'Vault import preserves conflicting local folders, permissions and newer schemas',
+    () async {
+      final original = VaultRegistration.create(
+        id: 'same',
+        name: 'Original',
+        rootPath: '${target.root.path}/original',
+      );
+      target.vaults.save(
+        VaultsSnapshot(
+          vaults: [original],
+          bindings: const [
+            WorkspaceVaultBinding(
+              workspaceId: 'w',
+              vaultId: 'same',
+              permissions: VaultPermissions(canWrite: false),
+            ),
+          ],
+        ),
+      );
+      final incoming = VaultRegistration.create(
+        id: 'same',
+        name: 'Incoming',
+        rootPath: '${source.root.path}/different',
+      );
+      source.vaults.save(
+        VaultsSnapshot(
+          vaults: [incoming],
+          bindings: const [
+            WorkspaceVaultBinding(workspaceId: 'w', vaultId: 'same'),
+          ],
+        ),
+      );
+      final archive = await source.service.capture(
+        selection: BackupSelection.everything,
+        appVersion: '1.5.0',
+      );
+      await target.service.apply(archive, installedModelIds: {});
+      expect(target.vaults.load().vaults.single.rootPath, original.rootPath);
+      expect(
+        target.vaults.load().bindingFor('w')?.permissions.canWrite,
+        isFalse,
+      );
+      final file = File(target.vaults.filePath)
+        ..writeAsStringSync('{"version":99,"vaults":[]}');
+      expect(
+        (await target.service.apply(
+          archive,
+          installedModelIds: {},
+        )).vaultsImported,
+        0,
+      );
+      expect(file.readAsStringSync(), '{"version":99,"vaults":[]}');
+    },
+  );
+
+  test(
+    'older backup schema remains readable and Vault export is explicit',
+    () async {
+      final archive = await source.service.capture(
+        selection: const BackupSelection(),
+        appVersion: '1.5.0',
+      );
+      expect(archive.sections.containsKey(BackupSection.vaults), isFalse);
+      final old = archive.toJson()..['schemaVersion'] = 1;
+      expect(
+        BackupArchive.decode(jsonEncode(old)).sections,
+        isNot(contains(BackupSection.vaults)),
+      );
+    },
+  );
 
   test(
     'a backup restores onto an empty device and reports missing models',

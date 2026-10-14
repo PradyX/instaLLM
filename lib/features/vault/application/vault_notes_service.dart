@@ -65,6 +65,7 @@ class VaultSearchHit {
 /// * Writes are atomic (temp file + rename) where the platform allows it.
 class VaultNotesService {
   const VaultNotesService();
+  static final Map<String, Future<VaultNoteError?>> _writeQueues = {};
 
   /// Creates the standard project structure (§8.3 + §20) under [paths].
   Future<List<String>> ensureProjectStructure(
@@ -97,6 +98,9 @@ class VaultNotesService {
     if (!permissions.canRead) return (null, VaultNoteError.denied);
     final absolute = _readPath(paths, permissions, relativePath);
     if (absolute == null) return (null, VaultNoteError.outsideProject);
+    if (await _containsLink(paths, absolute)) {
+      return (null, VaultNoteError.outsideProject);
+    }
     final file = File(absolute);
     if (!await file.exists()) return (null, VaultNoteError.notFound);
     try {
@@ -125,29 +129,82 @@ class VaultNotesService {
     required String relativePath,
     required String content,
     DateTime? expectedModified,
+    String? expectedContent,
+    bool createOnly = false,
+  }) async {
+    final key = paths.projectFile(relativePath);
+    if (key == null) return VaultNoteError.outsideProject;
+    final previous = _writeQueues[key] ?? Future<VaultNoteError?>.value();
+    final next = previous
+        .catchError((_) => null)
+        .then(
+          (_) => _writeNote(
+            paths: paths,
+            permissions: permissions,
+            relativePath: relativePath,
+            content: content,
+            expectedModified: expectedModified,
+            expectedContent: expectedContent,
+            createOnly: createOnly,
+          ),
+        );
+    _writeQueues[key] = next;
+    try {
+      return await next;
+    } catch (_) {
+      return VaultNoteError.io;
+    } finally {
+      if (identical(_writeQueues[key], next)) _writeQueues.remove(key);
+    }
+  }
+
+  Future<VaultNoteError?> _writeNote({
+    required VaultPaths paths,
+    required VaultPermissions permissions,
+    required String relativePath,
+    required String content,
+    DateTime? expectedModified,
+    String? expectedContent,
+    bool createOnly = false,
   }) async {
     if (!permissions.canWrite) return VaultNoteError.denied;
     final absolute = paths.projectFile(relativePath);
     if (absolute == null) return VaultNoteError.outsideProject;
     final file = File(absolute);
+    // Lexical containment alone cannot contain a link to an external folder.
+    if (await _containsLink(paths, absolute)) {
+      return VaultNoteError.outsideProject;
+    }
     final exists = await file.exists();
+    if (createOnly && exists) return VaultNoteError.conflict;
+    if (expectedContent != null && !exists) return VaultNoteError.conflict;
     if (exists && !permissions.canUpdate) return VaultNoteError.denied;
     if (!exists && !permissions.canCreate) return VaultNoteError.denied;
     try {
       if (exists && expectedModified != null) {
         final stat = await file.stat();
-        if (stat.modified.difference(expectedModified).abs() >
-            const Duration(milliseconds: 500)) {
+        if (stat.modified != expectedModified) {
           return VaultNoteError.conflict;
         }
       }
+      if (exists &&
+          expectedContent != null &&
+          await file.readAsString() != expectedContent) {
+        return VaultNoteError.conflict;
+      }
       await file.parent.create(recursive: true);
-      // Atomic where rename-overwrite is supported; otherwise direct.
-      final temp = File(
-        p.join(file.parent.path, '.${p.basename(file.path)}.tmp'),
-      );
+      // Atomic replacement; failure preserves the current note.
+      final scratch = await file.parent.createTemp('.installm-note-');
+      final temp = File(p.join(scratch.path, 'note'));
       try {
         await temp.writeAsString(content, flush: true);
+        if (createOnly && await file.exists() ||
+            expectedContent != null &&
+                (!await file.exists() ||
+                    await file.readAsString() != expectedContent)) {
+          await temp.delete();
+          return VaultNoteError.conflict;
+        }
         await temp.rename(file.path);
       } catch (_) {
         if (await temp.exists()) {
@@ -155,12 +212,35 @@ class VaultNotesService {
             await temp.delete();
           } catch (_) {}
         }
-        await file.writeAsString(content, flush: true);
+        // Refuse rather than truncating an existing note after failed atomic
+        // replacement. A failed write must preserve a user's edited version.
+        return VaultNoteError.io;
+      } finally {
+        try {
+          await scratch.delete();
+        } catch (_) {
+          /* Never remove unknown entries. */
+        }
       }
       return null;
     } catch (_) {
       return VaultNoteError.io;
     }
+  }
+
+  Future<bool> _containsLink(VaultPaths paths, String absolute) async {
+    var ancestor = p.normalize(absolute);
+    final root = p.normalize(paths.vaultRoot);
+    // The registered root may itself be a user-selected folder reference;
+    // child links may not redirect a bot's writes into another folder.
+    while (p.isWithin(root, ancestor)) {
+      if (await FileSystemEntity.type(ancestor, followLinks: false) ==
+          FileSystemEntityType.link) {
+        return true;
+      }
+      ancestor = p.dirname(ancestor);
+    }
+    return false;
   }
 
   Future<VaultNoteError?> deleteNote({

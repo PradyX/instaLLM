@@ -52,6 +52,13 @@ enum ToolRiskLevel {
     'Reads local data on this device and never changes it.',
   ),
 
+  /// Only the dedicated bot journal uses this; its handler fixes the destination
+  /// to that bot's bounded summary/decision files and checks edit conflicts.
+  scopedWrite(
+    'Bot journal',
+    'Writes a condensed note inside this bot’s own journal folder.',
+  ),
+
   /// Acts outside the app or changes something, so the user decides first.
   sensitive(
     'Sensitive',

@@ -21,6 +21,8 @@ import 'package:installm/i18n/strings.g.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
+import 'package:installm/features/vault/application/bot_journal_service.dart';
+import 'package:installm/features/vault/data/journal_checkpoint_store.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'package:installm/features/skills/domain/skill_selector.dart';
 import 'package:installm/features/tools/application/tools_providers.dart';
@@ -498,25 +500,55 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     // The room's board, through the same registry, validation and
     // permission gates as every other tool: listing is free, creating
     // and moving ask the user first.
-    final registry = _ref
-        .read(toolRegistryProvider)
-        .extendedWith(
-          buildKanbanTools(
-            KanbanToolContext(
-              workspaceId: chat.workspaceId,
-              roomId: chat.id,
-              repositoryFor: (workspaceId) =>
-                  resolveTaskRepository(_ref.read, workspaceId),
-              actorName: bot.name,
-              onBoardChanged: () async {
-                if (_ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
-                  await _ref.read(kanbanProvider.notifier).reload();
-                }
-                _ref.invalidate(workspaceTasksProvider(chat.workspaceId));
-              },
-            ),
-          ),
+    final vaults = _ref.read(vaultsProvider.notifier);
+    await vaults.whenReady;
+    final paths = vaults.pathsFor(chat.workspaceId);
+    final binding = _ref
+        .read(vaultsProvider)
+        .snapshot
+        .bindingFor(chat.workspaceId);
+    BotJournalSession? journal;
+    if (model.supportsToolCalling && paths != null && binding != null) {
+      try {
+        journal = await BotJournalSession.open(
+          paths: paths,
+          permissions: binding.permissions,
+          botId: bot.id,
+          checkpoints: await _ref.read(journalCheckpointStoreProvider.future),
+          contextKey: '${binding.vaultId}|${chat.workspaceId}',
+          resolvePermissions: () {
+            final current = _ref
+                .read(vaultsProvider)
+                .snapshot
+                .bindingFor(chat.workspaceId);
+            return current?.vaultId == binding.vaultId &&
+                    current?.projectPath == binding.projectPath
+                ? current?.permissions
+                : null;
+          },
         );
+      } catch (_) {
+        // Optional journals must not prevent the ordinary local answer.
+      }
+    }
+    final registry = _ref.read(toolRegistryProvider).extendedWith([
+      ...buildKanbanTools(
+        KanbanToolContext(
+          workspaceId: chat.workspaceId,
+          roomId: chat.id,
+          repositoryFor: (workspaceId) =>
+              resolveTaskRepository(_ref.read, workspaceId),
+          actorName: bot.name,
+          onBoardChanged: () async {
+            if (_ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
+              await _ref.read(kanbanProvider.notifier).reload();
+            }
+            _ref.invalidate(workspaceTasksProvider(chat.workspaceId));
+          },
+        ),
+      ),
+      ...?journal?.tools(),
+    ]);
     try {
       // What the model's own template writes where its reply begins, so a
       // bot answers in the reasoning state this user set for that model.
@@ -536,7 +568,9 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             goal: prompt.goal,
             registry: registry,
             maxIterations: 6,
-            systemPrompt: prompt.systemPrompt,
+            systemPrompt: model.supportsToolCalling
+                ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${registry.describeForPrompt()}'
+                : prompt.systemPrompt,
             assistantPrefill: assistantPrefill,
           );
       final answer = run.answer.trim().isEmpty

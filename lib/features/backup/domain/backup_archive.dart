@@ -10,7 +10,7 @@ const String backupFormat = 'installm.backup';
 ///
 /// Bump this when a section's shape changes; [BackupArchive.decode] refuses a
 /// file written by a newer build rather than downgrading it.
-const int backupSchemaVersion = 1;
+const int backupSchemaVersion = 2;
 
 /// Keys of the sections a backup can carry.
 ///
@@ -24,6 +24,7 @@ abstract final class BackupSection {
   static const String settings = 'settings';
   static const String benchmarks = 'benchmarks';
   static const String knowledge = 'knowledge';
+  static const String vaults = 'vaults';
 
   static const List<String> all = [
     conversations,
@@ -32,6 +33,7 @@ abstract final class BackupSection {
     settings,
     benchmarks,
     knowledge,
+    vaults,
   ];
 }
 
@@ -44,10 +46,14 @@ class BackupSelection {
     this.settings = true,
     this.benchmarks = true,
     this.knowledge = false,
+    this.vaults = false,
   });
 
   /// Everything, including the knowledge index and the text it holds.
-  static const BackupSelection everything = BackupSelection(knowledge: true);
+  static const BackupSelection everything = BackupSelection(
+    knowledge: true,
+    vaults: true,
+  );
 
   final bool conversations;
   final bool personas;
@@ -56,6 +62,9 @@ class BackupSelection {
   final bool benchmarks;
   final bool knowledge;
 
+  /// Explicit export includes external folder paths, but never Markdown files.
+  final bool vaults;
+
   /// True when at least one section is selected.
   bool get isEmpty =>
       !conversations &&
@@ -63,7 +72,8 @@ class BackupSelection {
       !inferenceProfiles &&
       !settings &&
       !benchmarks &&
-      !knowledge;
+      !knowledge &&
+      !vaults;
 
   bool includes(String section) {
     return switch (section) {
@@ -73,6 +83,7 @@ class BackupSelection {
       BackupSection.settings => settings,
       BackupSection.benchmarks => benchmarks,
       BackupSection.knowledge => knowledge,
+      BackupSection.vaults => vaults,
       _ => false,
     };
   }
@@ -84,6 +95,7 @@ class BackupSelection {
     bool? settings,
     bool? benchmarks,
     bool? knowledge,
+    bool? vaults,
   }) {
     return BackupSelection(
       conversations: conversations ?? this.conversations,
@@ -92,6 +104,7 @@ class BackupSelection {
       settings: settings ?? this.settings,
       benchmarks: benchmarks ?? this.benchmarks,
       knowledge: knowledge ?? this.knowledge,
+      vaults: vaults ?? this.vaults,
     );
   }
 }

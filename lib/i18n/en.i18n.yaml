@@ -203,3 +203,8 @@ appearance:
   loadError: "Could not load appearance preferences. Try restarting the app."
   saveError: "Could not save appearance preferences. Check available storage and try again."
   newerVersion: "These appearance preferences need a newer app version. Update the app to change them."
+
+vault:
+  backupTitle: "Vault registry"
+  backupDescription: "Folder registrations, external folder paths and workspace links; Markdown files stay in their folders"
+  restored: "${count} Vault registration(s) restored"

@@ -20,6 +20,9 @@ class VaultPaths {
   /// Absolute path of [relativePath] inside the project folder, or null
   /// when it escapes the folder.
   String? projectFile(String relativePath) {
+    if (!_isWithin(p.normalize(projectDir), p.normalize(vaultRoot))) {
+      return null;
+    }
     final absolute = p.normalize(p.join(projectDir, relativePath));
     if (!_isWithin(absolute, p.normalize(projectDir))) return null;
     return absolute;
@@ -36,6 +39,9 @@ class VaultPaths {
   /// Workspace-relative form of [absolutePath] (for shared documents), or
   /// null when the file is outside the project folder.
   String? relativeToProject(String absolutePath) {
+    if (!_isWithin(p.normalize(projectDir), p.normalize(vaultRoot))) {
+      return null;
+    }
     final normalized = p.normalize(absolutePath);
     if (!_isWithin(normalized, p.normalize(projectDir))) return null;
     return p.relative(normalized, from: p.normalize(projectDir));

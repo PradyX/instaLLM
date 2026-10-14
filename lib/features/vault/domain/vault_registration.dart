@@ -13,6 +13,7 @@ class VaultRegistration {
     required this.rootPath,
     required this.createdAt,
     required this.updatedAt,
+    this.isManaged = false,
   });
 
   factory VaultRegistration.create({
@@ -20,6 +21,7 @@ class VaultRegistration {
     required String name,
     required String rootPath,
     DateTime? now,
+    bool isManaged = false,
   }) {
     final timestamp = now ?? DateTime.now();
     return VaultRegistration(
@@ -28,6 +30,7 @@ class VaultRegistration {
       rootPath: rootPath.trim(),
       createdAt: timestamp,
       updatedAt: timestamp,
+      isManaged: isManaged,
     );
   }
 
@@ -36,6 +39,9 @@ class VaultRegistration {
 
   /// Absolute vault root on this device (device-specific, never synced).
   final String rootPath;
+
+  /// App-owned resource root; external registrations never acquire this flag.
+  final bool isManaged;
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -49,6 +55,7 @@ class VaultRegistration {
       rootPath: (rootPath ?? this.rootPath).trim(),
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+      isManaged: isManaged,
     );
   }
 
@@ -57,6 +64,7 @@ class VaultRegistration {
       'id': id,
       'name': name,
       'rootPath': rootPath,
+      'isManaged': isManaged,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -87,6 +95,7 @@ class VaultRegistration {
       rootPath: rootPath,
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),
+      isManaged: json['isManaged'] == true,
     );
   }
 }
@@ -149,10 +158,10 @@ class VaultPermissions {
   static VaultPermissions fromJson(Map<String, dynamic> json) {
     bool read(Object? value, bool fallback) => value is bool ? value : fallback;
     return VaultPermissions(
-      canRead: read(json['canRead'], true),
-      canWrite: read(json['canWrite'], true),
-      canCreate: read(json['canCreate'], true),
-      canUpdate: read(json['canUpdate'], true),
+      canRead: read(json['canRead'], false),
+      canWrite: read(json['canWrite'], false),
+      canCreate: read(json['canCreate'], false),
+      canUpdate: read(json['canUpdate'], false),
       canDelete: read(json['canDelete'], false),
       allowReadOutsideProject: read(json['allowReadOutsideProject'], false),
     );

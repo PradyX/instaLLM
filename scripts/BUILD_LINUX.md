@@ -226,4 +226,5 @@ On some desktops, logging out and back in or refreshing the application menu may
 - Linux notifications depend on a running Freedesktop notification daemon in the desktop session.
 - `flutter_secure_storage` uses the Linux keyring when available. InstaLLM falls back to app-local storage if the keyring backend is unavailable at runtime.
 - If you change the bundled native libraries, run `flutter clean` before retesting so Flutter rebuilds the Linux bundle cleanly.
+- `flutter test integration_test/<test>.dart -d linux` builds `build/linux/x64/debug/bundle` from the *test* entrypoint. Launching that binary straight afterwards starts the test harness rather than the app: the process runs, opens no window and prints only the engine banner. Rebuild with `flutter build linux` first, or launch through `scripts/run_linux.sh` / `flutter run -d linux`, which always build the normal entrypoint.
 - The release archive is a relocatable bundle, not a `.deb`. If you want distro-native packaging later, use the generated bundle as the input to your packaging tool.

@@ -119,22 +119,46 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
 }
 
-find_latest_ndk() {
-  local sdk_ndk_root="${HOME}/Library/Android/sdk/ndk"
+# Newest NDK version installed under an SDK's ndk/ directory, or nothing.
+newest_ndk_under() {
+  local sdk_ndk_root="$1"
 
-  if [[ -n "${ANDROID_NDK_ROOT:-}" && -d "${ANDROID_NDK_ROOT}" ]]; then
-    printf '%s\n' "${ANDROID_NDK_ROOT}"
-    return
-  fi
-
-  if [[ -n "${ANDROID_NDK_HOME:-}" && -d "${ANDROID_NDK_HOME}" ]]; then
-    printf '%s\n' "${ANDROID_NDK_HOME}"
-    return
-  fi
-
-  [[ -d "${sdk_ndk_root}" ]] || die "Could not find Android NDK. Set ANDROID_NDK_ROOT."
+  [[ -d "${sdk_ndk_root}" ]] || return 0
 
   find "${sdk_ndk_root}" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1
+}
+
+# Locates the Android NDK this host's SDK manager installed.
+#
+# The macOS default is kept, and the SDK roots are searched too so a Linux
+# checkout whose NDK sits beside its SDK works without extra environment
+# variables; the Flutter Gradle plugin installs one there on first Android build.
+# An explicit ANDROID_NDK_ROOT/ANDROID_NDK_HOME always wins, because those point
+# at an NDK rather than at an SDK.
+find_latest_ndk() {
+  local candidate found
+
+  for candidate in "${ANDROID_NDK_ROOT:-}" "${ANDROID_NDK_HOME:-}"; do
+    if [[ -n "${candidate}" && -d "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return
+    fi
+  done
+
+  for candidate in \
+    "${ANDROID_HOME:-}" \
+    "${ANDROID_SDK_ROOT:-}" \
+    "${HOME}/Android/Sdk" \
+    "${HOME}/Library/Android/sdk"; do
+    [[ -n "${candidate}" ]] || continue
+    found="$(newest_ndk_under "${candidate}/ndk")"
+    if [[ -n "${found}" ]]; then
+      printf '%s\n' "${found}"
+      return
+    fi
+  done
+
+  die "Could not find an Android NDK. Set ANDROID_NDK_HOME or ANDROID_NDK_ROOT, or install one with 'sdkmanager \"ndk;28.2.13676358\"'."
 }
 
 assert_paths() {

@@ -14,8 +14,10 @@ import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_chunking.dart';
 import 'package:installm/features/documents/domain/document_extraction.dart';
 import 'package:installm/features/documents/domain/document_index_maintenance.dart';
+import 'package:installm/features/documents/domain/document_reranker.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
 import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 import 'package:installm/features/documents/domain/knowledge_collection.dart';
 
@@ -265,12 +267,31 @@ class DocumentLibrary {
     String? collectionId,
     Float32List? queryVector,
   }) {
-    return _retriever.search(
+    final resolved = collectionId ?? _activeCollectionId;
+    final tuning =
+        collectionById(resolved)?.retrieval ?? const RetrievalTuning();
+    // Rerank needs a wider fused pool than the caller asked for, or there is
+    // nothing to reorder.
+    final lookAt = tuning.rerankEnabled ? limit * 3 : limit;
+    final hits = _retriever.search(
       query,
-      limit: limit,
-      collectionId: collectionId ?? _activeCollectionId,
+      limit: lookAt <= 0 ? limit : lookAt,
+      collectionId: resolved,
       queryVector: queryVector,
+      tuning: tuning,
     );
+    if (!tuning.rerankEnabled) return _take(hits, limit);
+    final reranked = DocumentReranker.rerank(query, hits);
+    return _take(reranked, limit);
+  }
+
+  static List<DocumentSearchHit> _take(
+    List<DocumentSearchHit> hits,
+    int limit,
+  ) {
+    if (limit <= 0) return const [];
+    if (hits.length <= limit) return hits;
+    return hits.sublist(0, limit);
   }
 
   /// Makes [collectionId] the collection chat uses.
@@ -298,6 +319,31 @@ class DocumentLibrary {
     _collections = [..._collections, collection];
     _persist();
     return collection;
+  }
+
+  /// Retunes how a collection answers: fusion weights, rerank switch and
+  /// full-collection context.
+  ///
+  /// Ranking-time only: nothing is re-indexed, so the change answers the very
+  /// next query. Returns false when the collection does not exist.
+  bool updateRetrievalTuning(String collectionId, RetrievalTuning tuning) {
+    final collection = collectionById(collectionId);
+    if (collection == null) return false;
+    final tuned = tuning.normalized();
+    if (collection.retrieval.lexicalWeight == tuned.lexicalWeight &&
+        collection.retrieval.vectorWeight == tuned.vectorWeight &&
+        collection.retrieval.rerankEnabled == tuned.rerankEnabled &&
+        collection.retrieval.fullDocumentContext == tuned.fullDocumentContext) {
+      return true;
+    }
+    _collections = [
+      for (final existing in _collections)
+        existing.id == collectionId
+            ? existing.copyWith(retrieval: tuned, updatedAt: DateTime.now())
+            : existing,
+    ];
+    _persist();
+    return true;
   }
 
   /// Points a collection at an embedding model, or back to lexical search.

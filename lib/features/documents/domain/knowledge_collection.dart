@@ -1,5 +1,6 @@
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/features/documents/domain/document.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 
 /// Limits for collection fields a user can change.
 abstract class KnowledgeCollectionLimits {
@@ -25,6 +26,7 @@ class KnowledgeCollection {
     required this.updatedAt,
     this.chunking = const DocumentChunkingConfig(),
     this.embeddingModelId,
+    this.retrieval = const RetrievalTuning(),
     this.indexVersion = documentChunkerVersion,
   });
 
@@ -40,6 +42,7 @@ class KnowledgeCollection {
   factory KnowledgeCollection.defaultCollection({
     DateTime? now,
     DocumentChunkingConfig chunking = const DocumentChunkingConfig(),
+    RetrievalTuning retrieval = const RetrievalTuning(),
   }) {
     final timestamp = now ?? DateTime.now();
     return KnowledgeCollection(
@@ -48,6 +51,7 @@ class KnowledgeCollection {
       createdAt: timestamp,
       updatedAt: timestamp,
       chunking: chunking,
+      retrieval: retrieval,
     );
   }
 
@@ -57,6 +61,7 @@ class KnowledgeCollection {
     String? id,
     DocumentChunkingConfig chunking = const DocumentChunkingConfig(),
     String? embeddingModelId,
+    RetrievalTuning retrieval = const RetrievalTuning(),
     DateTime? now,
   }) {
     final timestamp = now ?? DateTime.now();
@@ -67,6 +72,7 @@ class KnowledgeCollection {
       updatedAt: timestamp,
       chunking: chunking,
       embeddingModelId: embeddingModelId,
+      retrieval: retrieval,
     );
   }
 
@@ -81,6 +87,10 @@ class KnowledgeCollection {
   /// Embedding backend this collection's index is built for, or null when it
   /// uses lexical retrieval (no model download).
   final String? embeddingModelId;
+
+  /// How this collection answers: fusion weights, rerank switch and full
+  /// collection context. Ranking-time only, so changing it never re-indexes.
+  final RetrievalTuning retrieval;
 
   /// Pipeline version the collection's index was last built with.
   final int indexVersion;
@@ -100,6 +110,7 @@ class KnowledgeCollection {
     return copyWith(
       name: limited.isEmpty ? defaultName : limited,
       chunking: chunking.normalized(),
+      retrieval: retrieval.normalized(),
     );
   }
 
@@ -107,6 +118,7 @@ class KnowledgeCollection {
     String? name,
     DocumentChunkingConfig? chunking,
     Object? embeddingModelId = _unset,
+    RetrievalTuning? retrieval,
     int? indexVersion,
     DateTime? updatedAt,
   }) {
@@ -119,6 +131,7 @@ class KnowledgeCollection {
       embeddingModelId: embeddingModelId == _unset
           ? this.embeddingModelId
           : embeddingModelId as String?,
+      retrieval: retrieval ?? this.retrieval,
       indexVersion: indexVersion ?? this.indexVersion,
     );
   }
@@ -131,6 +144,7 @@ class KnowledgeCollection {
       'updatedAt': updatedAt.toIso8601String(),
       'chunking': chunking.toJson(),
       'embeddingModelId': embeddingModelId,
+      'retrieval': retrieval.toJson(),
       'indexVersion': indexVersion,
     };
   }
@@ -150,6 +164,7 @@ class KnowledgeCollection {
           DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? createdAt,
       chunking: DocumentChunkingConfig.fromJson(json['chunking']),
       embeddingModelId: json['embeddingModelId'] as String?,
+      retrieval: RetrievalTuning.fromJson(json['retrieval']),
       indexVersion:
           (json['indexVersion'] as num?)?.toInt() ?? documentChunkerVersion,
     );

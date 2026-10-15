@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
 import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 
 final RegExp _wordPattern = RegExp(r'[\p{L}\p{N}]+', unicode: true);
 final RegExp _camelBoundary = RegExp(
@@ -104,6 +105,9 @@ class LexicalDocumentRetriever implements DocumentRetriever {
     int limit = 5,
     String? collectionId,
     Float32List? queryVector,
+    // A lexical ranking has one channel, so tuning changes nothing here; the
+    // parameter exists only so one tuning travels every retrieval path.
+    RetrievalTuning? tuning,
   }) {
     if (limit <= 0 || _chunks.isEmpty) return const [];
     final terms = retrievalTokens(query).toSet();
@@ -128,7 +132,7 @@ class LexicalDocumentRetriever implements DocumentRetriever {
     }
     final averageLength = totalLength / candidates.length;
 
-    final scored = <DocumentSearchHit>[];
+    final scored = <_RankedHit>[];
     for (final entry in candidates) {
       var score = 0.0;
       final matched = <String>{};
@@ -146,7 +150,7 @@ class LexicalDocumentRetriever implements DocumentRetriever {
       if (score <= 0) continue;
 
       scored.add(
-        DocumentSearchHit(
+        _RankedHit(
           documentId: entry.documentId,
           documentName: entry.documentName,
           chunk: entry.chunk,
@@ -165,7 +169,18 @@ class LexicalDocumentRetriever implements DocumentRetriever {
       return a.chunk.index.compareTo(b.chunk.index);
     });
 
-    return scored.length <= limit ? scored : scored.sublist(0, limit);
+    final ranked = scored.length <= limit ? scored : scored.sublist(0, limit);
+    return [
+      for (var rank = 0; rank < ranked.length; rank++)
+        DocumentSearchHit(
+          documentId: ranked[rank].documentId,
+          documentName: ranked[rank].documentName,
+          chunk: ranked[rank].chunk,
+          score: ranked[rank].score,
+          matchedTerms: ranked[rank].matchedTerms,
+          rankDetail: 'lexical #${rank + 1}',
+        ),
+    ];
   }
 
   static double _idf(
@@ -176,6 +191,22 @@ class LexicalDocumentRetriever implements DocumentRetriever {
     final frequency = documentFrequency[term] ?? 0;
     return math.log(1 + (documentCount - frequency + 0.5) / (frequency + 0.5));
   }
+}
+
+class _RankedHit {
+  const _RankedHit({
+    required this.documentId,
+    required this.documentName,
+    required this.chunk,
+    required this.score,
+    required this.matchedTerms,
+  });
+
+  final String documentId;
+  final String documentName;
+  final DocumentChunk chunk;
+  final double score;
+  final Set<String> matchedTerms;
 }
 
 class _IndexedChunk {

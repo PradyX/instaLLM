@@ -11,6 +11,7 @@ import 'package:installm/features/documents/application/document_library.dart';
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_extraction.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 import 'package:installm/features/documents/domain/knowledge_collection.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -601,6 +602,26 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
         queryVector: queryVector,
       ),
     );
+  }
+
+  /// Retunes how a collection answers without re-indexing anything.
+  ///
+  /// Weights, rerank and full-collection context apply to the very next
+  /// query; the retrieval preview is re-run so what is shown is what chat
+  /// would receive.
+  Future<void> updateRetrievalTuning(
+    String collectionId,
+    RetrievalTuning tuning,
+  ) async {
+    final library = _library;
+    if (library == null || state.isIndexing) return;
+    if (!library.updateRetrievalTuning(collectionId, tuning)) return;
+    final collection = library.collectionById(collectionId);
+    _publishFromLibrary(
+      statusMessage:
+          '"${collection?.name ?? 'The collection'}" retrieval updated.',
+    );
+    await _refreshPreview();
   }
 
   /// Points a collection at an embedding model, or back to lexical search.

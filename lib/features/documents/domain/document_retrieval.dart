@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 
 /// One chunk returned by a retrieval query.
 class DocumentSearchHit {
@@ -11,6 +12,7 @@ class DocumentSearchHit {
     required this.chunk,
     required this.score,
     this.matchedTerms = const {},
+    this.rankDetail = '',
   });
 
   final String documentId;
@@ -31,6 +33,11 @@ class DocumentSearchHit {
   /// Query terms this chunk matched, so a response can explain why a source
   /// was used instead of asking the user to trust it.
   final Set<String> matchedTerms;
+
+  /// Why this chunk won, for the retrieval inspector: which channels found
+  /// it at which ranks, which weights applied, and any rerank movement.
+  /// Empty when no channel reported it (never for a real hit).
+  final String rankDetail;
 
   /// Stable id of the retrieved chunk, used to deduplicate prompt context and
   /// to point a citation at an exact place in the text.
@@ -79,6 +86,10 @@ abstract interface class DocumentRetriever {
   /// When [collectionId] is set, only that knowledge collection is searched and
   /// ranking statistics are computed from it.
   ///
+  /// [tuning] carries that collection's retrieval tuning; null answers
+  /// untuned (equal fusion weights), which is what keeps a collection stored
+  /// before tuning existed ranking exactly as it always has.
+  ///
   /// [queryVector] is the embedded [query], when the caller has one: a vector
   /// backend cannot search without it, and a backend that needs it returns
   /// nothing rather than guessing.
@@ -87,6 +98,7 @@ abstract interface class DocumentRetriever {
     int limit = 5,
     String? collectionId,
     Float32List? queryVector,
+    RetrievalTuning? tuning,
   });
 
   /// Number of stored vectors this retriever can rank for [collectionId].

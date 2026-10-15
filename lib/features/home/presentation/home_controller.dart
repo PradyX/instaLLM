@@ -35,10 +35,12 @@ import 'package:installm/features/context/domain/context_compaction.dart';
 import 'package:installm/features/documents/application/document_context_builder.dart';
 import 'package:installm/features/documents/application/document_library.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_context.dart';
 import 'package:installm/features/documents/domain/document_scope.dart';
 import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 import 'package:installm/features/inference_profiles/application/inference_profiles_controller.dart';
 import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
 import 'package:installm/features/inference_profiles/domain/inference_profile_resolver.dart';
@@ -931,6 +933,8 @@ class HomeController extends _$HomeController {
               tokenBudget: contextPolicy.retrievalTokens,
               collectionId: documentRetrieval.collectionId,
               queryVector: documentRetrieval.queryVector,
+              tuning: documentRetrieval.tuning,
+              collectionDocuments: documentRetrieval.collectionDocuments,
             );
       await ref.read(skillsProvider.notifier).whenReady;
       await ref.read(skillChoicesProvider.notifier).whenReady;
@@ -1605,6 +1609,8 @@ class HomeController extends _$HomeController {
         collectionId: collectionId,
         query: query,
         queryVector: queryVector,
+        tuning: library.collectionById(collectionId)?.retrieval,
+        collectionDocuments: library.documentsIn(collectionId),
       );
     } catch (error) {
       debugPrint('HomeController: could not open the document index: $error');
@@ -1871,6 +1877,8 @@ class _DocumentRetrieval {
     required this.collectionId,
     required this.query,
     this.queryVector,
+    this.tuning,
+    this.collectionDocuments = const [],
   });
 
   final DocumentRetriever retriever;
@@ -1882,4 +1890,10 @@ class _DocumentRetrieval {
 
   /// The embedded [query], or null when the collection answers from terms.
   final Float32List? queryVector;
+
+  /// How that collection answers; null keeps the untuned ranking.
+  final RetrievalTuning? tuning;
+
+  /// That collection's documents, for full-collection context.
+  final List<IndexedDocument> collectionDocuments;
 }

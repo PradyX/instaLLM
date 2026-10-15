@@ -4,6 +4,7 @@ import 'package:installm/features/documents/data/lexical_document_retriever.dart
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
 import 'package:installm/features/documents/domain/document_vectors.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 
 /// Retrieval over the local index, lexical first and semantic when it can be.
 ///
@@ -14,6 +15,11 @@ import 'package:installm/features/documents/domain/document_vectors.dart';
 /// of them knows about still surfaces, and no per-model weight has to be tuned
 /// or stored. [rankConstant] is the usual 60, which only decides how much the
 /// first few ranks matter relative to the tail.
+///
+/// The fusion weights come from the searched collection's tuning: equal
+/// weights reproduce the untuned ranking, zero removes a channel, and anything
+/// in between leans the ranking without inventing a new scale. A null tuning
+/// answers untuned.
 ///
 /// When a collection has no stored vectors, or the caller has no query vector
 /// (the embedding model is not installed, or embedding failed), the result is
@@ -88,7 +94,9 @@ class HybridDocumentRetriever implements DocumentRetriever {
     int limit = 5,
     String? collectionId,
     Float32List? queryVector,
+    RetrievalTuning? tuning,
   }) {
+    final weights = (tuning ?? const RetrievalTuning()).normalized();
     final lexicalHits = _lexical.search(
       query,
       limit: limit * _candidateFactor,
@@ -106,7 +114,15 @@ class HybridDocumentRetriever implements DocumentRetriever {
     if (vectorHits.isEmpty) return _take(lexicalHits, limit);
     if (lexicalHits.isEmpty) return _take(vectorHits, limit);
 
-    return _take(_fuse(lexicalHits, vectorHits), limit);
+    return _take(
+      _fuse(
+        lexicalHits,
+        vectorHits,
+        lexicalWeight: weights.lexicalWeight,
+        vectorWeight: weights.vectorWeight,
+      ),
+      limit,
+    );
   }
 
   static List<DocumentSearchHit> _take(
@@ -155,14 +171,27 @@ class HybridDocumentRetriever implements DocumentRetriever {
       return a.chunk.index.compareTo(b.chunk.index);
     });
 
-    return scored.length <= limit ? scored : scored.sublist(0, limit);
+    final ranked = scored.length <= limit ? scored : scored.sublist(0, limit);
+    return [
+      for (var rank = 0; rank < ranked.length; rank++)
+        DocumentSearchHit(
+          documentId: ranked[rank].documentId,
+          documentName: ranked[rank].documentName,
+          chunk: ranked[rank].chunk,
+          score: ranked[rank].score,
+          matchedTerms: ranked[rank].matchedTerms,
+          rankDetail: 'vector #${rank + 1}',
+        ),
+    ];
   }
 
-  /// Merges both rankings, best first, by summed reciprocal rank.
+  /// Merges both rankings, best first, by weighted summed reciprocal rank.
   List<DocumentSearchHit> _fuse(
     List<DocumentSearchHit> lexicalHits,
-    List<DocumentSearchHit> vectorHits,
-  ) {
+    List<DocumentSearchHit> vectorHits, {
+    required double lexicalWeight,
+    required double vectorWeight,
+  }) {
     final fused = <String, _FusedHit>{};
 
     for (var rank = 0; rank < lexicalHits.length; rank++) {
@@ -170,7 +199,8 @@ class HybridDocumentRetriever implements DocumentRetriever {
       fused
           .putIfAbsent(hit.chunkId, () => _FusedHit(hit))
           .addRank(
-            1 / (rankConstant + rank + 1),
+            lexicalWeight / (rankConstant + rank + 1),
+            channel: 'lexical #${rank + 1}',
             matchedTerms: hit.matchedTerms,
           );
     }
@@ -179,7 +209,8 @@ class HybridDocumentRetriever implements DocumentRetriever {
       fused
           .putIfAbsent(hit.chunkId, () => _FusedHit(hit))
           .addRank(
-            1 / (rankConstant + rank + 1),
+            vectorWeight / (rankConstant + rank + 1),
+            channel: 'vector #${rank + 1}',
             matchedTerms: hit.matchedTerms,
           );
     }
@@ -192,6 +223,9 @@ class HybridDocumentRetriever implements DocumentRetriever {
       if (byDocument != 0) return byDocument;
       return a.hit.chunk.index.compareTo(b.hit.chunk.index);
     });
+    final weightsLabel =
+        'weights ${lexicalWeight.toStringAsFixed(1)}/'
+        '${vectorWeight.toStringAsFixed(1)}';
     return [
       for (final entry in hits)
         DocumentSearchHit(
@@ -200,6 +234,7 @@ class HybridDocumentRetriever implements DocumentRetriever {
           chunk: entry.hit.chunk,
           score: entry.score,
           matchedTerms: entry.matchedTerms,
+          rankDetail: '${entry.channels.join(' · ')} ($weightsLabel)',
         ),
     ];
   }
@@ -229,9 +264,15 @@ class _FusedHit {
   final DocumentSearchHit hit;
   double score = 0;
   Set<String> matchedTerms;
+  final List<String> channels = [];
 
-  void addRank(double value, {Set<String>? matchedTerms}) {
+  void addRank(
+    double value, {
+    required String channel,
+    Set<String>? matchedTerms,
+  }) {
     score += value;
+    channels.add(channel);
     if (matchedTerms != null && matchedTerms.isNotEmpty) {
       this.matchedTerms = matchedTerms;
     }

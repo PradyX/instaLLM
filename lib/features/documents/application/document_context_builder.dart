@@ -2,8 +2,10 @@ import 'dart:typed_data';
 
 import 'package:installm/features/conversations/domain/context_policy.dart'
     show TokenEstimator;
+import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_context.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
+import 'package:installm/features/documents/domain/retrieval_tuning.dart';
 
 /// Turns retrieved local chunks into a prompt section with citation markers.
 ///
@@ -49,7 +51,15 @@ class DocumentContextBuilder {
     required int tokenBudget,
     String? collectionId,
     Float32List? queryVector,
+    RetrievalTuning? tuning,
+    List<IndexedDocument> collectionDocuments = const [],
   }) {
+    final whole = _wholeCollection(
+      tuning: tuning,
+      collectionDocuments: collectionDocuments,
+      tokenBudget: tokenBudget,
+    );
+    if (whole != null) return whole;
     if (tokenBudget <= 0 || query.trim().isEmpty) return DocumentContext.empty;
     if (collectionId == null
         ? retriever.chunkCount == 0
@@ -99,5 +109,63 @@ class DocumentContextBuilder {
   /// `[1] notes.md · Setup` followed by the chunk text.
   static String _format(DocumentSearchHit hit, int marker) {
     return '[$marker] ${hit.citationLabel}\n${hit.chunk.text.trim()}';
+  }
+
+  /// The whole collection in document order, for small tuned libraries.
+  ///
+  /// Returns null when full-collection context is off, when there is nothing
+  /// to send, or when the collection is past
+  /// [RetrievalTuningLimits.maxFullContextChunks] chunks or its estimated
+  /// cost exceeds [tokenBudget] — in all those cases the caller ranks instead.
+  /// Chunks keep their stored text and offsets; only their order changes from
+  /// rank order to document order, which is what makes a small library read
+  /// as documents rather than as hits.
+  DocumentContext? _wholeCollection({
+    required RetrievalTuning? tuning,
+    required List<IndexedDocument> collectionDocuments,
+    required int tokenBudget,
+  }) {
+    if (tuning?.fullDocumentContext != true) return null;
+    final hits = <DocumentSearchHit>[];
+    var estimated = _headerTokens;
+    for (final document in collectionDocuments) {
+      for (final chunk in document.chunks) {
+        if (hits.length >= RetrievalTuningLimits.maxFullContextChunks) {
+          return null;
+        }
+        estimated +=
+            TokenEstimator.estimateText(chunk.text) + _blockOverheadTokens;
+        if (estimated > tokenBudget) return null;
+        hits.add(
+          DocumentSearchHit(
+            documentId: document.id,
+            documentName: document.source.name,
+            chunk: chunk,
+            score: 1,
+            rankDetail: 'full collection · document order',
+          ),
+        );
+      }
+    }
+    if (hits.isEmpty) return null;
+
+    final used = <DocumentSearchHit>[];
+    final blocks = <String>[];
+    var usedTokens = _headerTokens;
+    for (final hit in hits) {
+      final block = _format(hit, used.length + 1);
+      final cost = TokenEstimator.estimateText(block) + _blockOverheadTokens;
+      if (usedTokens + cost > tokenBudget) break;
+      usedTokens += cost;
+      used.add(hit);
+      blocks.add(block);
+    }
+    if (used.isEmpty) return DocumentContext.empty;
+    final section = '$instructions\n\n${blocks.join('\n\n')}';
+    return DocumentContext(
+      section: section,
+      hits: List.unmodifiable(used),
+      tokenCount: usedTokens,
+    );
   }
 }

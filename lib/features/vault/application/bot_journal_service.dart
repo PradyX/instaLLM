@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
+import 'package:installm/features/agents/application/run_checkpoint_session.dart';
 import 'package:installm/features/conversations/application/conversation_memory_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/domain/vault_paths.dart';
@@ -27,6 +28,10 @@ class BotJournalSession {
   late final JournalCheckpointStore _checkpoints;
   late final String _contextKey;
   VaultPermissions? Function()? _resolvePermissions;
+
+  /// Records what this run writes, so `/rewind` can put it back. Null when the
+  /// caller keeps no snapshots (a platform without the store, for example).
+  RunCheckpointSession? _runCheckpoints;
   String _hash(String text) => sha256.convert(utf8.encode(text)).toString();
 
   static Future<BotJournalSession?> open({
@@ -35,6 +40,7 @@ class BotJournalSession {
     required String botId,
     DateTime? now,
     JournalCheckpointStore? checkpoints,
+    RunCheckpointSession? runCheckpoints,
     String? contextKey,
     VaultPermissions? Function()? resolvePermissions,
   }) async {
@@ -55,6 +61,7 @@ class BotJournalSession {
     session._contextKey =
         contextKey ?? '${paths.vaultRoot}|${paths.projectPath}';
     session._resolvePermissions = resolvePermissions;
+    session._runCheckpoints = runCheckpoints;
     try {
       session._checkpoints.hashFor('${session._contextKey}|readiness');
     } catch (_) {
@@ -110,6 +117,16 @@ class BotJournalSession {
       return 'Note not saved: the workspace link or permissions changed.';
     }
     final content = '$normalized\n';
+    // What the file held before this run is recorded once, before anything is
+    // written; a write that fails leaves no entry behind.
+    final absolute = paths.projectFile(path);
+    if (absolute != null) {
+      _runCheckpoints?.recordBefore(
+        path: absolute,
+        relativePath: path,
+        content: baseline?.content,
+      );
+    }
     final error = await _notes.writeNote(
       paths: paths,
       permissions: livePermissions,
@@ -121,6 +138,13 @@ class BotJournalSession {
     );
     if (error != null) {
       return 'Note not saved: ${error.message} Resolve the edit conflict or permissions before retrying.';
+    }
+    if (absolute != null) {
+      await _runCheckpoints?.recordAfter(
+        path: absolute,
+        relativePath: path,
+        content: content,
+      );
     }
     if (_baseline.containsKey(path)) {
       if (!_checkpoints.saveHash('$_contextKey|$path', _hash(content))) {

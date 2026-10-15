@@ -9,7 +9,12 @@ import 'package:installm/features/context/application/context_budget_controller.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
+import 'package:installm/core/utils/logger.dart';
 import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/application/rewind_service.dart';
+import 'package:installm/features/agents/application/run_checkpoint_session.dart';
+import 'package:installm/features/agents/application/run_commands.dart';
+import 'package:installm/features/agents/domain/run_checkpoint.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/bots/domain/bot_prompt.dart';
@@ -370,6 +375,13 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   Future<void> sendUserMessage(String chatId, String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || state.runningChatIds.contains(chatId)) return;
+    final rewind = RewindCommand.parse(trimmed);
+    if (rewind != null) {
+      final chat = _chatById(chatId);
+      if (chat == null) return;
+      await _handleRewind(chat, rewind, trimmed);
+      return;
+    }
     final command = MemoryCommand.parse(trimmed);
     final commandChat = _chatById(chatId);
     if (command != null && commandChat != null) {
@@ -449,6 +461,91 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     _append(GroupMessage.user(chatId: chatId, text: task));
     await _persist();
     await _runTurn(chatId, firstText: task, roundsUsed: 0);
+  }
+
+  /// `/rewind` — the files an agent run in this room wrote, put back.
+  ///
+  /// Listing is the default: the runs of this room and the exact command that
+  /// puts one back, so a restore is a decision rather than a guess. The files
+  /// go back through the vault service, under the same workspace link and
+  /// permissions as every other write, and nothing else is touched.
+  Future<void> _handleRewind(
+    GroupChat chat,
+    RewindCommand command,
+    String text,
+  ) async {
+    state = state.copyWith(runningChatIds: {...state.runningChatIds, chat.id});
+    try {
+      _append(GroupMessage.user(chatId: chat.id, text: text));
+      await _persist();
+      if (command.message != null) {
+        await _sayRewind(chat.id, command.message!);
+        return;
+      }
+      final store = await _ref.read(runCheckpointStoreProvider.future);
+      final runs = store.load().forContext('room:${chat.id}');
+      if (command.list) {
+        await _sayRewind(chat.id, rewindListing(runs));
+        return;
+      }
+      final matches = command.runId == 'last'
+          ? (runs.isEmpty ? <RunCheckpoint>[] : [runs.first])
+          : [
+              for (final run in runs)
+                if (run.id == command.runId) run,
+            ];
+      if (matches.isEmpty) {
+        await _sayRewind(
+          chat.id,
+          'No run of this chat has the id “${command.runId}”.\n\n'
+          '${rewindListing(runs)}',
+        );
+        return;
+      }
+      final vaults = _ref.read(vaultsProvider.notifier);
+      await vaults.whenReady;
+      final paths = vaults.pathsFor(chat.workspaceId);
+      final binding = _ref
+          .read(vaultsProvider)
+          .snapshot
+          .bindingFor(chat.workspaceId);
+      if (paths == null || binding == null) {
+        await _sayRewind(
+          chat.id,
+          'This workspace is not linked to a vault folder, so there is nowhere '
+          'to put the files back.',
+        );
+        return;
+      }
+      final outcome = await const RewindService().rewind(
+        run: matches.single,
+        paths: paths,
+      );
+      AppLogger.info(
+        'Rewind of run ${matches.single.id} in room ${chat.id}: '
+        'restored=${outcome.restored} files=${outcome.restoredPaths}',
+      );
+      await _sayRewind(chat.id, outcome.message);
+    } finally {
+      state = state.copyWith(
+        runningChatIds: state.runningChatIds
+            .where((id) => id != chat.id)
+            .toSet(),
+      );
+    }
+  }
+
+  /// One `/rewind` answer, under the app's own name rather than a bot's.
+  Future<void> _sayRewind(String chatId, String text) async {
+    _append(
+      GroupMessage.bot(
+        chatId: chatId,
+        botId: 'installm-rewind',
+        botName: 'Rewind',
+        text: text,
+      ),
+    );
+    await _persist();
   }
 
   /// Records a pasted answer for a pending bot turn, then routes onward.
@@ -600,6 +697,19 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         .read(vaultsProvider)
         .snapshot
         .bindingFor(chat.workspaceId);
+    // What this run writes is snapshotted, so `/rewind` can put those files
+    // back. A run that writes nothing never appears in the store, and a
+    // snapshot that cannot be stored does not stop the work.
+    RunCheckpointSession? runCheckpoints;
+    try {
+      runCheckpoints = RunCheckpointSession(
+        store: await _ref.read(runCheckpointStoreProvider.future),
+        contextKey: 'room:${chat.id}',
+        label: bot.name,
+      );
+    } catch (_) {
+      // Without snapshots the bot still works; only rewind has nothing to offer.
+    }
     BotJournalSession? journal;
     if (model.supportsToolCalling && paths != null && binding != null) {
       try {
@@ -608,6 +718,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           permissions: binding.permissions,
           botId: bot.id,
           checkpoints: await _ref.read(journalCheckpointStoreProvider.future),
+          runCheckpoints: runCheckpoints,
           contextKey: '${binding.vaultId}|${chat.workspaceId}',
           resolvePermissions: () {
             final current = _ref

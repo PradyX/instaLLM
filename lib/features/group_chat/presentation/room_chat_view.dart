@@ -1,4 +1,5 @@
 import 'package:installm/features/skills/presentation/skill_context_details.dart';
+import 'package:installm/features/agents/application/run_commands.dart';
 import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'dart:async';
@@ -259,25 +260,30 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
               child: RoomMentionComposer(
-                commands: SkillCommand.options(
-                  skills.isReady
-                      ? skills.skills
-                            .where(
-                              (skill) => chat.memberBotIds.any((id) {
-                                final member = bots.botById(id);
-                                return member != null &&
-                                    eligibleSkill(
-                                      skill,
-                                      workspaceId: chat.workspaceId,
-                                      botId: member.id,
-                                      capabilities: member.toolPermissions,
-                                      assignedSkillIds: member.skillIds,
-                                    );
-                              }),
-                            )
-                            .toList()
-                      : const [],
-                ),
+                commands: [
+                  ...SkillCommand.options(
+                    skills.isReady
+                        ? skills.skills
+                              .where(
+                                (skill) => chat.memberBotIds.any((id) {
+                                  final member = bots.botById(id);
+                                  return member != null &&
+                                      eligibleSkill(
+                                        skill,
+                                        workspaceId: chat.workspaceId,
+                                        botId: member.id,
+                                        capabilities: member.toolPermissions,
+                                        assignedSkillIds: member.skillIds,
+                                      );
+                                }),
+                              )
+                              .toList()
+                        : const [],
+                  ),
+                  // A room is where an agent run can write files, so it is the
+                  // surface that offers undoing them.
+                  RewindCommand.option(),
+                ],
                 members: [
                   for (final id in chat.memberBotIds)
                     ?ref.watch(botsProvider).botById(id),

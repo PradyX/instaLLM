@@ -6,6 +6,7 @@
 ## Project notes
 
 - Start with [Project Status](</Users/prady/Vault/Projects/installm/Project Status.md>) and [shared Flutter conventions](</Users/prady/Vault/skills/flutter.md>).
+- On Linux the same vault paths live under `/home/prady/Vault/...` instead of `/Users/prady/...` (macOS uses `/Users/prady/Vault/...`).
 - Read only the relevant sections of [Roadmaps](</Users/prady/Vault/Projects/installm/Roadmaps.md>) and [Reference](</Users/prady/Vault/Projects/installm/Reference.md>). All phases are sections in one roadmap; all detailed designs, decisions and lasting outcomes belong in Reference.
 - Keep current status and next work in Project Status; repair scoped section links when moving content. Do not add separate phase/topic notes or edit roadmap scope unless requested.
 - Current code, architecture, tests and platform implementations take precedence over conceptual examples. Latest acceptance supersedes historical planning checklists. Project-specific rules below override shared defaults.

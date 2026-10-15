@@ -22,13 +22,9 @@ class SkillsPage extends ConsumerWidget {
       ],
     );
     if (file == null) return;
-    final text = await File(file.path).readAsString();
-    final name = file.name.endsWith('.md')
-        ? file.name.substring(0, file.name.length - 3)
-        : file.name;
     final skill = await ref
         .read(skillsProvider.notifier)
-        .importSkillText(text, sourceName: name);
+        .importFile(File(file.path));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

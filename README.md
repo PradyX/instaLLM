@@ -207,6 +207,33 @@ Settings uses spacing between its controls without divider lines. Settings → V
 - Journal ownership is schema-v1 SHA-256 metadata under app support at `vault/journal-checkpoints.json`; it contains no note text. A user-edited or unowned journal is preserved, including after restart or backup restoration. Rename the edited note to keep it and permit a fresh journal, or keep using it without automatic updates. Conditional writes also reject edits during generation; app writes are serialized per note and replace files atomically.
 - Vault registry schema v2 retains v1 registrations and links; older, partial or corrupt originals are preserved before rewrite and unsupported versions refuse writes. Missing/malformed persisted permission flags fail closed. The earlier feature/key rename continues to read legacy names.
 
+### Skill bundles and references
+
+In Settings → Skills, import a UTF-8 `SKILL.md`. Its frontmatter can declare
+relative supporting files as lists:
+
+```yaml
+---
+name: documentation
+resources:
+  - references/style.md
+  - templates/report.md
+scripts:
+  - scripts/check.sh
+---
+Follow the style reference when writing a report.
+```
+
+Imports snapshot only declared files beside the chosen manifest, up to 32
+files, 64 KiB per file and 256 KiB per bundle. References/templates/examples
+must be text; paths and child links cannot leave the selected folder. Original
+files are never removed. Text-only imports still work. Assigned, enabled skills
+must match the bot's capabilities and workspace. Tool-capable bots can request
+`skill_read_resource`; loaded text shares the skill token budget with instructions.
+A missing file or an over-budget reference returns an actionable result.
+Scripts are stored but execution is not enabled in this delivery unit. Skill
+bundles remain outside backup/sync coverage.
+
 ### Context and memory
 
 - Every request is assembled against a token budget derived from the model's context window, the tokens reserved for the answer and the safety margin; the system prompt always stays, and older turns are dropped oldest-first only when the budget runs out.

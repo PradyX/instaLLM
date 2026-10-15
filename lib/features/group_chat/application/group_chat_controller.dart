@@ -1,3 +1,6 @@
+import 'package:installm/core/permissions/workspace_permission.dart';
+import 'package:installm/features/skills/application/skill_session.dart';
+import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
@@ -548,6 +551,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         ),
       ),
       ...?journal?.tools(),
+      ...prompt.skills.tools(),
     ]);
     try {
       // What the model's own template writes where its reply begins, so a
@@ -602,10 +606,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
 
   /// Stable instructions and facts stay in the system prefix; the goal is
   /// the recent room and assigned task. Both are charged by the agent loop.
-  Future<({String systemPrompt, String goal})> _assemblePrompt(
-    GroupChat chat,
-    Bot bot,
-  ) async {
+  Future<({String systemPrompt, String goal, SkillSession skills})>
+  _assemblePrompt(GroupChat chat, Bot bot) async {
     var projectMemory = '';
     if (bot.memoryScope != BotMemoryScope.none) {
       final memory = _ref.read(memoryProvider.notifier);
@@ -625,17 +627,26 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       room.writeln('${message.authorName}: ${message.text}');
     }
 
+    await _ref.read(skillsProvider.notifier).whenReady;
     final skills = _ref.read(skillsProvider);
     final ranked = SkillSelector.rank(
       skills: skills.skills,
       taskText: room.toString(),
       botId: bot.id,
+      botCapabilities: bot.toolPermissions.map(Capability.new).toSet(),
       workspaceId: chat.workspaceId,
     );
     // The same window a chat request would get; without a model selected
     // the selector still works against a conservative fallback.
     final window = _ref.read(selectedContextWindowProvider);
-    final usable = window?.resolvedConfig.contextTokens ?? 4000;
+    final usable = _ref
+        .read(contextBudgetProvider)
+        .budget
+        .resolvePolicy(
+          runtimeContextTokens: window?.resolvedConfig.contextTokens ?? 4000,
+          reservedOutputTokens: window?.resolvedConfig.maxOutputTokens ?? 256,
+        )
+        .usableInputTokens;
     final selected = SkillSelector.select(
       ranked: [
         for (final skill in ranked)
@@ -643,9 +654,26 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       ],
       usableInputTokens: usable,
     );
-    final skillSections = [
-      for (final item in selected) SkillSelector.sectionFor(item.skill),
-    ];
+    final skillSession = SkillSession(
+      skills: [for (final item in selected) item.skill],
+      tokenBudget: usable ~/ SkillSelector.maximumSkillShare,
+      isCurrent: (skill) {
+        final current = _ref.read(skillsProvider).skillById(skill.id);
+        final currentBot = _botById(bot.id);
+        return current != null &&
+            current.enabled &&
+            identical(current, skill) &&
+            currentBot != null &&
+            currentBot.skillIds.contains(skill.id) &&
+            skill.allowedFor(
+              currentBot.toolPermissions.map(Capability.new).toSet(),
+            ) &&
+            (skill.workspaceId == null ||
+                skill.workspaceId == chat.workspaceId) &&
+            !_cancelRequested.contains(chat.id);
+      },
+    );
+    final skillSections = skillSession.sections;
 
     var memory = '';
     final paths = _ref.read(vaultsProvider.notifier).pathsFor(chat.workspaceId);
@@ -714,6 +742,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         projectMemory: projectMemory,
       ),
       goal: parts.join('\n\n'),
+      skills: skillSession,
     );
   }
 

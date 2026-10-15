@@ -1,5 +1,6 @@
 import 'package:installm/features/conversations/domain/context_policy.dart';
 import 'package:installm/features/skills/domain/skill.dart';
+import 'package:installm/core/permissions/workspace_permission.dart';
 
 /// One skill selected for the current task, with the prompt section to inject.
 class SelectedSkill {
@@ -30,19 +31,21 @@ abstract final class SkillSelector {
     required String taskText,
     String? botId,
     String? workspaceId,
+    Set<Capability>? botCapabilities,
   }) {
     final words = _keywords(taskText);
     final scored = <({Skill skill, int score})>[];
     for (final skill in skills) {
       if (!skill.enabled) continue;
-      if (workspaceId != null &&
-          skill.workspaceId != null &&
-          skill.workspaceId != workspaceId) {
+      if (skill.workspaceId != null && skill.workspaceId != workspaceId) {
         continue;
       }
       if (botId != null &&
           skill.assignedBotIds.isNotEmpty &&
           !skill.assignedBotIds.contains(botId)) {
+        continue;
+      }
+      if (botCapabilities != null && !skill.allowedFor(botCapabilities)) {
         continue;
       }
       final score = _score(skill, words);
@@ -71,7 +74,7 @@ abstract final class SkillSelector {
 
   /// Prompt section for one skill, with its resource list for on-demand loads.
   static String sectionFor(Skill skill) {
-    final buffer = StringBuffer('Skill: ${skill.name}');
+    final buffer = StringBuffer('Skill: ${skill.name} (ID: ${skill.id})');
     if (skill.description.isNotEmpty) {
       buffer.write(' — ${skill.description}');
     }

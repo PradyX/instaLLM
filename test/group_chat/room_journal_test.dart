@@ -1,3 +1,6 @@
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/skills/data/skill_store.dart';
+import 'package:installm/features/skills/domain/skill.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -55,6 +58,7 @@ void main() {
               id: 'one',
               name: 'One',
               soul: 'Summarize project facts.',
+              skillIds: ['docs'],
             ),
           ],
         ),
@@ -78,8 +82,30 @@ void main() {
           ],
         ),
       );
+      final skillStore = SkillStore(File('${root.path}/skills.json'));
+      skillStore.save(
+        SkillsSnapshot(
+          customSkills: [
+            Skill.create(
+              id: 'docs',
+              name: 'summary',
+              body: 'Read the reference before making a summary.',
+              resourceNames: ['references/guide.md'],
+              bundleFiles: {
+                'references/guide.md':
+                    'Project documentation uses simple words.',
+              },
+            ),
+          ],
+        ),
+      );
       final runtime = ScriptedAgentRuntime(
         script: [
+          jsonEncode({
+            'type': 'tool_call',
+            'tool': 'skill_read_resource',
+            'arguments': {'skillId': 'docs', 'path': 'references/guide.md'},
+          }),
           jsonEncode({
             'type': 'tool_call',
             'tool': 'vault_record_summary',
@@ -98,6 +124,7 @@ void main() {
       );
       final container = ProviderContainer(
         overrides: [
+          skillStoreProvider.overrideWith((ref) async => skillStore),
           botStoreProvider.overrideWith((ref) async => bots),
           groupChatStoreProvider.overrideWith(
             (ref) async => GroupChatStore(File('${root.path}/rooms.json')),
@@ -138,6 +165,11 @@ void main() {
         '${root.path}/external/Project/bots/bot-one/summary.md',
       );
       expect(await note.readAsString(), 'Use Dart for this project.\n');
+      expect(
+        runtime.prompts[1],
+        contains('Project documentation uses simple words.'),
+      );
+      expect(runtime.prompts.first, contains('skill_read_resource'));
       expect(runtime.prompts.first, contains('vault_record_summary'));
       expect(runtime.prompts.first, contains('vault_write_note'));
       expect(

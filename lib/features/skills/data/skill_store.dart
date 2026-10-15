@@ -1,48 +1,99 @@
+import 'dart:convert';
 import 'dart:io';
-
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:installm/core/data/versioned_json_document.dart';
 import 'package:installm/features/skills/domain/built_in_skills.dart';
 import 'package:installm/features/skills/domain/skill.dart';
 
-/// Persisted skill registry: user skills plus per-skill state.
-///
-/// Built-ins are code and never written; they seed every load. Bodies are
-/// small (clamped to a few thousand tokens), so custom skills live in this
-/// one document instead of a file tree.
+/// Versioned registry containing copied text bundles. Preserve the original
+/// before every rewrite, including partial v1 data that the decoder skips.
 class SkillStore {
-  SkillStore(File file)
-    : _document = VersionedJsonDocument(
-        file: file,
-        currentVersion: currentVersion,
-        label: 'SkillStore',
-      );
-
-  static const int currentVersion = 1;
-
-  static Future<SkillStore> open() async {
-    final support = await getApplicationSupportDirectory();
-    return SkillStore(File(p.join(support.path, 'skills', 'skills.json')));
-  }
-
-  final VersionedJsonDocument _document;
-
-  String get filePath => _document.filePath;
-  bool get isReadOnly => _document.isReadOnly;
+  SkillStore(this.file);
+  final File file;
+  static const currentVersion = 2;
+  bool _readOnly = false;
+  bool _preserve = false;
+  bool get isReadOnly => _readOnly;
+  String get filePath => file.path;
+  static Future<SkillStore> open() async => SkillStore(
+    File(
+      p.join(
+        (await getApplicationSupportDirectory()).path,
+        'skills',
+        'skills.json',
+      ),
+    ),
+  );
 
   SkillsSnapshot load() {
-    final decoded = _document.read();
-    if (decoded == null) return SkillsSnapshot.empty;
-    return SkillsSnapshot.fromJson(decoded);
+    if (!file.existsSync()) return SkillsSnapshot.empty;
+    try {
+      final raw = jsonDecode(file.readAsStringSync());
+      if (raw is! Map<String, dynamic>) {
+        _preserve = true;
+        return SkillsSnapshot.empty;
+      }
+      final version = raw['version'];
+      if (version != 1 && version != currentVersion) {
+        _readOnly = true;
+        return SkillsSnapshot.empty;
+      }
+      final snapshot = SkillsSnapshot.fromJson(raw);
+      _preserve =
+          version == 1 ||
+          raw['skills'] is! List ||
+          jsonEncode(raw['skills']) !=
+              jsonEncode(
+                snapshot.customSkills.map((skill) => skill.toJson()).toList(),
+              ) ||
+          jsonEncode(raw['disabledBuiltInIds'] ?? []) !=
+              jsonEncode(snapshot.disabledBuiltInIds) ||
+          raw.keys.any(
+            (key) => !const {
+              'version',
+              'skills',
+              'disabledBuiltInIds',
+            }.contains(key),
+          );
+      return snapshot;
+    } on FormatException {
+      _preserve = true;
+      return SkillsSnapshot.empty;
+    }
   }
 
   bool save(SkillsSnapshot snapshot) {
-    return _document.write({
-      'version': currentVersion,
-      'skills': snapshot.customSkills.map((s) => s.toJson()).toList(),
-      'disabledBuiltInIds': snapshot.disabledBuiltInIds,
-    });
+    final temporary = File('${file.path}.tmp');
+    try {
+      // Re-read so a future-version file introduced after load stays protected.
+      load();
+      if (_readOnly) return false;
+      if (_preserve && file.existsSync()) {
+        file.copySync(
+          '${file.path}.preserved-${DateTime.now().microsecondsSinceEpoch}',
+        );
+      }
+      file.parent.createSync(recursive: true);
+      temporary.writeAsStringSync(
+        jsonEncode({
+          'version': currentVersion,
+          'skills': snapshot.customSkills.map((s) => s.toJson()).toList(),
+          'disabledBuiltInIds': snapshot.disabledBuiltInIds,
+        }),
+        flush: true,
+      );
+      temporary.renameSync(file.path);
+      _preserve = false;
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      if (temporary.existsSync()) {
+        try {
+          temporary.deleteSync();
+        } catch (_) {}
+      }
+    }
   }
 }
 

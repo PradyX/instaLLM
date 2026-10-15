@@ -26,6 +26,8 @@ class ParsedSkillManifest {
     required this.version,
     required this.permissions,
     required this.body,
+    this.resources = const [],
+    this.scripts = const [],
   });
 
   final String name;
@@ -33,6 +35,8 @@ class ParsedSkillManifest {
   final int version;
   final List<String> permissions;
   final String body;
+  final List<String> resources;
+  final List<String> scripts;
 }
 
 abstract final class SkillParser {
@@ -88,6 +92,12 @@ abstract final class SkillParser {
       version: version,
       permissions: permissions,
       body: remaining.trim(),
+      resources: frontmatter['resources'] is List<String>
+          ? frontmatter['resources'] as List<String>
+          : const [],
+      scripts: frontmatter['scripts'] is List<String>
+          ? frontmatter['scripts'] as List<String>
+          : const [],
     );
   }
 
@@ -126,7 +136,7 @@ abstract final class SkillParser {
       if (key.isEmpty) continue;
       if (value.isEmpty) {
         // A bare key starts a list when it is the permissions key.
-        if (key == 'permissions') {
+        if (const {'permissions', 'resources', 'scripts'}.contains(key)) {
           listKey = true;
           listKeyName = key;
         }

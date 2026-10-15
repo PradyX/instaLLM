@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:installm/features/skills/data/skill_bundle_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
 import 'package:installm/features/skills/domain/built_in_skills.dart';
@@ -65,6 +67,12 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
   }
 
   final Ref _ref;
+  Future<void> get whenReady async {
+    await _ref.read(skillStoreProvider.future);
+    while (!state.isReady && mounted) {
+      await Future<void>.delayed(Duration.zero);
+    }
+  }
 
   Future<void> _load() async {
     try {
@@ -116,6 +124,7 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
 
   /// Imports one SKILL.md file's text as a custom skill.
   Future<Skill?> importSkillText(String text, {String? sourceName}) async {
+    await whenReady;
     final parsed = SkillParser.parse(
       text,
       fallbackName: (sourceName ?? 'skill').trim().isEmpty
@@ -132,6 +141,29 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
     state = state.copyWith(skills: [...state.skills, skill], clearError: true);
     final saved = await _persist();
     return saved ? skill : null;
+  }
+
+  Future<Skill?> importFile(File file) async {
+    await whenReady;
+    try {
+      final skill = await const SkillBundleService().importFile(file);
+      final previous = state;
+      state = state.copyWith(
+        skills: [...state.skills, skill],
+        clearError: true,
+      );
+      if (await _persist()) return skill;
+      state = previous.copyWith(
+        errorMessage: 'Could not save the skill bundle.',
+      );
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: error is FormatException
+            ? error.message.toString()
+            : 'Could not read the selected skill bundle.',
+      );
+    }
+    return null;
   }
 
   Future<bool> setEnabled(String skillId, bool enabled) async {

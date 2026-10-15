@@ -49,6 +49,8 @@ class Skill {
     this.enabled = true,
     this.assignedBotIds = const [],
     this.resourceNames = const [],
+    this.scriptNames = const [],
+    this.bundleFiles = const {},
     required this.createdAt,
     required this.updatedAt,
   });
@@ -65,6 +67,9 @@ class Skill {
     String? workspaceId,
     bool enabled = true,
     List<String> assignedBotIds = const [],
+    List<String> resourceNames = const [],
+    List<String> scriptNames = const [],
+    Map<String, String> bundleFiles = const {},
     DateTime? now,
   }) {
     final timestamp = now ?? DateTime.now();
@@ -80,6 +85,9 @@ class Skill {
       workspaceId: workspaceId,
       enabled: enabled,
       assignedBotIds: assignedBotIds,
+      resourceNames: resourceNames,
+      scriptNames: scriptNames,
+      bundleFiles: bundleFiles,
       createdAt: timestamp,
       updatedAt: timestamp,
     ).normalized();
@@ -110,6 +118,11 @@ class Skill {
 
   /// Supporting files (references/, templates/…) available on demand.
   final List<String> resourceNames;
+
+  /// Declared scripts and copied UTF-8 bundle files. Never read external files
+  /// at inference time; imports are explicit snapshots.
+  final List<String> scriptNames;
+  final Map<String, String> bundleFiles;
 
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -149,6 +162,8 @@ class Skill {
       enabled: enabled,
       assignedBotIds: List.unmodifiable(assignedBotIds),
       resourceNames: List.unmodifiable(resourceNames),
+      scriptNames: List.unmodifiable(scriptNames),
+      bundleFiles: Map.unmodifiable(bundleFiles),
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -165,6 +180,8 @@ class Skill {
     bool? enabled,
     List<String>? assignedBotIds,
     List<String>? resourceNames,
+    List<String>? scriptNames,
+    Map<String, String>? bundleFiles,
     DateTime? updatedAt,
   }) {
     return Skill(
@@ -180,6 +197,8 @@ class Skill {
       enabled: enabled ?? this.enabled,
       assignedBotIds: assignedBotIds ?? this.assignedBotIds,
       resourceNames: resourceNames ?? this.resourceNames,
+      scriptNames: scriptNames ?? this.scriptNames,
+      bundleFiles: bundleFiles ?? this.bundleFiles,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     ).normalized();
@@ -199,6 +218,8 @@ class Skill {
       'enabled': enabled,
       'assignedBotIds': assignedBotIds,
       'resourceNames': resourceNames,
+      'scriptNames': scriptNames,
+      'bundleFiles': bundleFiles,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -248,6 +269,13 @@ class Skill {
       enabled: json['enabled'] is bool ? json['enabled'] as bool : true,
       assignedBotIds: readStrings(json['assignedBotIds']),
       resourceNames: readStrings(json['resourceNames']),
+      scriptNames: readStrings(json['scriptNames']),
+      bundleFiles: {
+        if (json['bundleFiles'] is Map)
+          for (final entry in (json['bundleFiles'] as Map).entries)
+            if (entry.key is String && entry.value is String)
+              entry.key as String: entry.value as String,
+      },
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),
     ).normalized();

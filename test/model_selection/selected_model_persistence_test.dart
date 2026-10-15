@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -8,29 +9,30 @@ import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 
-/// The two smallest catalog chat models. Installing both leaves a real choice,
-/// so "what the user picked" can differ from "what the app would pick".
-const _catalogFirstId = 'qwen-2.5-0.5b';
-const _chosenId = 'qwen-2.5-coder-0.5b';
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
   late Map<String, String> secureStore;
+  final containers = <ProviderContainer>[];
+  // Derive choices from the current catalog instead of pinning a model family.
+  final candidates = LlmModel.availableModels
+      .where((model) => !model.isEmbeddingModel && model.localFileName != null)
+      .take(3)
+      .toList();
+  final catalogFirstId = candidates[0].id;
+  final chosenId = candidates[1].id;
 
-  /// Writes a file the app accepts as an installed model: the GGUF magic bytes
-  /// are what tell a model apart from a half-finished download.
-  Future<void> installModel(String modelId) async {
+  /// Creates only a four-byte GGUF marker in the temporary directory.
+  /// No model weights are downloaded or loaded by this persistence test.
+  Future<void> createModelFixture(String modelId) async {
     final model = LlmModel.availableModels.firstWhere((m) => m.id == modelId);
     final file = File(p.join(tempDir.path, 'models', model.localFileName!));
     await file.parent.create(recursive: true);
     await file.writeAsBytes(const [0x47, 0x47, 0x55, 0x46]);
   }
 
-  setUp(() async {
-    tempDir = await Directory.systemTemp.createTemp('installm_selected_model');
-    secureStore = <String, String>{};
+  setUpAll(() {
     // The app resolves its own folders through a platform channel, so the
     // temporary directory keeps this test off the real app folders.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -69,9 +71,52 @@ void main() {
             }
           },
         );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('installm/storage_info'),
+          (call) async => {'freeBytes': 1, 'totalBytes': 2},
+        );
+  });
+
+  setUp(() async {
+    tempDir = await Directory.systemTemp.createTemp('installm_selected_model');
+    final fetchedAt = DateTime.now().toIso8601String();
+    // The persistence check needs no HTTP: give background metadata refreshes
+    // fresh caches for whichever models the catalog currently contains.
+    secureStore = {
+      'hf_discovered_models_cache_v1': jsonEncode({
+        'models': [],
+        'fetchedAt': fetchedAt,
+      }),
+      'hf_model_capabilities_cache_v1': jsonEncode({
+        'entries': {
+          for (final model in LlmModel.availableModels)
+            if (Uri.tryParse(model.downloadUrl ?? '') case final uri?
+                when uri.host == 'huggingface.co' &&
+                    uri.pathSegments.length >= 2)
+              uri.pathSegments.take(2).join('/'): {
+                'capabilities': model.capabilities.map((c) => c.id).toList(),
+                'fetchedAt': fetchedAt,
+              },
+        },
+      }),
+    };
   });
 
   tearDown(() async {
+    for (final container in containers) {
+      container.dispose();
+    }
+    containers.clear();
+    if (await tempDir.exists()) {
+      await tempDir.delete(recursive: true);
+    }
+  });
+
+  // Keep the channel mocks installed across test boundaries. Removing them
+  // while a previous controller resumes a background cache read activates the
+  // Linux singleton's sticky file fallback and poisons the following test.
+  tearDownAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),
@@ -82,9 +127,11 @@ void main() {
           const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
           null,
         );
-    if (await tempDir.exists()) {
-      await tempDir.delete(recursive: true);
-    }
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('installm/storage_info'),
+          null,
+        );
   });
 
   /// A launch of the app. The controller loads after it builds and disposes
@@ -92,7 +139,7 @@ void main() {
   /// the same subscription every surface reading the selection holds.
   ProviderContainer launch() {
     final container = ProviderContainer();
-    addTearDown(container.dispose);
+    containers.add(container);
     container.listen(modelSelectionControllerProvider, (previous, next) {});
     return container;
   }
@@ -106,10 +153,12 @@ void main() {
   ) async {
     for (var attempt = 0; attempt < 300; attempt++) {
       final state = container.read(modelSelectionControllerProvider);
-      if (done(state)) return state;
+      // Selection is published before storage info and background refreshes.
+      // Wait for initialization to advance past that platform await as well.
+      if (state.freeStorageBytes != null && done(state)) return state;
       await Future<void>.delayed(const Duration(milliseconds: 10));
     }
-    return container.read(modelSelectionControllerProvider);
+    fail('Model selection did not finish initializing.');
   }
 
   /// Waits for the write a selection schedules to reach storage: picking a
@@ -124,9 +173,9 @@ void main() {
     }
   }
 
-  test('a first launch starts on a model the device can run', () async {
-    await installModel(_catalogFirstId);
-    await installModel(_chosenId);
+  test('a first launch starts on an installed catalog model', () async {
+    await createModelFixture(catalogFirstId);
+    await createModelFixture(chosenId);
 
     final container = launch();
     final state = await waitForSelection(
@@ -136,12 +185,12 @@ void main() {
 
     // Nothing chosen yet: the app starts on an installed model rather than on
     // an empty selection, and that start is remembered below like any choice.
-    expect(state.selectedModelId, _catalogFirstId);
+    expect(state.selectedModelId, catalogFirstId);
   });
 
   test('the next launch opens on the model the user chose', () async {
-    await installModel(_catalogFirstId);
-    await installModel(_chosenId);
+    await createModelFixture(catalogFirstId);
+    await createModelFixture(chosenId);
 
     final first = launch();
     await waitForSelection(first, (state) => state.selectedModelId != null);
@@ -151,34 +200,34 @@ void main() {
     final chosen = first
         .read(modelSelectionControllerProvider)
         .models
-        .firstWhere((model) => model.id == _chosenId);
+        .firstWhere((model) => model.id == chosenId);
     first.read(modelSelectionControllerProvider.notifier).selectModel(chosen);
 
     expect(
       first.read(modelSelectionControllerProvider).selectedModelId,
-      _chosenId,
+      chosenId,
     );
-    await waitForStored(_chosenId);
+    await waitForStored(chosenId);
     expect(
       secureStore[ModelSelectionController.selectedModelStorageKey],
-      _chosenId,
+      chosenId,
     );
 
     // A second launch of the app, with the same models installed.
     final second = launch();
     final restored = await waitForSelection(
       second,
-      (state) => state.selectedModelId == _chosenId,
+      (state) => state.selectedModelId == chosenId,
     );
 
-    expect(restored.selectedModelId, _chosenId);
+    expect(restored.selectedModelId, chosenId);
   });
 
   test('a choice that is no longer installed falls back', () async {
-    await installModel(_catalogFirstId);
+    await createModelFixture(catalogFirstId);
     // A pick made in an earlier run, for a model since deleted from the app.
     secureStore[ModelSelectionController.selectedModelStorageKey] =
-        'qwen-2.5-coder-3b';
+        candidates.last.id;
 
     final container = launch();
     final state = await waitForSelection(
@@ -186,6 +235,6 @@ void main() {
       (state) => state.selectedModelId != null,
     );
 
-    expect(state.selectedModelId, _catalogFirstId);
+    expect(state.selectedModelId, catalogFirstId);
   });
 }

@@ -281,8 +281,10 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                         : const [],
                   ),
                   // A room is where an agent run can write files, so it is the
-                  // surface that offers undoing them.
+                  // surface that offers undoing them; it is also where a task
+                  // can be left running while the user goes elsewhere.
                   RewindCommand.option(),
+                  ...BackgroundCommand.options(),
                 ],
                 members: [
                   for (final id in chat.memberBotIds)

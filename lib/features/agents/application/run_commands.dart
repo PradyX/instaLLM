@@ -1,4 +1,5 @@
 import 'package:installm/core/widgets/composer_command_picker.dart';
+import 'package:installm/features/agents/domain/background_run.dart';
 import 'package:installm/features/agents/domain/run_checkpoint.dart';
 
 /// `/rewind` — undoing the files an agent run wrote (Road Map 3 Phase 3.3.3).
@@ -71,6 +72,94 @@ String rewindListing(List<RunCheckpoint> runs) {
         '  ${run.entries.map((entry) => entry.relativePath).join(', ')}',
       )
       ..write('  /rewind ${run.id}');
+  }
+  return buffer.toString();
+}
+
+/// `/background` — a task this chat's bot works on while the user is elsewhere.
+///
+/// Starting, listing and stopping are one command because they are one story:
+/// a supervised run the user cannot see, list or stop would be exactly the
+/// hidden automation the roadmap rules out.
+class BackgroundCommand {
+  const BackgroundCommand({
+    this.task,
+    this.list = false,
+    this.stopId,
+    this.stopCurrent = false,
+    this.message,
+  });
+
+  /// Task to run in the background.
+  final String? task;
+
+  /// True for `/background` and `/background list`.
+  final bool list;
+
+  /// Run to stop, when the user named one.
+  final String? stopId;
+
+  /// True for `/background stop`: the run going in this chat.
+  final bool stopCurrent;
+
+  /// Text to show instead of running anything.
+  final String? message;
+
+  static const String usage =
+      'Runs a task here while you are elsewhere:\n'
+      '/background <task> — start one with this chat’s bot\n'
+      '/background @Bot <task> — start one with a named bot\n'
+      '/background list — what this chat has run\n'
+      '/background stop [run id] — stop the run going here'
+      '\nThe run is an ordinary turn of this chat: same tools, same questions, '
+      'same rules. You get one notice when it finishes or needs you.';
+
+  /// The commands for the composer's suggestion list.
+  static List<ComposerCommand> options() => [
+    (command: '/background', description: 'Run a task while you are elsewhere'),
+  ];
+
+  /// Parses [text] as a background-run command, or null for anything else.
+  static BackgroundCommand? parse(String text) {
+    final trimmed = text.trim();
+    final lower = trimmed.toLowerCase();
+    final isRun = lower == '/runs' || lower.startsWith('/runs ');
+    final isBackground =
+        lower == '/background' || lower.startsWith('/background ');
+    if (!isRun && !isBackground) return null;
+    final rest = isRun
+        ? (trimmed.length <= 5 ? '' : trimmed.substring(5).trim())
+        : (trimmed.length <= 11 ? '' : trimmed.substring(11).trim());
+    if (rest.isEmpty || rest.toLowerCase() == 'list') {
+      return const BackgroundCommand(list: true);
+    }
+    final words = rest.split(RegExp(r'\s+'));
+    if (words.first.toLowerCase() == 'stop') {
+      if (words.length == 1) return const BackgroundCommand(stopCurrent: true);
+      if (words.length == 2) return BackgroundCommand(stopId: words[1]);
+      return const BackgroundCommand(message: usage);
+    }
+    return BackgroundCommand(task: rest);
+  }
+}
+
+/// The listing `/background` shows: what ran, and where each one stands.
+String backgroundRunListing(List<BackgroundRun> runs) {
+  if (runs.isEmpty) {
+    return 'No supervised run has been started here yet. Start one with '
+        '/background <task>.';
+  }
+  final buffer = StringBuffer('Runs started here (newest first):');
+  for (final run in runs.take(10)) {
+    buffer
+      ..writeln()
+      ..write(
+        '- ${run.id} · ${run.status.label} · ${run.botName} · '
+        '${_clock(run.startedAt)} · ${run.task}',
+      );
+    if (run.isRunning) {
+      buffer.write('\n  /background stop ${run.id}');
+    }
   }
   return buffer.toString();
 }

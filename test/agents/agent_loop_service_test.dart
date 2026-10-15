@@ -314,6 +314,61 @@ void main() {
     expect(run.steps.last.text, 'Stopped by the user.');
   });
 
+  test('a composed goal longer than the user limit still runs', () async {
+    // A room's goal is the conversation, which is longer than the limit meant
+    // for a goal the user typed; a room turn must not be refused for it.
+    final runtime = ScriptedAgentRuntime(script: ['Done.']);
+    final service = serviceFor(runtime);
+    final composed = 'Recent room:\n${'You: about the plan\n' * 200}';
+
+    final run = await service.run(
+      model: model,
+      goal: composed,
+      registry: registryFor(calls: []),
+      userSuppliedGoal: false,
+    );
+
+    expect(run.status, AgentRunStatus.completed);
+    expect(run.answer, 'Done.');
+    expect(runtime.generateCalls, 1);
+
+    await expectLater(
+      service.run(
+        model: model,
+        goal: composed,
+        registry: registryFor(calls: []),
+      ),
+      throwsA(isA<Exception>()),
+    );
+  });
+
+  test('a turn stopped before it reaches the model never generates', () async {
+    final runtime = ScriptedAgentRuntime(script: ['never']);
+    final service = serviceFor(runtime);
+    var stopped = true;
+
+    final run = await service.run(
+      model: model,
+      goal: 'Anything',
+      registry: registryFor(calls: []),
+      stopRequested: () => stopped,
+    );
+
+    expect(runtime.generateCalls, 0);
+    expect(run.status, AgentRunStatus.stopped);
+    expect(run.answer, isEmpty);
+    expect(run.steps.last.text, 'Stopped by the user.');
+
+    stopped = false;
+    final next = await service.run(
+      model: model,
+      goal: 'Anything',
+      registry: registryFor(calls: []),
+      stopRequested: () => stopped,
+    );
+    expect(next.status, AgentRunStatus.completed);
+  });
+
   test('reports a missing model file and never loads it', () async {
     final runtime = ScriptedAgentRuntime(script: ['never']);
     final service = AgentLoopService(

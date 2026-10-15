@@ -176,4 +176,61 @@ class LocalNotificationService {
       );
     }
   }
+
+  /// Tells the user a supervised agent run ended or needs them.
+  ///
+  /// A run started on purpose to continue while the user is elsewhere, so the
+  /// notice is the point of it: without one, "background" would only mean
+  /// "hidden". Both kinds share one channel because they are the same story —
+  /// work the user left this device to finish.
+  Future<void> showBackgroundRun({
+    required String title,
+    required String body,
+  }) async {
+    await initialize();
+    if (!_notificationsAvailable) return;
+
+    const androidDetails = AndroidNotificationDetails(
+      'background_runs',
+      'Agent runs',
+      channelDescription: 'Notifies when an agent run finishes or needs you',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: true,
+    );
+    const linuxDetails = LinuxNotificationDetails(
+      category: LinuxNotificationCategory.transferComplete,
+      urgency: LinuxNotificationUrgency.normal,
+      defaultActionName: 'Open InstaLLM',
+    );
+    const windowsDetails = WindowsNotificationDetails();
+
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+      linux: linuxDetails,
+      windows: windowsDetails,
+    );
+
+    try {
+      await _plugin.show(
+        id: title.hashCode & 0x7fffffff,
+        title: title,
+        body: body,
+        notificationDetails: details,
+      );
+    } catch (error, stackTrace) {
+      AppLogger.warning(
+        'LocalNotificationService failed to show notification: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
 }

@@ -11,6 +11,7 @@ import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/core/utils/logger.dart';
 import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/application/background_runs_controller.dart';
 import 'package:installm/features/agents/application/delegation_service.dart';
 import 'package:installm/features/agents/application/delegation_tools.dart';
 import 'package:installm/features/agents/application/rewind_service.dart';
@@ -274,6 +275,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   }
 
   /// Stops the running turn in [chatId], if any.
+  ///
+  /// The request is kept until the turn it belongs to ends, so a stop that
+  /// arrives while the turn is still being set up is not lost before there is
+  /// a generation to cancel.
   void cancelTurn(String chatId) {
     _cancelRequested.add(chatId);
     _skillRunners[chatId]?.cancel();
@@ -281,6 +286,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       _ref.read(agentLoopServiceProvider).cancel();
     } catch (_) {}
   }
+
+  /// Forgets a stop asked for a turn that never began, so it cannot end the
+  /// chat's next turn instead.
+  void forgetStopRequest(String chatId) => _cancelRequested.remove(chatId);
 
   final _openingTaskRooms = <String, Future<String?>>{};
 
@@ -376,7 +385,19 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// Posts the user's line and runs whoever should answer.
   Future<void> sendUserMessage(String chatId, String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || state.runningChatIds.contains(chatId)) return;
+    if (trimmed.isEmpty) return;
+    // `/background` is served even while this room is answering, because its
+    // `stop`, `list` and `start` answers are exactly the ones a busy room
+    // needs — and a stop that waited for the turn it wants to end would never
+    // arrive.
+    final background = BackgroundCommand.parse(trimmed);
+    if (background != null) {
+      final chat = _chatById(chatId);
+      if (chat == null) return;
+      await _handleBackground(chat, background, trimmed);
+      return;
+    }
+    if (state.runningChatIds.contains(chatId)) return;
     final rewind = RewindCommand.parse(trimmed);
     if (rewind != null) {
       final chat = _chatById(chatId);
@@ -537,6 +558,140 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     }
   }
 
+  /// `/background` — a task this chat's bot works on while the user is away.
+  ///
+  /// The run itself is an ordinary turn of this room, started through the same
+  /// controller, so it obeys the same tools, permission questions and hooks.
+  /// All this adds is the record, the cancel, and the notice when it is done or
+  /// needs an answer.
+  Future<void> _handleBackground(
+    GroupChat chat,
+    BackgroundCommand command,
+    String text,
+  ) async {
+    // Deliberately not marked as running here: this command starts no
+    // generation of its own, and marking it busy would make the supervised run
+    // it just started return without doing anything.
+    _append(GroupMessage.user(chatId: chat.id, text: text));
+    await _persist();
+    {
+      final runs = _ref.read(backgroundRunsProvider.notifier);
+      await runs.whenReady;
+      if (command.message != null) {
+        await _sayRewind(chat.id, command.message!);
+        return;
+      }
+      final mine = [
+        for (final run in _ref.read(backgroundRunsProvider).runs)
+          if (run.chatId == chat.id) run,
+      ];
+      if (command.list) {
+        await _sayRewind(chat.id, backgroundRunListing(mine));
+        return;
+      }
+      if (command.stopCurrent || command.stopId != null) {
+        final target = command.stopId == null
+            ? _ref.read(backgroundRunsProvider).runningIn(chat.id)
+            : _ref.read(backgroundRunsProvider).byId(command.stopId!);
+        if (target == null || !target.isRunning) {
+          await _sayRewind(
+            chat.id,
+            command.stopId == null
+                ? 'No run is going in this chat.'
+                : 'Run ${command.stopId} is not going.',
+          );
+          return;
+        }
+        if (target.chatId != chat.id) {
+          await _sayRewind(
+            chat.id,
+            'Run ${target.id} belongs to ${target.chatName}. Stop it from '
+            'there.',
+          );
+          return;
+        }
+        final stopped = await runs.stop(target.id);
+        await _sayRewind(
+          chat.id,
+          stopped
+              ? 'Stopping run ${target.id} (${target.botName}). '
+                    'Whatever it produced so far stays in this chat.'
+              : 'That run is no longer going.',
+        );
+        return;
+      }
+      if (state.runningChatIds.contains(chat.id) &&
+          _ref.read(backgroundRunsProvider).runningIn(chat.id) == null) {
+        await _sayRewind(
+          chat.id,
+          'This chat is answering right now, so a run was not started. Try '
+          'again when it is free.',
+        );
+        return;
+      }
+      final task = (command.task ?? '').trim();
+      if (task.isEmpty) {
+        await _sayRewind(chat.id, BackgroundCommand.usage);
+        return;
+      }
+      await _ref.read(botsProvider.notifier).whenReady;
+      final members = _membersOf(chat);
+      Bot? actor;
+      var goal = task;
+      if (goal.startsWith('@')) {
+        final split = goal.indexOf(RegExp(r'\s'));
+        final name = split < 0 ? goal.substring(1) : goal.substring(1, split);
+        actor = delegatedTarget(members: members, requested: name);
+        if (actor == null) {
+          await _sayRewind(
+            chat.id,
+            'No bot in this chat is called “$name”. Members: '
+            '${members.map((member) => member.name).join(', ')}.',
+          );
+          return;
+        }
+        goal = split < 0 ? '' : goal.substring(split).trim();
+      } else {
+        actor = members.isEmpty ? null : members.first;
+      }
+      if (actor == null) {
+        await _sayRewind(
+          chat.id,
+          'This chat has no bot to run the task, so nothing was started.',
+        );
+        return;
+      }
+      if (goal.isEmpty) {
+        await _sayRewind(chat.id, BackgroundCommand.usage);
+        return;
+      }
+      final run = await runs.start(
+        chatId: chat.id,
+        chatName: chat.name,
+        botId: actor.id,
+        botName: actor.name,
+        task: goal,
+      );
+      if (run == null) {
+        await _sayRewind(
+          chat.id,
+          _ref.read(backgroundRunsProvider).errorMessage ??
+              'The run could not be started.',
+        );
+        return;
+      }
+      AppLogger.info(
+        'Room ${chat.id} started background run ${run.id} for ${actor.name}.',
+      );
+      await _sayRewind(
+        chat.id,
+        'Started ${run.id} — ${actor.name} is working on “${run.task}” in the '
+        'background. You can leave this screen; you get one notice when it '
+        'finishes or needs you, and /background stop ends it early.',
+      );
+    }
+  }
+
   /// One `/rewind` answer, under the app's own name rather than a bot's.
   Future<void> _sayRewind(String chatId, String text) async {
     _append(
@@ -584,7 +739,6 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     final found = _chatById(chatId);
     if (found == null) return;
     GroupChat chat = found;
-    _cancelRequested.remove(chatId);
     state = state.copyWith(runningChatIds: {...state.runningChatIds, chatId});
     try {
       var text = firstText;
@@ -835,20 +989,32 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
                 ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${answerRegistry.describeForPrompt()}'
                 : prompt.systemPrompt,
             assistantPrefill: assistantPrefill,
+            // The room owns the stop, so a turn stopped while it was still
+            // being set up is honoured instead of answering anyway.
+            stopRequested: () => _cancelRequested.contains(chat.id),
+            // This goal is the room itself — history, notes and skills — so it
+            // is bounded by the context budget rather than by the limit meant
+            // for a goal the user typed (which it would always exceed).
+            userSuppliedGoal: false,
           );
       final answer = run.answer.trim().isEmpty
           ? (run.status == AgentRunStatus.budgetReached
                 ? run.steps.last.text
                 : '(The model gave no answer.)')
           : run.answer.trim();
-      _append(
-        GroupMessage.bot(
-          chatId: chat.id,
-          botId: bot.id,
-          botName: bot.name,
-          text: answer,
-        ),
-      );
+      // A turn the user stopped before it answered adds nothing: the stop is
+      // reported where the run is tracked, and “(The model gave no answer.)”
+      // would read as a failure.
+      if (answer.trim().isNotEmpty || !_cancelRequested.contains(chat.id)) {
+        _append(
+          GroupMessage.bot(
+            chatId: chat.id,
+            botId: bot.id,
+            botName: bot.name,
+            text: answer,
+          ),
+        );
+      }
     } catch (error) {
       _append(
         GroupMessage.bot(

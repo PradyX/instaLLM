@@ -120,7 +120,12 @@ class AgentLoopService {
   static const double topP = 0.8;
   static const int topK = 40;
 
-  /// Longest goal accepted, so one run cannot be started with a document.
+  /// Longest goal accepted from the user, so one run cannot be started with a
+  /// document.
+  ///
+  /// Only a goal the user typed is capped: a caller that composes the goal
+  /// itself (a room's turn, which is the conversation so far) is bounded by the
+  /// context budget below instead, and refusing it would refuse the room.
   static const int maximumGoalLength = 2000;
 
   /// Instruction the agent runs under.
@@ -162,12 +167,14 @@ class AgentLoopService {
     void Function(int inputTokens, int reservedOutput, int window)? onContext,
     String? systemPrompt,
     String assistantPrefill = '',
+    bool Function()? stopRequested,
+    bool userSuppliedGoal = true,
   }) async {
     final trimmedGoal = goal.trim();
     if (trimmedGoal.isEmpty) {
       throw Exception('Describe the goal the agent should work on.');
     }
-    if (trimmedGoal.length > maximumGoalLength) {
+    if (userSuppliedGoal && trimmedGoal.length > maximumGoalLength) {
       throw Exception('Keep the goal under $maximumGoalLength characters.');
     }
     if (_runtime.isGenerating) {
@@ -232,6 +239,26 @@ class AgentLoopService {
     }
 
     _cancelled = false;
+
+    /// A stop the caller owns, asked for before this run reached the model.
+    ///
+    /// A room is stopped from the moment it accepts the task, so the request
+    /// can arrive while the turn is still being set up — before there is a
+    /// generation for [cancel] to reach. Without this the turn would answer
+    /// after the user had already stopped it.
+    bool stoppedByUser() => _cancelled || (stopRequested?.call() ?? false);
+
+    if (stoppedByUser()) {
+      log(
+        AgentStep(
+          index: steps.length + 1,
+          kind: AgentStepKind.notice,
+          iteration: 0,
+          text: 'Stopped by the user.',
+        ),
+      );
+      return build(AgentRunStatus.stopped);
+    }
 
     final modelPath = await resolveModelPath(model);
     if (modelPath == null ||
@@ -304,14 +331,14 @@ class AgentLoopService {
           if (token.contains(stopToken)) break;
         }
       } catch (error) {
-        if (!_cancelled) {
+        if (!stoppedByUser()) {
           errorMessage = _messageOf(error);
           failed = true;
         }
       }
 
       final rawText = buildFinalResponseText(buffer.toString());
-      if (_cancelled) {
+      if (stoppedByUser()) {
         status = AgentRunStatus.stopped;
         answer = rawText.trim();
         log(
@@ -417,7 +444,7 @@ class AgentLoopService {
               ),
             );
 
-          if (_cancelled) {
+          if (stoppedByUser()) {
             status = AgentRunStatus.stopped;
             log(
               AgentStep(

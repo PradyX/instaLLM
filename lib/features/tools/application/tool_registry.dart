@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:installm/features/agents/domain/agent_hook.dart';
 import 'package:installm/features/tools/domain/tool_call.dart';
 import 'package:installm/features/tools/domain/tool_definition.dart';
 import 'package:installm/features/tools/domain/tool_execution_result.dart';
@@ -84,8 +85,10 @@ class ToolRegistry {
     required Iterable<ToolEntry> tools,
     required ToolPlatform? platform,
     ToolPermissionGate permissionGate = const DenySensitiveTools(),
+    HookPolicy hooks = const HookPolicy(),
   }) : _platform = platform,
        _permissionGate = permissionGate,
+       _hooks = hooks,
        _entries = {for (final entry in tools) entry.definition.name: entry};
 
   final Map<String, ToolEntry> _entries;
@@ -94,6 +97,12 @@ class ToolRegistry {
   /// unsupported instead of guessing a runtime that is not there.
   final ToolPlatform? _platform;
   final ToolPermissionGate _permissionGate;
+
+  /// The user's own guardrails, asked before every call this registry runs.
+  ///
+  /// A hook can only restrict: it refuses a call or forces the permission
+  /// question, and never turns a refusal into a run.
+  final HookPolicy _hooks;
 
   /// Every declared tool, in declaration order.
   List<ToolDefinition> get definitions =>
@@ -110,6 +119,7 @@ class ToolRegistry {
       tools: [..._entries.values, ...extra],
       platform: _platform,
       permissionGate: _permissionGate,
+      hooks: _hooks,
     );
   }
 
@@ -257,7 +267,23 @@ class ToolRegistry {
       );
     }
 
-    if (definition.risk.needsPermission) {
+    // The hooks decide first, because a rule the user wrote is a refusal the
+    // model must hear about: it can ask for something else, rather than wait
+    // for a prompt that will not come.
+    final matched = _hooks.matchFor(
+      tool: definition,
+      arguments: validation.arguments,
+    );
+    if (matched != null && matched.hook.level == HookLevel.refuse) {
+      return ToolExecutionResult(
+        toolName: definition.name,
+        status: ToolExecutionStatus.denied,
+        output: matched.refusalMessage,
+      );
+    }
+
+    if (definition.risk.needsPermission ||
+        matched?.hook.level == HookLevel.ask) {
       final approved = await _permissionGate.requestApproval(
         ToolApprovalRequest(tool: definition, arguments: validation.arguments),
       );
@@ -265,9 +291,11 @@ class ToolRegistry {
         return ToolExecutionResult(
           toolName: definition.name,
           status: ToolExecutionStatus.denied,
-          output:
-              'The user did not allow ${definition.name} to run, so nothing '
-              'happened.',
+          output: matched == null
+              ? 'The user did not allow ${definition.name} to run, so nothing '
+                    'happened.'
+              : '${matched.askedMessage} The user did not allow '
+                    '${definition.name} to run, so nothing happened.',
         );
       }
     }

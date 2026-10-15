@@ -96,6 +96,14 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.skills),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: const Text('Hooks'),
+                  subtitle: const Text(
+                    'Rules that refuse or question what agents may touch',
+                  ),
+                  onTap: () => context.push(AppRoutes.hooks),
+                ),
+                ListTile(
                   leading: const Icon(Icons.hub_outlined),
                   title: const Text('MCP servers'),
                   subtitle: const Text('External tools bots can use'),

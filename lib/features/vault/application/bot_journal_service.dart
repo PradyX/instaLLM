@@ -181,6 +181,9 @@ class BotJournalSession {
         description:
             'Create a condensed project note elsewhere in the linked workspace. Always asks permission. Existing notes are preserved and report a conflict.',
         risk: ToolRiskLevel.sensitive,
+        // The note path is what a hook protects: declaring it here is what
+        // lets a rule refuse one folder without knowing this tool.
+        resourceArguments: ['relativePath'],
         parameters: [
           ToolParameter(
             name: 'relativePath',

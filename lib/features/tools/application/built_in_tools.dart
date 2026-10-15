@@ -1,3 +1,4 @@
+import 'package:installm/features/agents/domain/agent_hook.dart';
 import 'package:installm/features/tools/application/tool_registry.dart';
 import 'package:installm/features/tools/data/android_action_tools.dart';
 import 'package:installm/features/tools/data/calculator_tool.dart';
@@ -46,6 +47,7 @@ List<ToolEntry> builtInToolEntries({
 ToolRegistry buildToolRegistry({
   required ToolPlatform? platform,
   ToolPermissionGate permissionGate = const DenySensitiveTools(),
+  HookPolicy hooks = const HookPolicy(),
   Clock? clock,
   Future<List<ConversationHistoryMatch>> Function(String query, int limit)?
   conversationHistorySearch,
@@ -66,5 +68,6 @@ ToolRegistry buildToolRegistry({
     ),
     platform: platform,
     permissionGate: permissionGate,
+    hooks: hooks,
   );
 }

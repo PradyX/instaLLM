@@ -151,6 +151,7 @@ class ToolDefinition {
     required this.risk,
     this.platforms = ToolPlatform.all,
     this.timeout = const Duration(seconds: 10),
+    this.resourceArguments = const [],
   });
 
   /// Stable identifier the model asks for; never localized.
@@ -167,6 +168,15 @@ class ToolDefinition {
 
   /// How long the handler may take before the registry stops waiting.
   final Duration timeout;
+
+  /// Argument names that hold the file or folder this tool acts on, first one
+  /// that is present wins.
+  ///
+  /// Declared rather than guessed so a rule can protect a path without the
+  /// app reading the tool's own code: `vault_write_note` names its
+  /// `relativePath`, and a tool that acts on no named file leaves this empty
+  /// and can only be matched by tool name.
+  final List<String> resourceArguments;
 
   /// False on a platform the app does not target, so a tool can never run
   /// where its implementation is unknown.

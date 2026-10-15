@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/agents/application/hooks_controller.dart';
 import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
@@ -19,12 +20,18 @@ import 'package:installm/features/tools/domain/tool_definition.dart';
 /// the screens show — chat history, the active knowledge collection and
 /// installed models — and never change it. Sensitive tools (the Android
 /// actions) run only after the user answers the chat's approval prompt.
+///
+/// The user's hooks are read here too, so every surface that runs a tool —
+/// chat, rooms and agent runs — obeys the same rules, and editing a rule in
+/// Settings rebuilds this one registry instead of needing each caller to
+/// remember it.
 final toolRegistryProvider = Provider<ToolRegistry>((ref) {
   return buildToolRegistry(
     platform: currentToolPlatform(),
     permissionGate: ChatToolPermissionGate(
       ref.read(toolApprovalControllerProvider.notifier),
     ),
+    hooks: ref.watch(hooksProvider).policy,
     androidActions: (toolName, arguments) => ref
         .read(androidToolExecutorServiceProvider)
         .executeAction(toolName: toolName, arguments: arguments),

@@ -1,3 +1,4 @@
+import 'package:installm/features/agents/presentation/hooks_page.dart';
 import 'package:installm/features/benchmark/presentation/benchmark_screen.dart';
 import 'package:installm/features/context/presentation/context_budget_page.dart';
 import 'package:installm/features/conversations/presentation/conversations_page.dart';
@@ -39,6 +40,7 @@ abstract class AppRoutes {
   static const voiceConversation = '/voice/conversation';
   static const workspaces = '/workspaces';
   static const skills = '/skills';
+  static const hooks = '/hooks';
   static const mcp = '/mcp';
   static const vaults = '/vaults';
   static const vaultManage = '/vaults/manage';
@@ -124,6 +126,10 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.skills,
         builder: (context, state) => const SkillsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.hooks,
+        builder: (context, state) => const HooksPage(),
       ),
       GoRoute(
         path: AppRoutes.mcp,

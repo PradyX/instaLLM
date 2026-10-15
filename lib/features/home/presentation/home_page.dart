@@ -1,4 +1,9 @@
 import 'package:installm/features/skills/presentation/skill_context_details.dart';
+import 'package:installm/features/skills/application/skill_choices.dart';
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/memory/application/memory_controller.dart';
+import 'package:installm/features/kanban/application/kanban_controller.dart'
+    show activeWorkspaceIdProvider;
 import 'dart:async';
 import 'dart:io';
 
@@ -963,6 +968,16 @@ class _HomePageState extends ConsumerState<HomePage> {
     LlmModel? selectedModel,
     List<LlmModel> downloadedModels,
   ) {
+    final skills = ref.watch(skillsProvider);
+    final memory = ref.watch(memoryProvider);
+    final conversationId = ref
+        .watch(conversationControllerProvider)
+        .activeConversationId;
+    final workspaceId =
+        memory.conversationWorkspaces[conversationId] ??
+        (memory.isReady && memory.errorMessage == null && !memory.isReadOnly
+            ? ref.watch(activeWorkspaceIdProvider)
+            : null);
     final canCompose = !isGenerating;
     final progressText = generationText.isEmpty
         ? 'Assistant is responding...'
@@ -1009,6 +1024,16 @@ class _HomePageState extends ConsumerState<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ChatComposer(
+            commands: _draftImages.isNotEmpty || !skills.isReady
+                ? const []
+                : SkillCommand.options(
+                    skills.skills
+                        .where(
+                          (skill) =>
+                              eligibleSkill(skill, workspaceId: workspaceId),
+                        )
+                        .toList(),
+                  ),
             controller: _messageController,
             enabled: canCompose,
             hintText: !hasDownloadedModel

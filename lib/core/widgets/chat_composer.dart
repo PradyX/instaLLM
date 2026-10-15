@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:installm/core/widgets/composer_command_picker.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
 import 'package:installm/features/home/presentation/composer_shortcuts.dart';
 
@@ -42,6 +43,8 @@ class ChatComposer extends StatelessWidget {
     this.micState = ComposerMicState.idle,
     this.focusNode,
     this.onKeyEvent,
+    this.commands = const [],
+    this.additionalQuery,
   });
 
   /// Text being composed; owned by the hosting page.
@@ -79,11 +82,32 @@ class ChatComposer extends StatelessWidget {
   /// What the mic shows; see [ComposerMicState].
   final ComposerMicState micState;
 
+  final List<ComposerCommand> commands;
+  final ComposerCommandQuery? Function(TextEditingValue)? additionalQuery;
   final FocusNode? focusNode;
   final KeyEventResult Function(FocusNode, KeyEvent)? onKeyEvent;
 
   @override
   Widget build(BuildContext context) {
+    return ComposerCommandPicker(
+      controller: controller,
+      enabled: enabled,
+      commands: commands,
+      additionalQuery: additionalQuery,
+      focusNode: focusNode,
+      onKeyEvent: onKeyEvent,
+      onSend: onSend,
+      builder: (focus, keyHandler, submit) =>
+          _buildPanel(context, focus, keyHandler, submit),
+    );
+  }
+
+  Widget _buildPanel(
+    BuildContext context,
+    FocusNode focus,
+    KeyEventResult Function(FocusNode, KeyEvent) keyHandler,
+    Future<void> Function() submit,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final micHandler = onMicPressed;
     return FrostedPanel(
@@ -117,11 +141,11 @@ class ChatComposer extends StatelessWidget {
             // here: this column shrink-wraps, so the field sizes itself.
             ComposerSendOnEnter(
               sendsOnEnter: enabled && sendsOnEnter,
-              onSend: onSend,
+              onSend: submit,
               child: Focus(
-                onKeyEvent: onKeyEvent,
+                onKeyEvent: keyHandler,
                 child: TextField(
-                  focusNode: focusNode,
+                  focusNode: focus,
                   controller: controller,
                   enabled: enabled,
                   readOnly: !enabled,
@@ -136,7 +160,8 @@ class ChatComposer extends StatelessWidget {
                     filled: false,
                     contentPadding: const EdgeInsets.fromLTRB(8, 10, 8, 4),
                   ),
-                  onSubmitted: enabled ? (_) => onSend() : null,
+                  onSubmitted: enabled ? (_) => submit() : null,
+                  onTapOutside: (_) => focus.unfocus(),
                 ),
               ),
             ),

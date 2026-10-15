@@ -192,6 +192,28 @@ class SkillCommand {
       .toLowerCase()
       .replaceAll(RegExp(r'[^a-z0-9-]+'), '-')
       .replaceAll(RegExp(r'^-+|-+$'), '');
+
+  static List<({String command, String description})> options(
+    List<Skill> eligible,
+  ) {
+    final counts = <String, int>{};
+    for (final skill in eligible) {
+      counts.update(nameFor(skill), (v) => v + 1, ifAbsent: () => 1);
+    }
+    return [
+      (command: '/chat', description: t.skills.normalChat),
+      (command: '/skills', description: t.skills.listCommands),
+      for (final skill in eligible)
+        (
+          command:
+              '/${nameFor(skill)}${(counts[nameFor(skill)]! > 1 || const {'chat', 'skills'}.contains(nameFor(skill))) ? '@${skill.id}' : ''}',
+          description: skill.description.isEmpty
+              ? skill.name
+              : skill.description,
+        ),
+    ];
+  }
+
   static SkillCommand? parse(String text, List<Skill> eligible) {
     final trimmed = text.trim();
     if (!trimmed.startsWith('/')) return null;
@@ -201,13 +223,9 @@ class SkillCommand {
         .toLowerCase();
     var task = split < 0 ? '' : trimmed.substring(split).trim();
     if (name.isEmpty || name == 'skills') {
-      final counts = <String, int>{};
-      for (final skill in eligible) {
-        counts.update(nameFor(skill), (v) => v + 1, ifAbsent: () => 1);
-      }
       return SkillCommand(
         message:
-            '${t.skills.commands}\n/chat — ${t.skills.normalChat}\n${eligible.map((skill) => '/${nameFor(skill)}${(counts[nameFor(skill)]! > 1 || const {'chat', 'skills'}.contains(nameFor(skill))) ? '@${skill.id}' : ''} — ${skill.description.isEmpty ? skill.name : skill.description}').join('\n')}',
+            '${t.skills.commands}\n${options(eligible).map((option) => '${option.command} — ${option.description}').join('\n')}',
       );
     }
     if (name == 'chat') {

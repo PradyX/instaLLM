@@ -891,6 +891,9 @@ class Translations$skills$en {
 	/// en: 'Available skill commands (send /skill-name followed by your task):'
 	String get commands => 'Available skill commands (send /skill-name followed by your task):';
 
+	/// en: 'List available skill commands'
+	String get listCommands => 'List available skill commands';
+
 	/// en: 'Ordinary chat; no session skill selected.'
 	String get normalChat => 'Ordinary chat; no session skill selected.';
 
@@ -1199,6 +1202,7 @@ extension on Translations {
 			'vault.restored' => ({required Object count}) => '${count} Vault registration(s) restored',
 			'skills.title' => 'Skills',
 			'skills.commands' => 'Available skill commands (send /skill-name followed by your task):',
+			'skills.listCommands' => 'List available skill commands',
 			'skills.normalChat' => 'Ordinary chat; no session skill selected.',
 			'skills.unavailable' => 'This skill is unavailable here. Send / to list enabled skills for this workspace and bot.',
 			'skills.ambiguous' => 'More than one eligible skill has this name. Send / and use its full command.',

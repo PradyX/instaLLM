@@ -22,6 +22,10 @@ void main() {
       final skills = BuiltInSkills.all();
       expect(SkillCommand.parse('ordinary text', skills), isNull);
       expect(SkillCommand.parse('/', skills)!.message, contains('/review'));
+      expect(
+        SkillCommand.options(skills).map((option) => option.command),
+        containsAll(['/chat', '/skills', '/review']),
+      );
       final review = SkillCommand.parse('/review inspect this patch', skills)!;
       expect(review.choice!.skillId, 'skill-builtin-review');
       expect(review.task, 'inspect this patch');
@@ -41,6 +45,20 @@ void main() {
         resourceNames: ['templates/a.md'],
       );
       final two = Skill.create(id: 'two', name: 'docs');
+      final reserved = Skill.create(id: 'reserved', name: 'chat');
+      final options = SkillCommand.options([one, two, reserved]);
+      expect(
+        options.map((option) => option.command),
+        containsAll(['/docs@one', '/docs@two', '/chat@reserved']),
+      );
+      for (final option in options.where(
+        (option) => option.command.contains('@'),
+      )) {
+        expect(
+          SkillCommand.parse(option.command, [one, two, reserved])!.choice,
+          isNotNull,
+        );
+      }
       expect(
         SkillCommand.parse('/docs', [one, two])!.message,
         contains('More than one'),

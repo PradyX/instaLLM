@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;background:transparent;color:var(--foreground);font-family:var(--font-sans,system-ui)}
+.variant-selector{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}.variant-selector select{font:inherit;color:var(--foreground);background:var(--background);border:1px solid var(--border);border-radius:6px;padding:8px}
+#slash-designs [hidden]{display:none!important}
+#slash-designs .stage{--app-bg:light-dark(#f5f6ef,#181d14);--surface:light-dark(#fff,#2a2e25);--edge:light-dark(#daddd2,#414638);--ink:light-dark(#282d22,#e4e6dc);--quiet:light-dark(#616957,#b9beaf);--green:light-dark(#536f2a,#b1ce83);--highlight:light-dark(#eaf0df,#38452a);box-sizing:border-box;position:relative;min-height:540px;background:var(--app-bg);color:var(--ink);border-radius:14px;padding:20px;font:14px/1.45 system-ui;overflow:hidden}
+#slash-designs *{box-sizing:border-box}#slash-designs .bar{display:flex;align-items:center;justify-content:space-between;color:var(--green);padding-bottom:20px}#slash-designs .bar span{color:var(--ink);font-weight:500}
+#slash-designs .history{min-height:95px;display:flex;align-items:flex-start;gap:12px;flex-direction:column}#slash-designs .reply{padding:12px 16px;border-radius:18px;background:var(--surface);max-width:90%}#slash-designs .label{color:var(--quiet);font-size:12px;margin:0 0 8px}#slash-designs .title{font-weight:500;padding:12px 14px 6px;color:var(--quiet);font-size:12px}
+#slash-designs .composer{background:var(--surface);border:1px solid var(--edge);border-radius:20px;padding:16px;margin-top:12px}#slash-designs input{width:100%;color:var(--ink);background:transparent;border:0;font:16px/1.5 system-ui;padding:8px 0 22px;outline-offset:4px;min-width:0}#slash-designs .tools{display:flex;justify-content:space-between;align-items:center;gap:8px}#slash-designs .model{font-size:12px;border:1px solid var(--edge);border-radius:22px;padding:8px 12px}#slash-designs .send{border:0;border-radius:50%;background:var(--green);color:var(--app-bg);height:38px;width:38px;font:22px system-ui}
+#slash-designs .menu{background:var(--surface);border:1px solid var(--edge);border-radius:14px;overflow:hidden}#slash-designs .commands button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;border-radius:0;background:transparent;color:var(--ink);text-align:left;padding:10px 14px;font:14px/1.3 system-ui;min-height:44px}#slash-designs .commands button:first-child{background:var(--highlight)}#slash-designs .commands button:hover{background:var(--highlight)}#slash-designs .commands strong{font-weight:500;display:block;overflow-wrap:anywhere}#slash-designs .commands small{display:block;color:var(--quiet);font:12px/1.4 system-ui;margin-top:2px}#slash-designs .commands .key{color:var(--quiet);font-size:12px;flex-shrink:0}#slash-designs .hint{font-size:12px;color:var(--quiet);padding:8px 14px;border-top:1px solid var(--edge)}
+#slash-designs .popover .menu{max-width:440px;margin-top:6px}#slash-designs .integrated .commands{border-bottom:1px solid var(--edge);margin:-4px -6px 10px}#slash-designs .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 16px}#slash-designs .chips button{background:var(--surface);border:1px solid var(--edge);color:var(--ink);border-radius:18px;padding:9px 12px;font:13px system-ui;min-height:40px}#slash-designs .chips button:hover{background:var(--highlight)}#slash-designs .sheetwrap{margin:14px -20px -20px;padding:16px 20px 20px;background:var(--surface);border-radius:20px 20px 0 0;border-top:1px solid var(--edge)}#slash-designs .sheet .commands button{border-bottom:1px solid var(--edge)}#slash-designs .sheet .composer{background:var(--app-bg)}#slash-designs .foot{font-size:12px;color:var(--quiet);text-align:right;margin-top:8px}
+@media(max-width:400px){#slash-designs .stage{padding:16px;min-height:610px}#slash-designs .sheetwrap{margin-left:-16px;margin-right:-16px;padding:16px}#slash-designs .commands .key{display:none}}
+</style></head><body>
+<label class="variant-selector">Design <select id="variant-choice" aria-label="Choose a design"><option>Floating list</option><option>Inside composer</option><option>Quick commands</option><option>Command drawer</option></select></label>
+<div id="slash-designs" class="viz-dotted-background" aria-label="Slash command picker designs">
+<section data-variant="Floating list" aria-label="Floating list"><div class="stage popover" data-layout="popover"></div></section>
+<section data-variant="Inside composer" aria-label="Inside composer" hidden><div class="stage integrated" data-layout="integrated"></div></section>
+<section data-variant="Quick commands" aria-label="Quick commands" hidden><div class="stage quick" data-layout="quick"></div></section>
+<section data-variant="Command drawer" aria-label="Command drawer" hidden><div class="stage sheet" data-layout="sheet"></div></section>
+</div>
+<script>
+const root=document.getElementById('slash-designs');
+document.getElementById('variant-choice').addEventListener('change',event=>root.querySelectorAll('[data-variant]').forEach(section=>section.hidden=section.dataset.variant!==event.target.value));
+const commands=[['/review','Review changes for bugs and missing validation'],['/chat','Return to ordinary chat'],['/flutter-development','Flutter implementation and debugging'],['/documentation','Write project notes and reports']];
+const rows=(items)=>'<div class="commands">'+items.map((c,i)=>'<button type="button" class="cursor-interaction" data-command="'+c[0]+'"><span><strong>'+c[0]+'</strong><small>'+c[1]+'</small></span><span class="key">'+(i===0?'↵':'')+'</span></button>').join('')+'</div>';
+const composer=()=>'<div class="composer"><input aria-label="Message InstaLLM" value="/" spellcheck="false"><div class="tools"><span class="model">SmolLM2 · 360M</span><button class="send cursor-interaction" type="button" aria-label="Send message">↑</button></div></div>';
+root.querySelectorAll('.stage').forEach(stage=>{
+ const layout=stage.dataset.layout;
+ const top='<div class="bar">☰ <span>InstaLLM</span> ＋</div><div class="history"><div class="reply">Ordinary chat; no session skill selected.</div></div>';
+ let ui='';
+ if(layout==='popover')ui='<div class="menu"><div class="title">Available commands</div>'+rows(commands)+'<div class="hint">↑ ↓ Navigate · Enter to insert · Esc to close</div></div>'+composer();
+ if(layout==='integrated')ui='<div class="composer"><div class="label">Available commands</div>'+rows(commands)+'<input aria-label="Message InstaLLM" value="/" spellcheck="false"><div class="tools"><span class="model">SmolLM2 · 360M</span><button type="button" class="send cursor-interaction" aria-label="Send message">↑</button></div></div>';
+ if(layout==='quick')ui='<div style="min-height:155px"></div><div class="label">Available commands</div><div class="chips">'+commands.map(c=>'<button type="button" class="cursor-interaction" data-command="'+c[0]+'">'+c[0]+'</button>').join('')+'</div>'+composer();
+ if(layout==='sheet')ui='<div class="sheetwrap"><div class="label">Available commands</div>'+rows(commands)+composer()+'</div>';
+ stage.innerHTML=top+ui+'<div class="foot" aria-live="polite">Type / to browse commands</div>';
+ const input=stage.querySelector('input');
+ stage.querySelectorAll('[data-command]').forEach(button=>button.addEventListener('click',()=>{input.value=button.dataset.command+' ';input.focus();stage.querySelector('.foot').textContent='Command inserted — add your task';}));
+ input.addEventListener('input',()=>{const prefix=input.value.toLowerCase();stage.querySelectorAll('[data-command]').forEach(button=>button.hidden=!button.dataset.command.startsWith(prefix));});
+ stage.querySelector('.send').addEventListener('click',()=>{stage.querySelector('.foot').textContent='Preview only — no message sent';});
+ if(globalThis.Tweak){const state={descriptions:true};const tweak=new Tweak({container:stage,onChange:()=>stage.querySelectorAll('small').forEach(el=>el.hidden=!state.descriptions)});tweak.addToggle(state,'descriptions',{label:'Command descriptions'});}
+});
+console.log('Slash picker: four variants ready');
+</script></body></html>

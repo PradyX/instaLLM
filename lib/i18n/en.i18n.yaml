@@ -265,6 +265,7 @@ vault:
 skills:
   title: "Skills"
   commands: "Available skill commands (send /skill-name followed by your task):"
+  listCommands: "List available skill commands"
   normalChat: "Ordinary chat; no session skill selected."
   unavailable: "This skill is unavailable here. Send / to list enabled skills for this workspace and bot."
   ambiguous: "More than one eligible skill has this name. Send / and use its full command."

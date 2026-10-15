@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:installm/core/widgets/chat_composer.dart';
+import 'package:installm/core/widgets/composer_command_picker.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
-import 'package:installm/i18n/strings.g.dart';
 
 /// The mention being edited at the caret, with room-member prefix matches.
 class BotMentionQuery {
@@ -63,7 +62,7 @@ class BotMentionQuery {
   }
 }
 
-class RoomMentionComposer extends StatefulWidget {
+class RoomMentionComposer extends StatelessWidget {
   const RoomMentionComposer({
     super.key,
     required this.controller,
@@ -75,6 +74,7 @@ class RoomMentionComposer extends StatefulWidget {
     this.reasoning,
     this.onMicPressed,
     this.micState = ComposerMicState.idle,
+    this.commands = const [],
   });
   final TextEditingController controller;
   final List<Bot> members;
@@ -85,152 +85,35 @@ class RoomMentionComposer extends StatefulWidget {
   final Widget? reasoning;
   final VoidCallback? onMicPressed;
   final ComposerMicState micState;
+  final List<ComposerCommand> commands;
 
   @override
-  State<RoomMentionComposer> createState() => _RoomMentionComposerState();
-}
-
-class _RoomMentionComposerState extends State<RoomMentionComposer> {
-  final _focus = FocusNode();
-  final _scroll = ScrollController();
-  TextEditingValue? _dismissed;
-  var _selected = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_changed);
-  }
-
-  @override
-  void didUpdateWidget(RoomMentionComposer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_changed);
-      widget.controller.addListener(_changed);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_changed);
-    _focus.dispose();
-    _scroll.dispose();
-    super.dispose();
-  }
-
-  void _changed() => setState(() => _selected = 0);
-
-  BotMentionQuery? get _query =>
-      !widget.enabled || widget.controller.value == _dismissed
-      ? null
-      : BotMentionQuery.atCaret(widget.controller.value, widget.members);
-
-  void _choose(BotMentionQuery query, Bot bot) {
-    final next = query.insert(widget.controller.value, bot);
-    _dismissed = next;
-    widget.controller.value = next;
-    _focus.requestFocus();
-  }
-
-  KeyEventResult _key(FocusNode node, KeyEvent event) {
-    final query = _query;
-    if (query == null ||
-        event is KeyUpEvent ||
-        HardwareKeyboard.instance.isShiftPressed ||
-        HardwareKeyboard.instance.isControlPressed ||
-        HardwareKeyboard.instance.isAltPressed ||
-        HardwareKeyboard.instance.isMetaPressed) {
-      return KeyEventResult.ignored;
-    }
-    final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.escape) {
-      setState(() => _dismissed = widget.controller.value);
-    } else if (key == LogicalKeyboardKey.arrowDown ||
-        key == LogicalKeyboardKey.arrowUp) {
-      setState(
-        () => _selected =
-            (_selected + (key == LogicalKeyboardKey.arrowDown ? 1 : -1)) %
-            query.matches.length,
+  Widget build(BuildContext context) => ChatComposer(
+    commands: commands,
+    controller: controller,
+    enabled: enabled,
+    hintText: hintText,
+    onSend: onSend,
+    leading: leading,
+    reasoning: reasoning,
+    onMicPressed: onMicPressed,
+    micState: micState,
+    additionalQuery: (value) {
+      final query = BotMentionQuery.atCaret(value, members);
+      if (query == null) return null;
+      Bot botFor(ComposerCommand option) =>
+          query.matches.firstWhere((bot) => '@${bot.name}' == option.command);
+      return ComposerCommandQuery(
+        query.start,
+        query.cursor,
+        [
+          for (final bot in query.matches)
+            (command: '@${bot.name}', description: bot.description),
+        ],
+        insertValue: (value, option) => query.insert(value, botFor(option)),
+        leading: (option) =>
+            ProfileAvatar(profileKey: botProfileKey(botFor(option).id)),
       );
-      if (_scroll.hasClients) {
-        _scroll.jumpTo(
-          (_selected * 56.0).clamp(0, _scroll.position.maxScrollExtent),
-        );
-      }
-    } else if (key == LogicalKeyboardKey.enter ||
-        key == LogicalKeyboardKey.numpadEnter ||
-        key == LogicalKeyboardKey.tab) {
-      _choose(
-        query,
-        query.matches[_selected.clamp(0, query.matches.length - 1)],
-      );
-    } else {
-      return KeyEventResult.ignored;
-    }
-    return KeyEventResult.handled;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final query = _query;
-    return ChatComposer(
-      controller: widget.controller,
-      enabled: widget.enabled,
-      hintText: widget.hintText,
-      onSend: widget.onSend,
-      focusNode: _focus,
-      onKeyEvent: _key,
-      leading: widget.leading,
-      reasoning: widget.reasoning,
-      onMicPressed: widget.onMicPressed,
-      micState: widget.micState,
-      header: query == null
-          ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  t.roomMentions.title,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 180),
-                  child: ListView.builder(
-                    controller: _scroll,
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: query.matches.length,
-                    itemBuilder: (context, index) {
-                      final bot = query.matches[index];
-                      return Material(
-                        type: MaterialType.transparency,
-                        child: ListTile(
-                          key: ValueKey('mention-${bot.id}'),
-                          dense: true,
-                          selected: index == _selected,
-                          selectedTileColor: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          leading: ProfileAvatar(
-                            profileKey: botProfileKey(bot.id),
-                          ),
-                          title: Text(
-                            '@${bot.name}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: () => _choose(query, bot),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
+    },
+  );
 }

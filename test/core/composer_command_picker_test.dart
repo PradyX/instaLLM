@@ -149,6 +149,9 @@ void main() {
       await tester.enterText(find.byType(TextField), '/res');
       await tester.pumpAndSettle();
       expect(find.text('/research'), findsOneWidget);
+      await tester.enterText(find.byType(TextField), '/');
+      await tester.pumpAndSettle();
+      expect(find.text('/chat'), findsOneWidget);
     },
   );
 

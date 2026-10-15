@@ -138,6 +138,7 @@ class _ComposerCommandPickerState extends State<ComposerCommandPicker> {
   }
 
   void _changed() {
+    if (widget.controller.value != _dismissed) _dismissed = null;
     setState(() => _selected = 0);
     _syncOverlay();
     if (_scroll.hasClients) _scroll.jumpTo(0);

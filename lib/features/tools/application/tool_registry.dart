@@ -123,6 +123,44 @@ class ToolRegistry {
     );
   }
 
+  /// A registry without [names], for a run that must not reach them.
+  ///
+  /// Removing a tool is the one narrowing the app does to itself: a delegated
+  /// child gets no route back to delegating. The platform and the permission
+  /// gate carry over unchanged, so a tool that remains is refused here exactly
+  /// as it is anywhere else.
+  ToolRegistry without(Iterable<String> names) {
+    final removed = names.toSet();
+    return ToolRegistry(
+      tools: [
+        for (final entry in _entries.values)
+          if (!removed.contains(entry.definition.name)) entry,
+      ],
+      platform: _platform,
+      permissionGate: _permissionGate,
+      hooks: _hooks,
+    );
+  }
+
+  /// Only what changes nothing: the tools a delegated child may use.
+  ///
+  /// A hand-off reads and answers; it does not write notes, journals or board
+  /// tasks, so the envelope is narrowed by what a tool does rather than by who
+  /// asked. Sensitive and write tools stay with the run that owns them.
+  ToolRegistry readOnlyOnly() {
+    return ToolRegistry(
+      tools: [
+        for (final entry in _entries.values)
+          if (entry.definition.risk == ToolRiskLevel.safe ||
+              entry.definition.risk == ToolRiskLevel.readOnly)
+            entry,
+      ],
+      platform: _platform,
+      permissionGate: _permissionGate,
+      hooks: _hooks,
+    );
+  }
+
   /// Tools that actually run on this platform.
   List<ToolDefinition> get supportedDefinitions => definitions
       .where((definition) => definition.isSupportedOn(_platform))

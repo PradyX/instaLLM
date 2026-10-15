@@ -11,6 +11,8 @@ import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/core/utils/logger.dart';
 import 'package:installm/features/agents/application/agent_loop_service.dart';
+import 'package:installm/features/agents/application/delegation_service.dart';
+import 'package:installm/features/agents/application/delegation_tools.dart';
 import 'package:installm/features/agents/application/rewind_service.dart';
 import 'package:installm/features/agents/application/run_checkpoint_session.dart';
 import 'package:installm/features/agents/application/run_commands.dart';
@@ -642,6 +644,18 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     }
   }
 
+  /// What the model's own template writes where its reply begins, so a bot
+  /// answers in the reasoning state this user set for that model.
+  Future<String> _assistantPrefillFor(LlmModel model) async {
+    final reasoning = await _ref
+        .read(modelReasoningServiceProvider)
+        .resolve(model);
+    return reasoning?.prefillFor(
+          _ref.read(reasoningSettingsProvider).choiceFor(model.id),
+        ) ??
+        '';
+  }
+
   /// Runs one bot's answer: the local model the room resolves to, else a
   /// pending prompt the user (or a pasted reply) completes.
   ///
@@ -740,6 +754,13 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       onResult: prompt.skills.recordScriptResult,
     );
     _skillRunners[chat.id] = scripts;
+    // The other bots this one may hand a task to. Each keeps its own soul and
+    // gets a read-only copy of this registry, so a delegation can never widen
+    // what the asking bot could do itself.
+    final delegatable = [
+      for (final id in chat.memberBotIds)
+        if (id != bot.id) ?_botById(id),
+    ];
     final registry = _ref.read(toolRegistryProvider).extendedWith([
       ...buildKanbanTools(
         KanbanToolContext(
@@ -760,24 +781,42 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       ...prompt.skills.tools(),
       ...scripts.tools(prompt.skills.skills),
     ]);
+    final assistantPrefill = await _assistantPrefillFor(model);
+    final answerRegistry = delegatable.isEmpty
+        ? registry
+        : registry.extendedWith([
+            buildDelegationTool(
+              actor: bot,
+              members: delegatable,
+              model: model,
+              budget: _ref.read(contextBudgetProvider).budget,
+              registry: registry,
+              runner: DelegationRunner(
+                loop: _ref.read(agentLoopServiceProvider),
+              ),
+              assistantPrefill: assistantPrefill,
+              readSlice: (requested) {
+                if (paths == null || binding == null) {
+                  return Future.value(
+                    'No workspace folder is linked, so no files could be '
+                    'passed along.',
+                  );
+                }
+                return const DelegationRunner().readSlice(
+                  paths: paths,
+                  permissions: binding.permissions,
+                  requested: requested,
+                );
+              },
+            ),
+          ]);
     try {
-      // What the model's own template writes where its reply begins, so a
-      // bot answers in the reasoning state this user set for that model.
-      final reasoning = await _ref
-          .read(modelReasoningServiceProvider)
-          .resolve(model);
-      final assistantPrefill =
-          reasoning?.prefillFor(
-            _ref.read(reasoningSettingsProvider).choiceFor(model.id),
-          ) ??
-          '';
-
       final run = await _ref
           .read(agentLoopServiceProvider)
           .run(
             model: model,
             goal: prompt.goal,
-            registry: registry,
+            registry: answerRegistry,
             maxIterations: 6,
             budget: _ref.read(contextBudgetProvider).budget,
             onContext: (input, reserved, window) {
@@ -793,7 +832,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
               };
             },
             systemPrompt: model.supportsToolCalling
-                ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${registry.describeForPrompt()}'
+                ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${answerRegistry.describeForPrompt()}'
                 : prompt.systemPrompt,
             assistantPrefill: assistantPrefill,
           );

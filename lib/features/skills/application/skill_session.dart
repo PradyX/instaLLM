@@ -17,6 +17,7 @@ class SkillSession {
   final int tokenBudget;
   final bool Function(Skill) isCurrent;
   final Map<String, String> _loaded = {};
+  List<String> get resourceSections => _loaded.values.toList(growable: false);
   int get bodyTokens => TokenEstimator.estimateText(sections.join('\n\n'));
   int get resourceTokens => _loaded.values.fold(
     0,

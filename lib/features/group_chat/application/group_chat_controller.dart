@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/core/permissions/workspace_permission.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
@@ -401,9 +402,51 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     final chat = _chatById(chatId);
     if (chat == null) return;
     if (chat.isDirect && _botById(chat.directBotId!) == null) return;
-    _append(GroupMessage.user(chatId: chatId, text: trimmed));
+    var task = trimmed;
+    if (trimmed.startsWith('/')) {
+      await _ref.read(skillsProvider.notifier).whenReady;
+      await _ref.read(skillChoicesProvider.notifier).whenReady;
+      final eligible = _ref
+          .read(skillsProvider)
+          .skills
+          .where(
+            (skill) => _membersOf(chat).any(
+              (bot) => eligibleSkill(
+                skill,
+                workspaceId: chat.workspaceId,
+                botId: bot.id,
+                capabilities: bot.toolPermissions,
+                assignedSkillIds: bot.skillIds,
+              ),
+            ),
+          )
+          .toList();
+      final command = SkillCommand.parse(trimmed, eligible)!;
+      var message = command.message;
+      if ((command.choice != null || command.clear) &&
+          !await _ref
+              .read(skillChoicesProvider.notifier)
+              .select('room:$chatId', command.choice)) {
+        message = t.skills.saveError;
+      }
+      if (message != null) {
+        _append(GroupMessage.user(chatId: chatId, text: trimmed));
+        _append(
+          GroupMessage.bot(
+            chatId: chatId,
+            botId: 'installm-skills',
+            botName: t.skills.title,
+            text: message,
+          ),
+        );
+        await _persist();
+        return;
+      }
+      task = command.task;
+    }
+    _append(GroupMessage.user(chatId: chatId, text: task));
     await _persist();
-    await _runTurn(chatId, firstText: trimmed, roundsUsed: 0);
+    await _runTurn(chatId, firstText: task, roundsUsed: 0);
   }
 
   /// Records a pasted answer for a pending bot turn, then routes onward.
@@ -450,6 +493,24 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         members: _membersOf(chat),
         userText: text,
       );
+      if (speaker == null) {
+        final choice = _ref.read(skillChoicesProvider)['room:$chatId'];
+        final skill = _ref.read(skillsProvider).skillById(choice?.skillId);
+        if (skill != null) {
+          for (final member in _membersOf(chat)) {
+            if (eligibleSkill(
+              skill,
+              workspaceId: chat.workspaceId,
+              botId: member.id,
+              capabilities: member.toolPermissions,
+              assignedSkillIds: member.skillIds,
+            )) {
+              speaker = member.id;
+              break;
+            }
+          }
+        }
+      }
       while (speaker != null && rounds < chat.maxRounds) {
         if (_cancelRequested.contains(chatId)) break;
         final bot = _botById(speaker);
@@ -488,7 +549,23 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// Any installed chat model may answer; a model that cannot call tools simply
   /// answers without them, the way it does in a normal chat.
   Future<void> _answerAsBot(GroupChat chat, Bot bot) async {
-    final prompt = await _assemblePrompt(chat, bot);
+    late final ({String systemPrompt, String goal, SkillSession skills}) prompt;
+    try {
+      prompt = await _assemblePrompt(chat, bot);
+    } catch (error) {
+      _append(
+        GroupMessage.bot(
+          chatId: chat.id,
+          botId: bot.id,
+          botName: bot.name,
+          text: error is FormatException
+              ? error.message.toString()
+              : t.skills.unavailable,
+        ),
+      );
+      await _persist();
+      return;
+    }
     final pendingPrompt = '${prompt.systemPrompt}\n\n${prompt.goal}'.trim();
     final model = roomAnswerModel(
       chat: chat,
@@ -663,13 +740,37 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           reservedOutputTokens: window?.resolvedConfig.maxOutputTokens ?? 256,
         )
         .usableInputTokens;
+    await _ref.read(skillChoicesProvider.notifier).whenReady;
+    final choice = _ref.read(skillChoicesProvider)['room:${chat.id}'];
+    final explicit = choice == null ? null : skills.skillById(choice.skillId);
     final selected = SkillSelector.select(
       ranked: [
-        for (final skill in ranked)
-          if (bot.skillIds.contains(skill.id)) skill,
+        if (explicit != null &&
+            eligibleSkill(
+              explicit,
+              workspaceId: chat.workspaceId,
+              botId: bot.id,
+              capabilities: bot.toolPermissions,
+              assignedSkillIds: bot.skillIds,
+            ))
+          explicit,
+        if (choice == null)
+          for (final skill in ranked)
+            if (bot.skillIds.contains(skill.id)) skill,
       ],
       usableInputTokens: usable,
     );
+    if (explicit != null &&
+        eligibleSkill(
+          explicit,
+          workspaceId: chat.workspaceId,
+          botId: bot.id,
+          capabilities: bot.toolPermissions,
+          assignedSkillIds: bot.skillIds,
+        ) &&
+        selected.isEmpty) {
+      throw FormatException(t.skills.budgetError);
+    }
     final skillSession = SkillSession(
       skills: [for (final item in selected) item.skill],
       tokenBudget: usable ~/ SkillSelector.maximumSkillShare,
@@ -692,7 +793,20 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             !_cancelRequested.contains(chat.id);
       },
     );
-    final skillSections = skillSession.sections;
+    if (choice != null &&
+        explicit != null &&
+        selected.any((item) => item.skill.id == explicit.id)) {
+      for (final path in choice.resources) {
+        final loaded = skillSession.readResource(explicit.id, path);
+        if (!loaded.startsWith('Skill resource ')) {
+          throw FormatException(loaded);
+        }
+      }
+    }
+    final skillSections = [
+      ...skillSession.sections,
+      ...skillSession.resourceSections,
+    ];
 
     var memory = '';
     final paths = _ref.read(vaultsProvider.notifier).pathsFor(chat.workspaceId);

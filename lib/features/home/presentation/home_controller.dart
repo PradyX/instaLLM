@@ -1,3 +1,6 @@
+import 'package:installm/features/skills/application/skill_choices.dart';
+import 'package:installm/features/skills/application/skills_controller.dart';
+import 'package:installm/features/skills/application/skill_session.dart';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -299,6 +302,10 @@ class HomeController extends _$HomeController {
   bool _conversationStateHydrated = false;
   bool _suppressNextConversationLoad = false;
   bool _stopRequestedByUser = false;
+  SkillSession? _turnSkills;
+
+  ToolRegistry get _turnRegistry =>
+      ref.read(toolRegistryProvider).extendedWith(_turnSkills?.tools() ?? []);
   double? _adaptiveTokensPerSecondEma;
 
   /// The running local summary of older turns, when one is in flight.
@@ -356,15 +363,20 @@ class HomeController extends _$HomeController {
           .read(memoryProvider)
           .conversationWorkspaces[_activeConversationId],
     );
-    return withMemoryFacts(
+    final base = withMemoryFacts(
       composePersonaSystemPrompt(
         persona: _activePersona,
         toolContract: model.supportsToolCalling
-            ? ref.read(toolRegistryProvider).describeForPrompt()
+            ? _turnRegistry.describeForPrompt()
             : '',
       ),
       facts,
     );
+    return [
+      base,
+      ...?_turnSkills?.sections,
+      ...?_turnSkills?.resourceSections,
+    ].join('\n\n');
   }
 
   Future<void> _prepareSavedMemory(String conversationId) async {
@@ -508,6 +520,47 @@ class HomeController extends _$HomeController {
     List<String> imagePaths = const [],
     Map<String, MessageAttachment> reusedAttachments = const {},
   }) async {
+    if (imagePaths.isEmpty && text.trim().startsWith('/')) {
+      await ref.read(skillsProvider.notifier).whenReady;
+      await ref.read(skillChoicesProvider.notifier).whenReady;
+      final id = await _ensureActiveConversation();
+      if (id == null || _disposed) return;
+      await _prepareSavedMemory(id);
+      final workspace = ref.read(memoryProvider).conversationWorkspaces[id];
+      final eligible = ref
+          .read(skillsProvider)
+          .skills
+          .where((skill) => eligibleSkill(skill, workspaceId: workspace))
+          .toList();
+      final command = SkillCommand.parse(text, eligible)!;
+      if ((command.choice != null || command.clear) &&
+          !await ref
+              .read(skillChoicesProvider.notifier)
+              .select('conversation:$id', command.choice)) {
+        _appendAssistantError(t.skills.saveError);
+        return;
+      }
+      if (!_isCurrentMemoryConversation(id)) return;
+      if (command.message != null) {
+        state = [
+          ...state,
+          Message.create(
+            conversationId: id,
+            role: MessageRole.user,
+            content: text,
+          ),
+          Message.create(
+            conversationId: id,
+            role: MessageRole.system,
+            content: command.message!,
+            modelName: t.skills.title,
+          ),
+        ];
+        await _persistConversation();
+        return;
+      }
+      text = command.task;
+    }
     await _runPrompt(
       promptText: text,
       appendUserMessage: true,
@@ -708,6 +761,7 @@ class HomeController extends _$HomeController {
         );
       }
       _stopRequestedByUser = false;
+      _turnSkills = null;
       unawaited(_persistConversation());
     }
   }
@@ -849,6 +903,32 @@ class HomeController extends _$HomeController {
               collectionId: documentRetrieval.collectionId,
               queryVector: documentRetrieval.queryVector,
             );
+      await ref.read(skillsProvider.notifier).whenReady;
+      await ref.read(skillChoicesProvider.notifier).whenReady;
+      final sessionId = _activeConversationId;
+      final workspace = ref
+          .read(memoryProvider)
+          .conversationWorkspaces[sessionId];
+      final choice = ref.read(skillChoicesProvider)['conversation:$sessionId'];
+      _turnSkills = choiceSession(
+        choice: choice,
+        eligible: ref
+            .read(skillsProvider)
+            .skills
+            .where((skill) => eligibleSkill(skill, workspaceId: workspace))
+            .toList(),
+        usableInputTokens: contextPolicy.usableInputTokens,
+        isCurrent: (skill) =>
+            !_disposed &&
+            !_stopRequestedByUser &&
+            _activeConversationId == sessionId &&
+            ref
+                    .read(skillChoicesProvider)['conversation:$sessionId']
+                    ?.skillId ==
+                skill.id &&
+            identical(ref.read(skillsProvider).skillById(skill.id), skill) &&
+            eligibleSkill(skill, workspaceId: workspace),
+      );
       final assembly = const ConversationContextBuilder().build(
         messages: [
           for (final message in state)
@@ -921,7 +1001,7 @@ class HomeController extends _$HomeController {
 
       _setStatus(text: 'Building prompt...', isGenerating: true);
 
-      final registry = ref.read(toolRegistryProvider);
+      final registry = _turnRegistry;
       final firstCompletion = await _streamCompletion(
         aiMessageId: aiMessageId,
         promptBundle: promptBundle,

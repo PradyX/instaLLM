@@ -10,6 +10,17 @@ abstract final class BuiltInSkills {
     final epoch = DateTime.fromMillisecondsSinceEpoch(0);
     return [
       Skill(
+        id: 'skill-builtin-review',
+        name: 'review',
+        description:
+            'Review supplied changes for concrete bugs and missing validation',
+        body:
+            'Review the supplied changes. Identify actionable bugs with file locations and evidence. Distinguish verified findings from uncertainty. Ask for missing code rather than inventing it. Report when no issue is found. Do not run a separate agent or execute scripts without tool permission.',
+        source: SkillSource.builtIn,
+        createdAt: epoch,
+        updatedAt: epoch,
+      ),
+      Skill(
         id: 'skill-builtin-flutter',
         name: 'flutter-development',
         description: 'Flutter implementation and debugging workflow',

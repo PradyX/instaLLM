@@ -55,6 +55,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$navigation$en navigation = Translations$navigation$en._(_root);
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
 	late final Translations$vault$en vault = Translations$vault$en._(_root);
+	late final Translations$skills$en skills = Translations$skills$en._(_root);
 }
 
 // Path: login
@@ -876,6 +877,57 @@ class Translations$vault$en {
 	String restored({required Object count}) => '${count} Vault registration(s) restored';
 }
 
+// Path: skills
+class Translations$skills$en {
+	Translations$skills$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Skills'
+	String get title => 'Skills';
+
+	/// en: 'Available skill commands (send /skill-name followed by your task):'
+	String get commands => 'Available skill commands (send /skill-name followed by your task):';
+
+	/// en: 'Ordinary chat; no session skill selected.'
+	String get normalChat => 'Ordinary chat; no session skill selected.';
+
+	/// en: 'This skill is unavailable here. Send / to list enabled skills for this workspace and bot.'
+	String get unavailable => 'This skill is unavailable here. Send / to list enabled skills for this workspace and bot.';
+
+	/// en: 'More than one eligible skill has this name. Send / and use its full command.'
+	String get ambiguous => 'More than one eligible skill has this name. Send / and use its full command.';
+
+	/// en: 'Selected ${name} for this chat. Add --resource=path after the command to include a declared reference/template. Send /chat to clear.'
+	String selected({required Object name}) => 'Selected ${name} for this chat. Add --resource=path after the command to include a declared reference/template. Send /chat to clear.';
+
+	/// en: 'Choose a declared resource from this skill (at most eight). Re-import missing files before using it.'
+	String get resourceUnavailable => 'Choose a declared resource from this skill (at most eight). Re-import missing files before using it.';
+
+	/// en: 'Could not save the skill choice. Your previous choice is kept.'
+	String get saveError => 'Could not save the skill choice. Your previous choice is kept.';
+
+	/// en: 'This skill and its requested resources do not fit the current skill budget. Increase the context budget or use /chat.'
+	String get budgetError => 'This skill and its requested resources do not fit the current skill budget. Increase the context budget or use /chat.';
+
+	/// en: 'Context details'
+	String get inspector => 'Context details';
+
+	/// en: 'Skill instructions'
+	String get bodyTokens => 'Skill instructions';
+
+	/// en: 'Skill resources'
+	String get resourceTokens => 'Skill resources';
+
+	/// en: 'Skill script results'
+	String get observationTokens => 'Skill script results';
+
+	/// en: 'Send / to choose a skill or /chat to clear it.'
+	String get selectedHint => 'Send / to choose a skill or /chat to clear it.';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -1115,6 +1167,20 @@ extension on Translations {
 			'vault.backupTitle' => 'Vault registry',
 			'vault.backupDescription' => 'Folder registrations, external folder paths and workspace links; Markdown files stay in their folders',
 			'vault.restored' => ({required Object count}) => '${count} Vault registration(s) restored',
+			'skills.title' => 'Skills',
+			'skills.commands' => 'Available skill commands (send /skill-name followed by your task):',
+			'skills.normalChat' => 'Ordinary chat; no session skill selected.',
+			'skills.unavailable' => 'This skill is unavailable here. Send / to list enabled skills for this workspace and bot.',
+			'skills.ambiguous' => 'More than one eligible skill has this name. Send / and use its full command.',
+			'skills.selected' => ({required Object name}) => 'Selected ${name} for this chat. Add --resource=path after the command to include a declared reference/template. Send /chat to clear.',
+			'skills.resourceUnavailable' => 'Choose a declared resource from this skill (at most eight). Re-import missing files before using it.',
+			'skills.saveError' => 'Could not save the skill choice. Your previous choice is kept.',
+			'skills.budgetError' => 'This skill and its requested resources do not fit the current skill budget. Increase the context budget or use /chat.',
+			'skills.inspector' => 'Context details',
+			'skills.bodyTokens' => 'Skill instructions',
+			'skills.resourceTokens' => 'Skill resources',
+			'skills.observationTokens' => 'Skill script results',
+			'skills.selectedHint' => 'Send / to choose a skill or /chat to clear it.',
 			_ => null,
 		};
 	}

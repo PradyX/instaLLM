@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
@@ -173,13 +174,14 @@ void main() {
       container.read(groupChatsProvider);
       await pumpAgentUntil(() => container.read(groupChatsProvider).isReady);
       final controller = container.read(groupChatsProvider.notifier);
-      final room = (await controller.directChatWith(
+      final room = (await controller.createChat(
         workspaceId: 'w',
-        botId: 'one',
+        name: 'Docs',
+        memberBotIds: ['one'],
       ))!;
       await controller.sendUserMessage(
         room.id,
-        'Record a concise summary in your journal.',
+        '/summary --resource=references/guide.md Record a concise summary in your journal.',
       );
       final note = File(
         '${root.path}/external/Project/bots/bot-one/summary.md',
@@ -203,6 +205,10 @@ void main() {
             .last
             .text,
         'Recorded the project summary.',
+      );
+      expect(
+        container.read(skillChoicesProvider)['room:${room.id}']?.skillId,
+        'docs',
       );
       expect(runtime.loadedModelPaths, hasLength(1));
     },

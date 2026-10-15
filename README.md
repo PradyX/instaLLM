@@ -246,6 +246,20 @@ retire the owned POSIX process group. Deliberately detached processes are not
 an adversarial containment guarantee. No app credentials/environment are
 forwarded. Skill bundles remain outside backup/sync coverage.
 
+Send `/` (or `/skills`) in any chat to list eligible installed skills. Send
+`/skill-name your task` to select and invoke one; sending just the command
+selects a session lens without generating. `/review` is a local review procedure,
+not a separate review agent; `/chat` clears the lens. Where names collide, use
+the full command shown in the list. `--resource=templates/report.md` immediately
+after the skill command includes that declared template/reference in the prompt.
+The explicit choice, including selected resources, survives restart and model
+switching in a versioned local preferences file. Ordinary chats offer read-only
+skills (no capabilities beyond `filesystem:read`); scripts remain bot-only.
+Rooms list skills assigned to an eligible member, and explicit invocation can
+pick that member without an `@mention`. Disabled, unassigned or out-of-workspace
+skills cannot be invoked. Old conversations/rooms need no rewriting; these
+preferences also remain outside existing backup/sync coverage.
+
 ### Context and memory
 
 - Every request is assembled against a token budget derived from the model's context window, the tokens reserved for the answer and the safety margin; the system prompt always stays, and older turns are dropped oldest-first only when the budget runs out.

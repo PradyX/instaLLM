@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/core/permissions/workspace_permission.dart';
 import 'package:installm/features/skills/data/skill_bundle_service.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
+import 'package:installm/features/skills/domain/built_in_skills.dart';
 import 'package:installm/features/skills/domain/skill.dart';
 import 'package:installm/features/skills/domain/skill_selector.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
@@ -15,6 +16,11 @@ void main() {
     file.parent.createSync(recursive: true);
     return file..writeAsStringSync(text);
   }
+
+  List<dynamic> loadDisabledIds(File file) =>
+      (jsonDecode(file.readAsStringSync())
+              as Map<String, dynamic>)['disabledBuiltInIds']
+          as List<dynamic>;
 
   setUp(() => root = Directory.systemTemp.createTempSync('skill-bundle-'));
   tearDown(() => root.deleteSync(recursive: true));
@@ -119,7 +125,10 @@ void main() {
       final original = file.readAsStringSync();
       final store = SkillStore(file);
       expect(store.save(store.load()), isTrue);
-      expect(jsonDecode(file.readAsStringSync())['version'], 2);
+      expect(
+        jsonDecode(file.readAsStringSync())['version'],
+        SkillStore.currentVersion,
+      );
       expect(store.load().customSkills.single.body, 'Keep me');
       expect(
         root
@@ -145,6 +154,68 @@ void main() {
       expect(file.readAsStringSync(), '{"version":99,"skills":[]}');
     },
   );
+  test('a v2 registry keeps its custom skills and disables when rewritten', () {
+    final skill = Skill.create(name: 'Old instructions', body: 'Keep me');
+    final builtIn = BuiltInSkills.all().first;
+    final file = write(
+      'registry.json',
+      jsonEncode({
+        'version': 2,
+        'skills': [
+          skill.toJson(),
+          {'source': 'builtIn', 'id': builtIn.id},
+        ],
+        'disabledBuiltInIds': [builtIn.id],
+      }),
+    );
+    final store = SkillStore(file);
+    final loaded = store.load();
+    expect(loaded.customSkills.single.body, 'Keep me');
+    expect(loaded.removedBuiltInIds, isEmpty);
+    expect(
+      loaded.allSkills
+          .where((candidate) => candidate.id == builtIn.id)
+          .single
+          .enabled,
+      isFalse,
+    );
+    expect(store.save(loaded), isTrue);
+    final rewritten =
+        jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+    expect(rewritten['version'], SkillStore.currentVersion);
+    expect(rewritten['disabledBuiltInIds'], [builtIn.id]);
+    expect(rewritten['removedBuiltInIds'], isEmpty);
+    // The v2 file is kept as a backup before the rewrite.
+    expect(
+      root
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.contains('preserved'))
+          .length,
+      1,
+    );
+  });
+  test('a removed built-in is dropped from the list and offered back', () {
+    final builtIn = BuiltInSkills.all().first;
+    final file = File('${root.path}/registry.json');
+    final store = SkillStore(file);
+    expect(store.save(SkillsSnapshot.empty.removeBuiltIn(builtIn.id)), isTrue);
+
+    final reloaded = store.load();
+    expect(reloaded.allSkills.any((skill) => skill.id == builtIn.id), isFalse);
+    expect(reloaded.removedBuiltInSkills.single.id, builtIn.id);
+    expect(
+      loadDisabledIds(file),
+      isEmpty,
+      reason: 'a skill that is not listed keeps no switch state',
+    );
+
+    expect(store.save(reloaded.restoreBuiltIn(builtIn.id)), isTrue);
+    final restored = store.load();
+    expect(restored.removedBuiltInSkills, isEmpty);
+    expect(restored.allSkills.first.id, builtIn.id);
+    expect(restored.allSkills.first.enabled, isTrue);
+  });
   test(
     'resource budgets and revoked eligibility refuse text without consuming budget',
     () {

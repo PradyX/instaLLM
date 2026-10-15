@@ -5,12 +5,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:installm/features/skills/domain/built_in_skills.dart';
 import 'package:installm/features/skills/domain/skill.dart';
 
-/// Versioned registry containing copied text bundles. Preserve the original
-/// before every rewrite, including partial v1 data that the decoder skips.
+/// Versioned registry containing copied text bundles and the shipped skills
+/// the user removed. Preserve the original before every rewrite, including
+/// older or partial data that the decoder skips.
 class SkillStore {
   SkillStore(this.file);
   final File file;
-  static const currentVersion = 2;
+  static const currentVersion = 3;
+
+  /// Every schema this build can read. A file written by a newer build stays
+  /// untouched: the registry turns read-only instead of being rewritten from
+  /// what this build happens to understand.
+  static const List<int> readableVersions = [1, 2, currentVersion];
   bool _readOnly = false;
   bool _preserve = false;
   bool get isReadOnly => _readOnly;
@@ -34,13 +40,13 @@ class SkillStore {
         return SkillsSnapshot.empty;
       }
       final version = raw['version'];
-      if (version != 1 && version != currentVersion) {
+      if (version is! int || !readableVersions.contains(version)) {
         _readOnly = true;
         return SkillsSnapshot.empty;
       }
       final snapshot = SkillsSnapshot.fromJson(raw);
       _preserve =
-          version == 1 ||
+          version != currentVersion ||
           raw['skills'] is! List ||
           jsonEncode(raw['skills']) !=
               jsonEncode(
@@ -48,11 +54,14 @@ class SkillStore {
               ) ||
           jsonEncode(raw['disabledBuiltInIds'] ?? []) !=
               jsonEncode(snapshot.disabledBuiltInIds) ||
+          jsonEncode(raw['removedBuiltInIds'] ?? []) !=
+              jsonEncode(snapshot.removedBuiltInIds) ||
           raw.keys.any(
             (key) => !const {
               'version',
               'skills',
               'disabledBuiltInIds',
+              'removedBuiltInIds',
             }.contains(key),
           );
       return snapshot;
@@ -79,6 +88,7 @@ class SkillStore {
           'version': currentVersion,
           'skills': snapshot.customSkills.map((s) => s.toJson()).toList(),
           'disabledBuiltInIds': snapshot.disabledBuiltInIds,
+          'removedBuiltInIds': snapshot.removedBuiltInIds,
         }),
         flush: true,
       );
@@ -97,12 +107,13 @@ class SkillStore {
   }
 }
 
-/// Custom skills plus which built-ins the user turned off; built-ins are
-/// prepended by [allSkills].
+/// Custom skills, which built-ins the user turned off, and which built-ins the
+/// user removed from the list; built-ins are prepended by [allSkills].
 class SkillsSnapshot {
   const SkillsSnapshot({
     required this.customSkills,
     this.disabledBuiltInIds = const [],
+    this.removedBuiltInIds = const [],
   });
 
   static const SkillsSnapshot empty = SkillsSnapshot(customSkills: []);
@@ -112,13 +123,25 @@ class SkillsSnapshot {
   /// Built-in ids disabled by the user.
   final List<String> disabledBuiltInIds;
 
-  /// Built-ins (with stored disables applied) followed by custom skills.
+  /// Built-in ids the user removed. A built-in is code, so removing it takes
+  /// it out of the registry rather than deleting anything; [removedBuiltInSkills]
+  /// is what a restore offers back.
+  final List<String> removedBuiltInIds;
+
+  /// The shipped skills the user removed, in the order the app ships them.
+  List<Skill> get removedBuiltInSkills => [
+    for (final skill in BuiltInSkills.all())
+      if (removedBuiltInIds.contains(skill.id)) skill,
+  ];
+
+  /// Built-ins that are still listed (with stored disables applied), followed
+  /// by custom skills.
   List<Skill> get allSkills => [
     for (final skill in BuiltInSkills.all())
-      if (disabledBuiltInIds.contains(skill.id))
-        skill.copyWith(enabled: false)
-      else
-        skill,
+      if (!removedBuiltInIds.contains(skill.id))
+        disabledBuiltInIds.contains(skill.id)
+            ? skill.copyWith(enabled: false)
+            : skill,
     ...customSkills,
   ];
 
@@ -137,6 +160,7 @@ class SkillsSnapshot {
     return SkillsSnapshot(
       customSkills: updated,
       disabledBuiltInIds: disabledBuiltInIds,
+      removedBuiltInIds: removedBuiltInIds,
     );
   }
 
@@ -144,6 +168,33 @@ class SkillsSnapshot {
     return SkillsSnapshot(
       customSkills: customSkills.where((skill) => skill.id != skillId).toList(),
       disabledBuiltInIds: disabledBuiltInIds,
+      removedBuiltInIds: removedBuiltInIds,
+    );
+  }
+
+  /// Takes a built-in out of the list. Its disabled flag goes with it: a skill
+  /// that is not listed has no switch to remember.
+  SkillsSnapshot removeBuiltIn(String skillId) {
+    return SkillsSnapshot(
+      customSkills: customSkills,
+      disabledBuiltInIds: disabledBuiltInIds
+          .where((id) => id != skillId)
+          .toList(),
+      removedBuiltInIds: [
+        ...removedBuiltInIds.where((id) => id != skillId),
+        skillId,
+      ],
+    );
+  }
+
+  /// Puts a removed built-in back, enabled.
+  SkillsSnapshot restoreBuiltIn(String skillId) {
+    return SkillsSnapshot(
+      customSkills: customSkills,
+      disabledBuiltInIds: disabledBuiltInIds,
+      removedBuiltInIds: removedBuiltInIds
+          .where((id) => id != skillId)
+          .toList(),
     );
   }
 
@@ -158,6 +209,7 @@ class SkillsSnapshot {
     return SkillsSnapshot(
       customSkills: customSkills,
       disabledBuiltInIds: disabled.toList(),
+      removedBuiltInIds: removedBuiltInIds,
     );
   }
 
@@ -186,6 +238,7 @@ class SkillsSnapshot {
     return SkillsSnapshot(
       customSkills: skills,
       disabledBuiltInIds: readIds(json['disabledBuiltInIds']),
+      removedBuiltInIds: readIds(json['removedBuiltInIds']),
     );
   }
 }

@@ -38,6 +38,36 @@ class SkillsPage extends ConsumerWidget {
     );
   }
 
+  /// Deleting an imported skill destroys its copied bundle, so it asks first.
+  /// Removing a built-in only takes it out of the list and can be undone, so
+  /// it does not.
+  Future<void> _remove(BuildContext context, WidgetRef ref, Skill skill) async {
+    if (!skill.isBuiltIn) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Delete ${skill.name}?'),
+          content: const Text(
+            'Its instructions and copied resources are removed from this '
+            'device. Chats, bots and rooms are untouched.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+    await ref.read(skillsProvider.notifier).removeSkill(skill.id);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(skillsProvider);
@@ -75,10 +105,28 @@ class SkillsPage extends ConsumerWidget {
                     skill: skill,
                     onToggle: (enabled) =>
                         notifier.setEnabled(skill.id, enabled),
-                    onDelete: skill.isBuiltIn
-                        ? null
-                        : () => notifier.removeSkill(skill.id),
+                    onRemove: () => _remove(context, ref, skill),
                   ),
+                if (state.removedBuiltInSkills.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text('Removed built-ins', style: textTheme.titleSmall),
+                  const SizedBox(height: 4),
+                  Text(
+                    'These ship with the app, so removing one only takes it '
+                    'out of the list. Restoring puts it back on.',
+                    style: textTheme.bodySmall,
+                  ),
+                  for (final skill in state.removedBuiltInSkills)
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.auto_awesome),
+                      title: Text(skill.name),
+                      trailing: TextButton(
+                        onPressed: () => notifier.restoreSkill(skill.id),
+                        child: const Text('Restore'),
+                      ),
+                    ),
+                ],
                 if (state.errorMessage != null) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -98,16 +146,17 @@ class _SkillTile extends StatelessWidget {
   const _SkillTile({
     required this.skill,
     required this.onToggle,
-    required this.onDelete,
+    required this.onRemove,
   });
 
   final Skill skill;
   final ValueChanged<bool> onToggle;
-  final VoidCallback? onDelete;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
       child: ExpansionTile(
         leading: Icon(
@@ -121,7 +170,24 @@ class _SkillTile extends StatelessWidget {
               ? skill.source.label
               : '${skill.source.label} · ${skill.description}',
         ),
-        trailing: Switch(value: skill.enabled, onChanged: onToggle),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch(value: skill.enabled, onChanged: onToggle),
+            // Red is for deleting a file. A built-in's removal is a reversible
+            // list change, so it stays neutral.
+            IconButton(
+              icon: Icon(
+                skill.isBuiltIn
+                    ? Icons.remove_circle_outline
+                    : Icons.delete_outline,
+              ),
+              color: skill.isBuiltIn ? null : colorScheme.error,
+              tooltip: skill.isBuiltIn ? 'Remove built-in' : 'Delete skill',
+              onPressed: onRemove,
+            ),
+          ],
+        ),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -149,15 +215,6 @@ class _SkillTile extends StatelessWidget {
                   maxLines: 12,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (onDelete != null)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text('Delete'),
-                    ),
-                  ),
               ],
             ),
           ),

@@ -14,12 +14,17 @@ final skillStoreProvider = FutureProvider<SkillStore>(
 class SkillsState {
   const SkillsState({
     this.skills = const [],
+    this.removedBuiltInSkills = const [],
     this.isReady = false,
     this.errorMessage,
     this.isReadOnly = false,
   });
 
   final List<Skill> skills;
+
+  /// Shipped skills the user removed from the list. They are not deleted —
+  /// they are code — so the registry keeps them here to offer back.
+  final List<Skill> removedBuiltInSkills;
   final bool isReady;
   final String? errorMessage;
   final bool isReadOnly;
@@ -39,6 +44,7 @@ class SkillsState {
 
   SkillsState copyWith({
     List<Skill>? skills,
+    List<Skill>? removedBuiltInSkills,
     bool? isReady,
     String? errorMessage,
     bool clearError = false,
@@ -46,6 +52,7 @@ class SkillsState {
   }) {
     return SkillsState(
       skills: skills ?? this.skills,
+      removedBuiltInSkills: removedBuiltInSkills ?? this.removedBuiltInSkills,
       isReady: isReady ?? this.isReady,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       isReadOnly: isReadOnly ?? this.isReadOnly,
@@ -80,6 +87,7 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
       final snapshot = store.load();
       state = SkillsState(
         skills: snapshot.allSkills,
+        removedBuiltInSkills: snapshot.removedBuiltInSkills,
         isReady: true,
         isReadOnly: store.isReadOnly,
         errorMessage: store.isReadOnly
@@ -114,6 +122,9 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
         SkillsSnapshot(
           customSkills: state.customSkills,
           disabledBuiltInIds: disabled,
+          removedBuiltInIds: [
+            for (final skill in state.removedBuiltInSkills) skill.id,
+          ],
         ),
       );
     } catch (error) {
@@ -206,9 +217,20 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
     return _persist();
   }
 
+  /// Removes a skill from the list.
+  ///
+  /// An imported skill is deleted with its copied bundle. A built-in cannot be
+  /// deleted — it is code — so removing it takes it out of the registry: it is
+  /// no longer offered, and [restoreSkill] puts it back. Either way this is one
+  /// versioned write.
   Future<bool> removeSkill(String skillId) async {
     final skill = state.skillById(skillId);
-    if (skill == null || skill.isBuiltIn) return false;
+    if (skill == null) {
+      final shipped = _shippedBuiltIn(skillId);
+      if (shipped == null) return false;
+      return _removeBuiltIn(shipped);
+    }
+    if (skill.isBuiltIn) return _removeBuiltIn(skill);
     state = state.copyWith(
       skills: [
         for (final candidate in state.skills)
@@ -217,6 +239,47 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
       clearError: true,
     );
     return _persist();
+  }
+
+  /// Puts a removed built-in back into the list, enabled, in the order the app
+  /// ships its skills in.
+  Future<bool> restoreSkill(String skillId) async {
+    final match = state.removedBuiltInSkills
+        .where((skill) => skill.id == skillId)
+        .firstOrNull;
+    if (match == null) return false;
+    final listed = [...state.builtInSkills, match];
+    state = state.copyWith(
+      skills: [
+        for (final shipped in BuiltInSkills.all())
+          ...listed.where((skill) => skill.id == shipped.id),
+        ...state.customSkills,
+      ],
+      removedBuiltInSkills: state.removedBuiltInSkills
+          .where((skill) => skill.id != skillId)
+          .toList(),
+      clearError: true,
+    );
+    return _persist();
+  }
+
+  Future<bool> _removeBuiltIn(Skill skill) async {
+    state = state.copyWith(
+      skills: [
+        for (final candidate in state.skills)
+          if (candidate.id != skill.id) candidate,
+      ],
+      removedBuiltInSkills: [...state.removedBuiltInSkills, skill],
+      clearError: true,
+    );
+    return _persist();
+  }
+
+  Skill? _shippedBuiltIn(String skillId) {
+    for (final skill in BuiltInSkills.all()) {
+      if (skill.id == skillId) return skill;
+    }
+    return null;
   }
 
   void clearError() {

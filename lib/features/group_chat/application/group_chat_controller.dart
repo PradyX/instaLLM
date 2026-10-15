@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/core/permissions/workspace_permission.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
@@ -124,6 +125,15 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   final Ref _ref;
   static const VaultNotesService _notes = VaultNotesService();
   final _cancelRequested = <String>{};
+  final _skillRunners = <String, SkillScriptRunner>{};
+
+  @override
+  void dispose() {
+    for (final runner in _skillRunners.values) {
+      runner.cancel();
+    }
+    super.dispose();
+  }
 
   /// Recent room lines each bot hears.
   static const int recentHistoryLines = 20;
@@ -256,6 +266,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// Stops the running turn in [chatId], if any.
   void cancelTurn(String chatId) {
     _cancelRequested.add(chatId);
+    _skillRunners[chatId]?.cancel();
     try {
       _ref.read(agentLoopServiceProvider).cancel();
     } catch (_) {}
@@ -534,6 +545,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         // Optional journals must not prevent the ordinary local answer.
       }
     }
+    final scripts = SkillScriptRunner(isCurrent: prompt.skills.isCurrent);
+    _skillRunners[chat.id] = scripts;
     final registry = _ref.read(toolRegistryProvider).extendedWith([
       ...buildKanbanTools(
         KanbanToolContext(
@@ -552,6 +565,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       ),
       ...?journal?.tools(),
       ...prompt.skills.tools(),
+      ...scripts.tools(prompt.skills.skills),
     ]);
     try {
       // What the model's own template writes where its reply begins, so a
@@ -601,6 +615,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         ),
       );
     }
+    scripts.cancel();
+    _skillRunners.remove(chat.id);
     await _persist();
   }
 
@@ -665,6 +681,9 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             identical(current, skill) &&
             currentBot != null &&
             currentBot.skillIds.contains(skill.id) &&
+            (skill.assignedBotIds.isEmpty ||
+                skill.assignedBotIds.contains(bot.id)) &&
+            _chatById(chat.id)?.workspaceId == chat.workspaceId &&
             skill.allowedFor(
               currentBot.toolPermissions.map(Capability.new).toSet(),
             ) &&

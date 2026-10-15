@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
 import 'package:installm/features/skills/domain/skill.dart';
@@ -59,6 +60,7 @@ void main() {
               name: 'One',
               soul: 'Summarize project facts.',
               skillIds: ['docs'],
+              toolPermissions: {'shell.execute'},
             ),
           ],
         ),
@@ -90,8 +92,11 @@ void main() {
               id: 'docs',
               name: 'summary',
               body: 'Read the reference before making a summary.',
+              requiredCapabilities: {'shell.execute'},
+              scriptNames: ['scripts/check.sh'],
               resourceNames: ['references/guide.md'],
               bundleFiles: {
+                'scripts/check.sh': 'printf script-check-passed',
                 'references/guide.md':
                     'Project documentation uses simple words.',
               },
@@ -99,6 +104,9 @@ void main() {
           ],
         ),
       );
+      final scriptTool = SkillScriptRunner(
+        isCurrent: (_) => true,
+      ).tools(skillStore.load().customSkills).single.definition.name;
       final runtime = ScriptedAgentRuntime(
         script: [
           jsonEncode({
@@ -111,6 +119,12 @@ void main() {
             'tool': 'vault_record_summary',
             'arguments': {'summary': 'Use Dart for this project.'},
           }),
+          if (Platform.isLinux)
+            jsonEncode({
+              'type': 'tool_call',
+              'tool': scriptTool,
+              'arguments': {},
+            }),
           'Recorded the project summary.',
         ],
       );
@@ -137,7 +151,13 @@ void main() {
           chatModelsProvider.overrideWithValue([model]),
           selectedChatModelProvider.overrideWithValue(model),
           toolRegistryProvider.overrideWithValue(
-            ToolRegistry(tools: [], platform: ToolPlatform.macOS),
+            ToolRegistry(
+              tools: [],
+              platform: Platform.isLinux
+                  ? ToolPlatform.linux
+                  : ToolPlatform.macOS,
+              permissionGate: _ApproveScript(),
+            ),
           ),
           agentLoopServiceProvider.overrideWithValue(
             AgentLoopService(
@@ -169,6 +189,9 @@ void main() {
         runtime.prompts[1],
         contains('Project documentation uses simple words.'),
       );
+      if (Platform.isLinux) {
+        expect(runtime.prompts.last, contains('script-check-passed'));
+      }
       expect(runtime.prompts.first, contains('skill_read_resource'));
       expect(runtime.prompts.first, contains('vault_record_summary'));
       expect(runtime.prompts.first, contains('vault_write_note'));
@@ -184,4 +207,10 @@ void main() {
       expect(runtime.loadedModelPaths, hasLength(1));
     },
   );
+}
+
+class _ApproveScript implements ToolPermissionGate {
+  @override
+  Future<bool> requestApproval(ToolApprovalRequest request) async =>
+      request.tool.name.startsWith('skill_run_');
 }

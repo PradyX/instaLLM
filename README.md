@@ -231,8 +231,20 @@ files are never removed. Text-only imports still work. Assigned, enabled skills
 must match the bot's capabilities and workspace. Tool-capable bots can request
 `skill_read_resource`; loaded text shares the skill token budget with instructions.
 A missing file or an over-budget reference returns an actionable result.
-Scripts are stored but execution is not enabled in this delivery unit. Skill
-bundles remain outside backup/sync coverage.
+Scripts (`.sh`/`.py`) run only for explicitly assigned bots whose allowed
+capabilities include every declared permission and `shell.execute`; the skill
+must declare `shell.execute` too. Every call asks for approval, showing the
+bundle fingerprint, literal arguments and working directory (a temporary
+bundle copy). Changes to assignment/permissions cancel eligibility. Scripts
+have the app's host permissions: capabilities are an eligibility check, not an
+OS sandbox. Trust a script before approving possible file/network access.
+
+macOS/Linux need Python 3 for the process supervisor; `.sh` files use `/bin/sh`.
+There is no new bundled interpreter. Android/iOS do not run scripts. Output is
+capped at 8 KiB, execution at 15 seconds, and cancellation/timeout/completion
+retire the owned POSIX process group. Deliberately detached processes are not
+an adversarial containment guarantee. No app credentials/environment are
+forwarded. Skill bundles remain outside backup/sync coverage.
 
 ### Context and memory
 

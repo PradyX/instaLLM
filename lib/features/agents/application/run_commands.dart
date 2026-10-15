@@ -1,5 +1,6 @@
 import 'package:installm/core/widgets/composer_command_picker.dart';
 import 'package:installm/features/agents/domain/background_run.dart';
+import 'package:installm/features/agents/domain/review_finding.dart';
 import 'package:installm/features/agents/domain/run_checkpoint.dart';
 
 /// `/rewind` — undoing the files an agent run wrote (Road Map 3 Phase 3.3.3).
@@ -162,6 +163,90 @@ String backgroundRunListing(List<BackgroundRun> runs) {
     }
   }
   return buffer.toString();
+}
+
+/// `/review` — a reviewer's pass over the changes a room made, and the hand-off
+/// that puts one finding in front of a bot (Road Map 3 Phase 3.3.4).
+///
+/// The pass is one ordinary turn of the room it is typed in — same model, same
+/// tools, same permissions — so this is a command, not a second agent: what it
+/// reviews is the room's own last run, read from the snapshots that run left.
+class ReviewCommand {
+  const ReviewCommand({
+    this.list = false,
+    this.fixIndex,
+    this.botName,
+    this.files = const [],
+    this.message,
+  });
+
+  /// True for `/review list`: show the last review again.
+  final bool list;
+
+  /// Finding to hand to a bot, as numbered in the listing.
+  final int? fixIndex;
+
+  /// Bot named after `fix`, when the user chose one.
+  final String? botName;
+
+  /// Paths the user named to review, relative to the linked project folder.
+  final List<String> files;
+
+  /// Text to show instead of running anything.
+  final String? message;
+
+  static const String usage =
+      'Reviews the changes this chat made:\n'
+      '/review — the files this chat’s last run wrote\n'
+      '/review <path> [path…] — files to review as they are now\n'
+      '/review list — the last review of this chat\n'
+      '/review fix <n> [@Bot] — hand finding n to a bot as a supervised run'
+      '\nFindings come back with a severity; fixing one is an ordinary run of '
+      'this chat, so it is recorded and cancellable like any other.';
+
+  /// The command for the composer's suggestion list.
+  static ComposerCommand option() =>
+      (command: '/review', description: 'Review the changes this chat made');
+
+  /// Parses [text] as a review command, or null for anything else.
+  ///
+  /// Anything carrying a skill flag (`--resource=…`) is left to the skill path:
+  /// `/review` was the review skill before it was the review pass, and that
+  /// choice still has to work.
+  static ReviewCommand? parse(String text) {
+    final trimmed = text.trim();
+    final lower = trimmed.toLowerCase();
+    if (lower != '/review' && !lower.startsWith('/review ')) return null;
+    final rest = trimmed.length <= 7 ? '' : trimmed.substring(7).trim();
+    if (rest.contains('--')) return null;
+    if (rest.isEmpty) return const ReviewCommand();
+    if (rest.toLowerCase() == 'list') return const ReviewCommand(list: true);
+    final words = rest.split(RegExp(r'\s+'));
+    if (words.first.toLowerCase() == 'fix') {
+      if (words.length < 2) {
+        return const ReviewCommand(message: 'Which finding? /review fix <n>.');
+      }
+      final index = int.tryParse(words[1].replaceAll(RegExp(r'[^0-9]'), ''));
+      if (index == null || index < 1) {
+        return ReviewCommand(
+          message:
+              '“${words[1]}” is not a finding number. ${usage.split('\n').first}',
+        );
+      }
+      final named = words.length > 2 && words[2].startsWith('@')
+          ? words[2].substring(1)
+          : null;
+      return ReviewCommand(fixIndex: index, botName: named);
+    }
+    if (words.length > ReviewLimits.maxFiles) {
+      return ReviewCommand(
+        message:
+            'Review at most ${ReviewLimits.maxFiles} files at a time; a '
+            'review is meant to be read.',
+      );
+    }
+    return ReviewCommand(files: words);
+  }
 }
 
 String _clock(DateTime value) {

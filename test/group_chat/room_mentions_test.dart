@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:installm/features/agents/application/run_commands.dart';
 import 'package:installm/features/bots/domain/bot.dart';
+import 'package:installm/core/widgets/composer_command_picker.dart';
 import 'package:installm/features/group_chat/presentation/room_mention_composer.dart';
 import 'package:installm/features/profile_images/application/profile_images_controller.dart';
 import 'package:installm/features/profile_images/data/petdex_service.dart';
@@ -31,7 +33,11 @@ void main() {
     await directory.delete(recursive: true);
   });
 
-  Future<void> pump(WidgetTester tester, {double scale = 1}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    double scale = 1,
+    List<ComposerCommand> commands = const [],
+  }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [petdexServiceProvider.overrideWith((_) async => portraits)],
@@ -48,6 +54,7 @@ void main() {
               child: RoomMentionComposer(
                 controller: controller,
                 members: members,
+                commands: commands,
                 enabled: true,
                 hintText: 'Room',
                 onSend: () async {
@@ -120,6 +127,29 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('the picker offers the commands a room can type', (tester) async {
+    await pump(
+      tester,
+      commands: [
+        RewindCommand.option(),
+        ...BackgroundCommand.options(),
+        ReviewCommand.option(),
+      ],
+    );
+    await tester.enterText(find.byType(TextField), '/rev');
+    await tester.pumpAndSettle();
+    expect(find.text('/review'), findsOneWidget);
+
+    await tester.tap(find.text('/review'));
+    await tester.pumpAndSettle();
+    expect(controller.text, '/review ');
+    expect(sent, 0);
+
+    await tester.enterText(find.byType(TextField), '/rew');
+    await tester.pumpAndSettle();
+    expect(find.text('/rewind'), findsOneWidget);
+  });
 
   test(
     'ignores emails, selections and unknown names; replaces mid-handle and full spaced names',

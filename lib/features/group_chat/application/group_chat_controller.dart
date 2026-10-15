@@ -17,6 +17,7 @@ import 'package:installm/features/agents/application/delegation_tools.dart';
 import 'package:installm/features/agents/application/rewind_service.dart';
 import 'package:installm/features/agents/application/run_checkpoint_session.dart';
 import 'package:installm/features/agents/application/run_commands.dart';
+import 'package:installm/features/agents/domain/review_finding.dart';
 import 'package:installm/features/agents/domain/run_checkpoint.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/domain/bot.dart';
@@ -135,6 +136,9 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
 
   final Ref _ref;
   static const VaultNotesService _notes = VaultNotesService();
+
+  /// Who posts a review's answer, so `/review list` can find it again.
+  static const String _reviewAuthorId = 'installm-review';
   final _cancelRequested = <String>{};
   final _skillRunners = <String, SkillScriptRunner>{};
 
@@ -398,6 +402,16 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       return;
     }
     if (state.runningChatIds.contains(chatId)) return;
+    // `/review` is a command, not a skill choice in a room: what it reviews is
+    // this room's own changes, which a chat has none of. A command carrying
+    // skill flags is still left to the skill path.
+    final review = ReviewCommand.parse(trimmed);
+    if (review != null) {
+      final chat = _chatById(chatId);
+      if (chat == null) return;
+      await _handleReview(chat, review, trimmed);
+      return;
+    }
     final rewind = RewindCommand.parse(trimmed);
     if (rewind != null) {
       final chat = _chatById(chatId);
@@ -558,6 +572,73 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     }
   }
 
+  /// Runs one turn whose visible line and task differ.
+  ///
+  /// A command that assembles its own evidence (`/review`) shows the user the
+  /// command they typed, while the model is given the changes themselves.
+  Future<void> sendTurn(
+    String chatId, {
+    required String line,
+    required String task,
+  }) async {
+    if (state.runningChatIds.contains(chatId)) return;
+    _append(GroupMessage.user(chatId: chatId, text: line));
+    await _persist();
+    await _runTurn(chatId, firstText: task, roundsUsed: 0, taskOverride: task);
+  }
+
+  /// Starts one supervised run in [chat] and says what happened.
+  ///
+  /// Shared by `/background` and the `/review fix` hand-off: both start the
+  /// same kind of run, so they resolve the bot and record it the same way.
+  Future<void> _startSupervisedRun({
+    required GroupChat chat,
+    required String task,
+    String? requestedBot,
+  }) async {
+    final runs = _ref.read(backgroundRunsProvider.notifier);
+    await runs.whenReady;
+    await _ref.read(botsProvider.notifier).whenReady;
+    final members = _membersOf(chat);
+    final bot = requestedBot == null
+        ? (members.isEmpty ? null : members.first)
+        : delegatedTarget(members: members, requested: requestedBot);
+    if (bot == null) {
+      await _sayRewind(
+        chat.id,
+        requestedBot == null
+            ? 'This chat has no bot to run the task, so nothing was started.'
+            : 'No bot in this chat is called “$requestedBot”. Members: '
+                  '${members.map((member) => member.name).join(', ')}.',
+      );
+      return;
+    }
+    final run = await runs.start(
+      chatId: chat.id,
+      chatName: chat.name,
+      botId: bot.id,
+      botName: bot.name,
+      task: task,
+    );
+    if (run == null) {
+      await _sayRewind(
+        chat.id,
+        _ref.read(backgroundRunsProvider).errorMessage ??
+            'The run could not be started.',
+      );
+      return;
+    }
+    AppLogger.info(
+      'Room ${chat.id} started background run ${run.id} for ${bot.name}.',
+    );
+    await _sayRewind(
+      chat.id,
+      'Started ${run.id} — ${bot.name} is working on “${run.task}” in the '
+      'background. You can leave this screen; you get one notice when it '
+      'finishes or needs you, and /background stop ends it early.',
+    );
+  }
+
   /// `/background` — a task this chat's bot works on while the user is away.
   ///
   /// The run itself is an ordinary turn of this room, started through the same
@@ -634,62 +715,328 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         await _sayRewind(chat.id, BackgroundCommand.usage);
         return;
       }
-      await _ref.read(botsProvider.notifier).whenReady;
-      final members = _membersOf(chat);
-      Bot? actor;
       var goal = task;
+      String? requestedBot;
       if (goal.startsWith('@')) {
         final split = goal.indexOf(RegExp(r'\s'));
-        final name = split < 0 ? goal.substring(1) : goal.substring(1, split);
-        actor = delegatedTarget(members: members, requested: name);
-        if (actor == null) {
-          await _sayRewind(
-            chat.id,
-            'No bot in this chat is called “$name”. Members: '
-            '${members.map((member) => member.name).join(', ')}.',
-          );
-          return;
-        }
+        requestedBot = split < 0 ? goal.substring(1) : goal.substring(1, split);
         goal = split < 0 ? '' : goal.substring(split).trim();
-      } else {
-        actor = members.isEmpty ? null : members.first;
-      }
-      if (actor == null) {
-        await _sayRewind(
-          chat.id,
-          'This chat has no bot to run the task, so nothing was started.',
-        );
-        return;
       }
       if (goal.isEmpty) {
         await _sayRewind(chat.id, BackgroundCommand.usage);
         return;
       }
-      final run = await runs.start(
-        chatId: chat.id,
-        chatName: chat.name,
-        botId: actor.id,
-        botName: actor.name,
+      await _startSupervisedRun(
+        chat: chat,
         task: goal,
+        requestedBot: requestedBot,
       );
-      if (run == null) {
-        await _sayRewind(
+    }
+  }
+
+  /// `/review` — a reviewer's pass over this chat's changes, and the hand-off
+  /// that puts one finding in front of a bot.
+  ///
+  /// The pass is one ordinary turn of this chat, so it runs on the room's own
+  /// model, tools and permissions: what makes it a review is what it is given
+  /// (the changes) and what it is asked for (findings with a severity).
+  Future<void> _handleReview(
+    GroupChat chat,
+    ReviewCommand command,
+    String text,
+  ) async {
+    if (command.message != null) {
+      await _sayReview(chat.id, command.message!);
+      return;
+    }
+    if (command.list) {
+      await _sayReview(
+        chat.id,
+        _lastReview(chat.id) ??
+            'Nothing has been reviewed in this chat yet. Use /review.',
+      );
+      return;
+    }
+    if (command.fixIndex != null) {
+      await _handFindingToBot(chat, command.fixIndex!, command.botName);
+      return;
+    }
+    await _reviewChanges(chat, command, text);
+  }
+
+  /// Runs the reviewer over the changes, then lists what it found.
+  Future<void> _reviewChanges(
+    GroupChat chat,
+    ReviewCommand command,
+    String text,
+  ) async {
+    final vaults = _ref.read(vaultsProvider.notifier);
+    await vaults.whenReady;
+    final paths = vaults.pathsFor(chat.workspaceId);
+    final binding = _ref
+        .read(vaultsProvider)
+        .snapshot
+        .bindingFor(chat.workspaceId);
+    if (paths == null || binding == null) {
+      await _sayReview(
+        chat.id,
+        'This chat’s workspace is not linked to a folder, so there are no '
+        'changes to review.',
+      );
+      return;
+    }
+    await _ref.read(botsProvider.notifier).whenReady;
+    final members = _membersOf(chat);
+    Bot? actor;
+    if (command.botName != null) {
+      actor = delegatedTarget(members: members, requested: command.botName!);
+      if (actor == null) {
+        await _sayReview(
           chat.id,
-          _ref.read(backgroundRunsProvider).errorMessage ??
-              'The run could not be started.',
+          'No bot in this chat is called “${command.botName}”. Members: '
+          '${members.map((member) => member.name).join(', ')}.',
         );
         return;
       }
-      AppLogger.info(
-        'Room ${chat.id} started background run ${run.id} for ${actor.name}.',
-      );
-      await _sayRewind(
-        chat.id,
-        'Started ${run.id} — ${actor.name} is working on “${run.task}” in the '
-        'background. You can leave this screen; you get one notice when it '
-        'finishes or needs you, and /background stop ends it early.',
-      );
+    } else {
+      actor = members.isEmpty ? null : members.first;
     }
+    if (actor == null) {
+      await _sayReview(
+        chat.id,
+        'This chat has no bot to review with, so nothing was reviewed.',
+      );
+      return;
+    }
+
+    final evidence = <ReviewFile>[];
+    final notes = <String>[];
+    var total = 0;
+    String context;
+    final requested = command.files;
+    if (requested.isEmpty) {
+      final store = await _ref.read(runCheckpointStoreProvider.future);
+      final runs = store.load().forContext('room:${chat.id}');
+      if (runs.isEmpty) {
+        await _sayReview(
+          chat.id,
+          'No run of this chat has written a file yet, so there is nothing '
+          'recorded to review. Name files instead: /review notes/plan.md',
+        );
+        return;
+      }
+      final run = runs.first;
+      context = 'the latest run (${run.id}, ${run.label})';
+      for (final entry in run.entries) {
+        if (evidence.length >= ReviewLimits.maxFiles) {
+          notes.add(
+            '${run.entries.length - evidence.length} further file(s) of this '
+            'run were not shown.',
+          );
+          break;
+        }
+        final (note, error) = await _notes.readNote(
+          paths: paths,
+          permissions: binding.permissions,
+          relativePath: entry.relativePath,
+        );
+        if (error != null) {
+          notes.add('${entry.relativePath}: ${error.message}, not shown.');
+          continue;
+        }
+        final after = _clip(note?.content ?? '', ReviewLimits.maxFileBytes);
+        final before = entry.beforeExists
+            ? _clip(entry.beforeContent ?? '', ReviewLimits.maxFileBytes)
+            : null;
+        total += after.text.length + (before?.text.length ?? 0);
+        if (total > ReviewLimits.maxReviewBytes) {
+          notes.add('The review reached its size limit; later files follow.');
+          break;
+        }
+        evidence.add(
+          ReviewFile(
+            relativePath: entry.relativePath,
+            after: after.text,
+            before: before?.text,
+            createdByRun: !entry.beforeExists,
+            truncated: after.truncated || (before?.truncated ?? false),
+          ),
+        );
+      }
+    } else {
+      context = '${requested.length} named file(s)';
+      for (final path in requested) {
+        final (note, error) = await _notes.readNote(
+          paths: paths,
+          permissions: binding.permissions,
+          relativePath: path,
+        );
+        if (error != null) {
+          notes.add('$path: ${error.message}, not shown.');
+          continue;
+        }
+        final after = _clip(note?.content ?? '', ReviewLimits.maxFileBytes);
+        total += after.text.length;
+        if (total > ReviewLimits.maxReviewBytes) {
+          notes.add('The review reached its size limit; later files follow.');
+          break;
+        }
+        evidence.add(
+          ReviewFile(
+            relativePath: path,
+            after: after.text,
+            truncated: after.truncated,
+          ),
+        );
+      }
+    }
+    if (evidence.isEmpty) {
+      await _sayReview(
+        chat.id,
+        'Nothing could be read for this review:\n'
+        '${notes.map((note) => '- $note').join('\n')}',
+      );
+      return;
+    }
+
+    // A reviewer is a model. Without one the room would only be handed a
+    // prompt to paste elsewhere, and calling that “No findings” would be a
+    // claim about the changes that nothing checked.
+    if (roomAnswerModel(
+          chat: chat,
+          bot: actor,
+          installed: _ref.read(chatModelsProvider),
+          selected: _ref.read(selectedChatModelProvider),
+        ) ==
+        null) {
+      await _sayReview(
+        chat.id,
+        'No model is installed, so nothing could be reviewed. Install or choose '
+        'a model in Models, then run /review again.',
+      );
+      return;
+    }
+
+    final task =
+        '@${actor.name}\n\n${reviewTask(subject: '$context in this chat', files: evidence, notes: notes)}';
+    final before = state.snapshot.messagesFor(chat.id).length;
+    await sendTurn(chat.id, line: text, task: task);
+    String? answer;
+    final messages = state.snapshot.messagesFor(chat.id);
+    for (var index = messages.length - 1; index >= before; index--) {
+      final message = messages[index];
+      // A pending prompt is the room asking for a reply, not the reviewer's
+      // answer, so it is never read as findings.
+      if (message.authorBotId != null &&
+          !message.isPending &&
+          message.text.trim().isNotEmpty) {
+        answer = message.text.trim();
+        break;
+      }
+    }
+    if (answer == null) {
+      await _sayReview(
+        chat.id,
+        'The reviewer did not answer, so there is nothing to list. Run '
+        '/review again, or name a file: /review notes/plan.md',
+      );
+      return;
+    }
+    final findings = ReviewFindings.parse(answer);
+    final listing = reviewListing(
+      context: context,
+      files: [for (final file in evidence) file.relativePath],
+      findings: findings,
+    );
+    AppLogger.info(
+      'Review of ${chat.id}: ${findings.length} finding(s) over '
+      '${evidence.length} file(s).',
+    );
+    await _sayReview(chat.id, listing);
+  }
+
+  /// Hands one finding of this chat's last review to a bot as a run.
+  Future<void> _handFindingToBot(
+    GroupChat chat,
+    int index,
+    String? botName,
+  ) async {
+    final listing = _lastReview(chat.id);
+    if (listing == null) {
+      await _sayReview(
+        chat.id,
+        'Nothing has been reviewed in this chat yet. Use /review first.',
+      );
+      return;
+    }
+    final findings = ReviewFindings.parse(listing);
+    if (findings.isEmpty) {
+      await _sayReview(
+        chat.id,
+        'The last review found nothing to fix. Run /review again after more '
+        'work, or name a file: /review notes/plan.md',
+      );
+      return;
+    }
+    if (index > findings.length) {
+      await _sayReview(
+        chat.id,
+        'The last review has ${findings.length} '
+        '${findings.length == 1 ? 'finding' : 'findings'}; /review fix takes '
+        'one of those numbers.',
+      );
+      return;
+    }
+    final finding = findings[index - 1];
+    final buffer = StringBuffer(
+      'Fix this review finding (${finding.severity.label}): '
+      '${finding.summary}',
+    );
+    if (finding.detail.isNotEmpty) buffer.write('\n${finding.detail}');
+    buffer.write(
+      '\nWork in the linked project folder, keep the change as small as the '
+      'finding, and say what you changed.',
+    );
+    await _startSupervisedRun(
+      chat: chat,
+      task: buffer.toString(),
+      requestedBot: botName,
+    );
+  }
+
+  /// The last review this chat was shown, or null when it has none.
+  String? _lastReview(String chatId) {
+    final messages = state.snapshot.messagesFor(chatId);
+    for (var index = messages.length - 1; index >= 0; index--) {
+      final message = messages[index];
+      if (message.authorBotId == _reviewAuthorId &&
+          message.text.startsWith('Review of ')) {
+        return message.text;
+      }
+    }
+    return null;
+  }
+
+  /// Cuts [text] to [limit] characters, saying so when it was cut.
+  static ({String text, bool truncated}) _clip(String text, int limit) {
+    if (text.length <= limit) return (text: text, truncated: false);
+    return (
+      text: '${text.substring(0, limit)}\n… (cut at $limit characters)',
+      truncated: true,
+    );
+  }
+
+  /// One review answer, under the app's own name rather than a bot's.
+  Future<void> _sayReview(String chatId, String text) async {
+    _append(
+      GroupMessage.bot(
+        chatId: chatId,
+        botId: _reviewAuthorId,
+        botName: 'Review',
+        text: text,
+      ),
+    );
+    await _persist();
   }
 
   /// One `/rewind` answer, under the app's own name rather than a bot's.
@@ -735,6 +1082,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     String chatId, {
     required String firstText,
     required int roundsUsed,
+    String? taskOverride,
   }) async {
     final found = _chatById(chatId);
     if (found == null) return;
@@ -743,6 +1091,9 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     try {
       var text = firstText;
       var rounds = roundsUsed;
+      // Only the first answer of this turn is given the assembled task: the
+      // follow-up rounds of a hand-off answer each other, not the task again.
+      var turnTask = taskOverride;
       var speaker = GroupRouter.nextSpeaker(
         chat: chat,
         members: _membersOf(chat),
@@ -771,7 +1122,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         final bot = _botById(speaker);
         if (bot == null) break;
         rounds++;
-        await _answerAsBot(chat, bot);
+        await _answerAsBot(chat, bot, taskOverride: turnTask);
+        turnTask = null;
         chat = _chatById(chatId) ?? chat;
         final answer = _latestBotText(chatId, speaker);
         if (answer == null || _cancelRequested.contains(chatId)) break;
@@ -815,10 +1167,14 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   ///
   /// Any installed chat model may answer; a model that cannot call tools simply
   /// answers without them, the way it does in a normal chat.
-  Future<void> _answerAsBot(GroupChat chat, Bot bot) async {
+  Future<void> _answerAsBot(
+    GroupChat chat,
+    Bot bot, {
+    String? taskOverride,
+  }) async {
     late final ({String systemPrompt, String goal, SkillSession skills}) prompt;
     try {
-      prompt = await _assemblePrompt(chat, bot);
+      prompt = await _assemblePrompt(chat, bot, turnTask: taskOverride);
     } catch (error) {
       _append(
         GroupMessage.bot(
@@ -1036,7 +1392,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// Stable instructions and facts stay in the system prefix; the goal is
   /// the recent room and assigned task. Both are charged by the agent loop.
   Future<({String systemPrompt, String goal, SkillSession skills})>
-  _assemblePrompt(GroupChat chat, Bot bot) async {
+  _assemblePrompt(GroupChat chat, Bot bot, {String? turnTask}) async {
     var projectMemory = '';
     if (bot.memoryScope != BotMemoryScope.none) {
       final memory = _ref.read(memoryProvider.notifier);
@@ -1055,12 +1411,18 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     for (final message in recent) {
       room.writeln('${message.authorName}: ${message.text}');
     }
+    // A command that assembles its own evidence (`/review`) ran the bot on a
+    // goal the room never saw, so the goal is carried here rather than read
+    // back out of the transcript.
+    final rankText = turnTask == null
+        ? room.toString()
+        : '${room.toString()}\n$turnTask';
 
     await _ref.read(skillsProvider.notifier).whenReady;
     final skills = _ref.read(skillsProvider);
     final ranked = SkillSelector.rank(
       skills: skills.skills,
-      taskText: room.toString(),
+      taskText: rankText,
       botId: bot.id,
       botCapabilities: bot.toolPermissions.map(Capability.new).toSet(),
       workspaceId: chat.workspaceId,
@@ -1209,6 +1571,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           'Moves appear on the Board.',
       if (memory.isNotEmpty) 'Relevant project notes:\n$memory',
       'Recent room:\n${room.toString().trim()}',
+      ?turnTask,
     ];
     return (
       systemPrompt: BotPrompt.assemble(

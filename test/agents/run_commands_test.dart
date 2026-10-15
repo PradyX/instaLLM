@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/agents/application/run_commands.dart';
+import 'package:installm/features/agents/domain/review_finding.dart';
 import 'package:installm/features/agents/domain/run_checkpoint.dart';
 
 RunCheckpoint _run({
@@ -95,6 +96,42 @@ void main() {
 
       expect(listing, contains('/rewind run-9'));
       expect(listing, isNot(contains('/rewind run-10')));
+    });
+  });
+
+  group('/review parsing', () {
+    test('bare, list, named files and the hand-off', () {
+      expect(ReviewCommand.parse('/review')!.files, isEmpty);
+      expect(ReviewCommand.parse('/review')!.list, isFalse);
+      expect(ReviewCommand.parse('/review list')!.list, isTrue);
+      expect(ReviewCommand.parse('/review notes/a.md b.md')!.files, [
+        'notes/a.md',
+        'b.md',
+      ]);
+      final fix = ReviewCommand.parse('/review fix 2')!;
+      expect(fix.fixIndex, 2);
+      expect(fix.botName, isNull);
+      expect(ReviewCommand.parse('/review fix 3 @One')!.botName, 'One');
+      expect(ReviewCommand.parse('/review fix')!.message, contains('Which'));
+      expect(ReviewCommand.parse('/review fix banana')!.message, isNotNull);
+      expect(
+        ReviewCommand.parse('/review a b c d e f g h i')!.message,
+        contains('at most ${ReviewLimits.maxFiles}'),
+      );
+    });
+
+    test('anything else is not a review command', () {
+      expect(ReviewCommand.parse('/rewind'), isNull);
+      expect(ReviewCommand.parse('review the code'), isNull);
+      expect(ReviewCommand.parse('/reviews'), isNull);
+      // The review skill takes flags, and that path must keep working.
+      expect(ReviewCommand.parse('/review --resource=template.md'), isNull);
+    });
+
+    test('the composer offers the command', () {
+      expect(ReviewCommand.option().command, '/review');
+      expect(ReviewCommand.option().description, isNotEmpty);
+      expect(ReviewCommand.usage, contains('/review fix <n>'));
     });
   });
 }

@@ -282,9 +282,13 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                   ),
                   // A room is where an agent run can write files, so it is the
                   // surface that offers undoing them; it is also where a task
-                  // can be left running while the user goes elsewhere.
+                  // can be left running while the user goes elsewhere, and where
+                  // the changes are to review. The review skill lists the same
+                  // command, so it is only offered here when it does not.
                   RewindCommand.option(),
                   ...BackgroundCommand.options(),
+                  if (!skills.skills.any((skill) => skill.name == 'review'))
+                    ReviewCommand.option(),
                 ],
                 members: [
                   for (final id in chat.memberBotIds)

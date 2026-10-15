@@ -90,7 +90,11 @@ class MemoryTestEngine implements InferenceEngine {
 }
 
 class MemoryTestHarness {
-  MemoryTestHarness({this.models = const []}) {
+  MemoryTestHarness({
+    this.models = const [],
+    MemoryTestEngine? engine,
+    this.registry,
+  }) : engine = engine ?? MemoryTestEngine() {
     root = Directory.systemTemp.createTempSync('installm_memory_acceptance_');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -122,7 +126,8 @@ class MemoryTestHarness {
   late final WorkspaceStore workspaceStore;
   late final MemoryStore memoryStore;
   late final ConversationStore conversationStore;
-  final engine = MemoryTestEngine();
+  final MemoryTestEngine engine;
+  final ToolRegistry? registry;
   final containers = <ProviderContainer>[];
 
   ProviderContainer container({Future<MemoryStore>? memoryFuture}) {
@@ -147,7 +152,7 @@ class MemoryTestHarness {
         modelStorageServiceProvider.overrideWithValue(MemoryTestStorage()),
         inferenceEngineProvider.overrideWithValue(engine),
         toolRegistryProvider.overrideWithValue(
-          ToolRegistry(tools: [], platform: null),
+          registry ?? ToolRegistry(tools: [], platform: null),
         ),
       ],
     );

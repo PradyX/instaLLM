@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/presentation/skill_context_details.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -230,6 +231,7 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                             ? _PendingReplyCard(message: message)
                             : null,
                       ),
+                    SkillContextDetails(sessionKey: 'room:${chat.id}'),
                   ],
                 ),
         ),
@@ -261,8 +263,8 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                 controller: _inputController,
                 enabled: !running && bots.isReady,
                 hintText: chat.isDirect
-                    ? 'Message ${bot?.name ?? chat.name}...'
-                    : 'Message the room (@name for a bot)...',
+                    ? t.skills.botHint(name: bot?.name ?? chat.name)
+                    : t.skills.roomHint,
                 leading: ComposerModelPill(
                   models: chatModels,
                   selected: answerModel,

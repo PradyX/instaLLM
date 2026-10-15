@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_usage.dart';
 import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
@@ -209,6 +210,17 @@ void main() {
       expect(
         container.read(skillChoicesProvider)['room:${room.id}']?.skillId,
         'docs',
+      );
+      final usage = container.read(skillUsageProvider)['room:${room.id}']!;
+      expect(usage.instructions, greaterThan(0));
+      expect(usage.resources, greaterThan(0));
+      if (Platform.isLinux) {
+        expect(usage.scriptResults, greaterThan(0));
+      }
+      expect(usage.skills + usage.otherInput, usage.inputTokens);
+      expect(
+        usage.inputTokens + usage.reservedOutput,
+        lessThanOrEqualTo(usage.window),
       );
       expect(runtime.loadedModelPaths, hasLength(1));
     },

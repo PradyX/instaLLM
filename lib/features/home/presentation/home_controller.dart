@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/application/skill_usage.dart';
 import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skills_controller.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
@@ -265,17 +266,45 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
                 ? ref.watch(activeWorkspaceIdProvider)
                 : null),
       );
+  final workspace =
+      savedMemory.conversationWorkspaces[conversation?.id] ??
+      ref.watch(activeWorkspaceIdProvider);
+  final choice = ref.watch(
+    skillChoicesProvider,
+  )['conversation:${conversation?.id}'];
+  SkillSession? projectedSkills;
+  try {
+    projectedSkills = choiceSession(
+      choice: choice,
+      eligible: ref
+          .watch(skillsProvider)
+          .skills
+          .where((skill) => eligibleSkill(skill, workspaceId: workspace))
+          .toList(),
+      usableInputTokens: policy.usableInputTokens,
+      isCurrent: (_) => true,
+    );
+  } on FormatException {
+    /* The send path reports an actionable selection error. */
+  }
+  final projectedRegistry = ref
+      .watch(toolRegistryProvider)
+      .extendedWith(projectedSkills?.tools() ?? []);
   return projectConversationContext(
     messages: ref.watch(homeControllerProvider),
-    systemPrompt: withMemoryFacts(
-      composePersonaSystemPrompt(
-        persona: window.persona,
-        toolContract: toolContractIncluded
-            ? ref.watch(toolRegistryProvider).describeForPrompt()
-            : '',
+    systemPrompt: [
+      withMemoryFacts(
+        composePersonaSystemPrompt(
+          persona: window.persona,
+          toolContract: toolContractIncluded
+              ? projectedRegistry.describeForPrompt()
+              : '',
+        ),
+        facts,
       ),
-      facts,
-    ),
+      ...?projectedSkills?.sections,
+      ...?projectedSkills?.resourceSections,
+    ].join('\n\n'),
     policy: policy,
     toolContractIncluded: toolContractIncluded,
     // A stored summary of older turns is sent with every request, exactly like
@@ -1098,6 +1127,21 @@ class HomeController extends _$HomeController {
     required int maxTokens,
     required bool adaptiveMode,
   }) async {
+    final usage = ref.read(homeGenerationStatusProvider).contextUsage;
+    if (usage != null && _activeConversationId != null) {
+      ref.read(skillUsageProvider.notifier).state = {
+        ...ref.read(skillUsageProvider),
+        'conversation:$_activeConversationId': SkillUsage.capture(
+          _turnSkills,
+          input:
+              TokenEstimator.estimateText(promptBundle.prompt) +
+              TokenEstimator.messageOverheadTokens +
+              promptBundle.imagePaths.length * TokenEstimator.imageTokens,
+          reserved: maxTokens,
+          window: usage.contextTokens,
+        ),
+      };
+    }
     final stopSequence = modelStopToken(promptFormatId);
     final responseBuffer = StringBuffer();
     var sawToken = false;
@@ -1225,24 +1269,25 @@ class HomeController extends _$HomeController {
     );
     _setStatus(text: 'Using ${result.toolName}...', isGenerating: true);
 
-    final followUpBundle = buildModelChatPrompt(
-      buildToolFollowUpMessages(
-        history: _promptMessagesFor(assembly.messages),
-        rawToolCall: firstCompletion.rawText,
-        result: result,
-      ),
+    if (_stopRequestedByUser || _disposed) return;
+    final followUpPrompt = buildBudgetedToolFollowUp(
+      history: _promptMessagesFor(assembly.messages),
+      rawToolCall: firstCompletion.rawText,
+      result: result,
       systemPrompt: assembly.systemPrompt,
       promptFormatId: selectedModel.promptFormatId,
       assistantPrefill: await _reasoningPrefillFor(selectedModel),
+      inputLimit: assembly.usage.limitTokens,
+      retainedImagePaths: promptBundle.imagePaths,
     );
-    // Some prompt formats carry images inline and some pass them separately;
-    // the first prompt already worked out which paths this request sends.
-    final followUpPrompt = followUpBundle.imagePaths.isNotEmpty
-        ? followUpBundle
-        : BuiltLlmPrompt(
-            prompt: followUpBundle.prompt,
-            imagePaths: promptBundle.imagePaths,
-          );
+    if (followUpPrompt == null) {
+      _replaceAiMessage(
+        aiMessageId,
+        t.skills.followUpBudget,
+        toolActivity: toolActivity,
+      );
+      return;
+    }
 
     final secondCompletion = await _streamCompletion(
       aiMessageId: aiMessageId,

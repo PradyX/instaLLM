@@ -1,3 +1,4 @@
+import 'package:installm/i18n/strings.g.dart';
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
@@ -131,6 +132,10 @@ class _SkillTile extends StatelessWidget {
                   Text(
                     'Needs: ${skill.requiredCapabilities.join(', ')}',
                     style: textTheme.bodySmall,
+                  ),
+                if (skill.scriptNames.isNotEmpty)
+                  Text(
+                    t.skills.scriptFiles(names: skill.scriptNames.join(', ')),
                   ),
                 if (skill.resourceNames.isNotEmpty)
                   Text(

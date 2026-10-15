@@ -1,3 +1,4 @@
+import 'package:installm/features/skills/presentation/skill_context_details.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -1016,7 +1017,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ? 'Wait for current response...'
                 : canAttachImage
                 ? 'Ask about your image or start a chat...'
-                : 'Message InstaLLM...',
+                : t.skills.chatHint,
             onSend: _sendMessage,
             sendsOnEnter: sendsMessageOnEnter,
             header: (isGenerating || _draftImages.isNotEmpty)
@@ -1121,10 +1122,14 @@ class _HomePageState extends ConsumerState<HomePage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    'Context: ${_formatTokens(meterUsage.usedTokens)}',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                  SkillContextDetails(
+                    sessionKey:
+                        'conversation:${ref.watch(conversationControllerProvider).activeConversationId}',
+                    child: Text(
+                      'Context: ${_formatTokens(meterUsage.usedTokens)}',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],

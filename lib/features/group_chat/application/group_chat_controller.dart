@@ -1,3 +1,6 @@
+import 'package:installm/features/agents/domain/agent_run.dart';
+import 'package:installm/features/skills/application/skill_usage.dart';
+import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
 import 'package:installm/features/skills/application/skill_choices.dart';
 import 'package:installm/features/skills/application/skill_script_runner.dart';
 import 'package:installm/core/permissions/workspace_permission.dart';
@@ -15,7 +18,6 @@ import 'package:installm/features/group_chat/domain/group_chat.dart';
 import 'package:installm/features/group_chat/domain/group_router.dart';
 import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/kanban/domain/task.dart';
-import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart';
 import 'package:installm/features/kanban/application/kanban_tools.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -622,7 +624,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         // Optional journals must not prevent the ordinary local answer.
       }
     }
-    final scripts = SkillScriptRunner(isCurrent: prompt.skills.isCurrent);
+    final scripts = SkillScriptRunner(
+      isCurrent: prompt.skills.isCurrent,
+      onResult: prompt.skills.recordScriptResult,
+    );
     _skillRunners[chat.id] = scripts;
     final registry = _ref.read(toolRegistryProvider).extendedWith([
       ...buildKanbanTools(
@@ -663,13 +668,28 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             goal: prompt.goal,
             registry: registry,
             maxIterations: 6,
+            budget: _ref.read(contextBudgetProvider).budget,
+            onContext: (input, reserved, window) {
+              if (!mounted) return;
+              _ref.read(skillUsageProvider.notifier).state = {
+                ..._ref.read(skillUsageProvider),
+                'room:${chat.id}': SkillUsage.capture(
+                  prompt.skills,
+                  input: input,
+                  reserved: reserved,
+                  window: window,
+                ),
+              };
+            },
             systemPrompt: model.supportsToolCalling
                 ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${registry.describeForPrompt()}'
                 : prompt.systemPrompt,
             assistantPrefill: assistantPrefill,
           );
       final answer = run.answer.trim().isEmpty
-          ? '(The model gave no answer.)'
+          ? (run.status == AgentRunStatus.budgetReached
+                ? run.steps.last.text
+                : '(The model gave no answer.)')
           : run.answer.trim();
       _append(
         GroupMessage.bot(
@@ -731,13 +751,19 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     );
     // The same window a chat request would get; without a model selected
     // the selector still works against a conservative fallback.
-    final window = _ref.read(selectedContextWindowProvider);
+    final answerModel = roomAnswerModel(
+      chat: chat,
+      bot: bot,
+      installed: _ref.read(chatModelsProvider),
+      selected: _ref.read(selectedChatModelProvider),
+    );
     final usable = _ref
         .read(contextBudgetProvider)
         .budget
         .resolvePolicy(
-          runtimeContextTokens: window?.resolvedConfig.contextTokens ?? 4000,
-          reservedOutputTokens: window?.resolvedConfig.maxOutputTokens ?? 256,
+          runtimeContextTokens: ModelCompatibilityService.defaultContextTokens,
+          declaredContextTokens: answerModel?.ggufMetadata?.contextLength,
+          reservedOutputTokens: AgentLoopService.defaultMaxTokens,
         )
         .usableInputTokens;
     await _ref.read(skillChoicesProvider.notifier).whenReady;

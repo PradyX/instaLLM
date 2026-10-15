@@ -1,3 +1,4 @@
+import 'package:installm/features/conversations/domain/context_policy.dart';
 import 'package:installm/core/utils/llm_prompt_utils.dart';
 import 'package:installm/features/tools/domain/tool_execution_result.dart';
 
@@ -26,4 +27,43 @@ List<LlmPromptMessage> buildToolFollowUpMessages({
       'another tool in this reply.',
     ),
   ];
+}
+
+/// Preserve the system prefix, latest request, tool exchange and answer
+/// reservation. Older history is the only material dropped to fit the already
+/// resolved input limit; null means even those essential parts do not fit.
+BuiltLlmPrompt? buildBudgetedToolFollowUp({
+  required List<LlmPromptMessage> history,
+  required String rawToolCall,
+  required ToolExecutionResult result,
+  required String systemPrompt,
+  required String promptFormatId,
+  required int inputLimit,
+  String assistantPrefill = '',
+  List<String> retainedImagePaths = const [],
+}) {
+  for (var dropped = 0; dropped <= history.length; dropped++) {
+    if (dropped > 0 && history.length - dropped < 1) break;
+    final bundle = buildModelChatPrompt(
+      buildToolFollowUpMessages(
+        history: history.sublist(dropped),
+        rawToolCall: rawToolCall,
+        result: result,
+      ),
+      systemPrompt: systemPrompt,
+      promptFormatId: promptFormatId,
+      assistantPrefill: assistantPrefill,
+    );
+    final images = bundle.imagePaths.isEmpty
+        ? retainedImagePaths
+        : bundle.imagePaths;
+    final cost =
+        TokenEstimator.estimateText(bundle.prompt) +
+        TokenEstimator.messageOverheadTokens +
+        images.length * TokenEstimator.imageTokens;
+    if (cost <= inputLimit) {
+      return BuiltLlmPrompt(prompt: bundle.prompt, imagePaths: images);
+    }
+  }
+  return null;
 }

@@ -159,6 +159,7 @@ class AgentLoopService {
     int? maxTokens,
     ContextBudget budget = ContextBudget.auto,
     void Function(AgentStep step)? onStep,
+    void Function(int inputTokens, int reservedOutput, int window)? onContext,
     String? systemPrompt,
     String assistantPrefill = '',
   }) async {
@@ -281,6 +282,7 @@ class AgentLoopService {
         );
         return build(status);
       }
+      onContext?.call(promptTokens, outputTokens, policy.contextTokens);
       // Counted only once the turn really runs, so a stopped-before-starting
       // run reports the turns it used.
       usedIterations = iteration;

@@ -1,3 +1,6 @@
+import 'package:installm/features/tools/application/tool_registry.dart';
+import 'package:installm/features/tools/domain/tool_definition.dart';
+import 'package:installm/features/skills/application/skill_usage.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
@@ -212,6 +215,75 @@ void main() {
     },
   );
   test(
+    'Home model-requested resource reaches the follow-up and its actual inspector',
+    () async {
+      final engine = _ResourceEngine();
+      final harness = MemoryTestHarness(
+        engine: engine,
+        registry: ToolRegistry(tools: [], platform: ToolPlatform.linux),
+        models: const [
+          LlmModel(
+            id: 'm1',
+            name: 'One',
+            parameterSize: '1B',
+            description: 'test',
+            isDownloaded: true,
+            capabilities: [ModelCapability.tools],
+          ),
+        ],
+      );
+      addTearDown(harness.close);
+      final skill = Skill.create(
+        id: 'docs',
+        name: 'reports',
+        body: 'Preserve the report instructions.',
+        resourceNames: ['references/report.md'],
+        bundleFiles: {
+          'references/report.md': 'Unique reference evidence for this run.',
+        },
+      );
+      SkillStore(
+        File('${harness.root.path}/skills/skills.json'),
+      ).save(SkillsSnapshot(customSkills: [skill]));
+      final container = harness.container();
+      final records = <SkillUsage>[];
+      container.listen(
+        skillUsageProvider,
+        (_, next) => records.addAll(next.values),
+      );
+      final home = await harness.home(container);
+      await home.sendMessage('/reports Use the declared report reference.');
+      expect(engine.prompts, hasLength(2));
+      expect(
+        engine.prompts.first,
+        isNot(contains('Unique reference evidence for this run.')),
+      );
+      expect(
+        engine.prompts.last,
+        contains('Unique reference evidence for this run.'),
+      );
+      expect(
+        engine.prompts.last,
+        contains('Preserve the report instructions.'),
+      );
+      expect(records.first.resources, 0);
+      expect(records.last.resources, greaterThan(0));
+      expect(
+        records.last.skills + records.last.otherInput,
+        records.last.inputTokens,
+      );
+      expect(
+        records.last.inputTokens + records.last.reservedOutput,
+        lessThanOrEqualTo(records.last.window),
+      );
+      expect(engine.reservations[0], engine.reservations[1]);
+      expect(
+        container.read(homeControllerProvider).last.content,
+        contains('Used the reference'),
+      );
+    },
+  );
+  test(
     'Home real send path injects chosen instructions/templates across model switches',
     () async {
       final harness = MemoryTestHarness(
@@ -253,6 +325,19 @@ void main() {
         contains('Always use the requested report structure.'),
       );
       expect(harness.engine.prompts.last, contains('# Evidence'));
+      final id = container
+          .read(conversationControllerProvider)
+          .activeConversationId!;
+      final usage = container.read(skillUsageProvider)['conversation:$id']!;
+      expect(usage.instructions, greaterThan(0));
+      expect(usage.resources, greaterThan(0));
+      expect(usage.skills + usage.otherInput, usage.inputTokens);
+      final projected = container.read(homeContextProjectionProvider)!;
+      expect(projected.fixedTokens, greaterThan(usage.skills));
+      expect(
+        usage.inputTokens + usage.reservedOutput,
+        lessThanOrEqualTo(usage.window),
+      );
       (container.read(modelSelectionControllerProvider.notifier)
               as MemoryTestSelection)
           .choose('m2');
@@ -267,4 +352,21 @@ void main() {
       );
     },
   );
+}
+
+class _ResourceEngine extends MemoryTestEngine {
+  @override
+  Stream<String> generateResponse(String prompt, {int? maxTokens}) {
+    prompts.add(prompt);
+    reservations.add(maxTokens);
+    return Stream.value(
+      prompts.length == 1
+          ? jsonEncode({
+              'type': 'tool_call',
+              'tool': 'skill_read_resource',
+              'arguments': {'skillId': 'docs', 'path': 'references/report.md'},
+            })
+          : 'Used the reference.',
+    );
+  }
 }

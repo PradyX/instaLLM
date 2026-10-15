@@ -23,7 +23,19 @@ class SkillSession {
     0,
     (n, text) => n + TokenEstimator.estimateText(text),
   );
-  int get usedTokens => bodyTokens + resourceTokens;
+  int _scriptTokens = 0;
+  int get scriptTokens => _scriptTokens;
+  int get usedTokens => bodyTokens + resourceTokens + scriptTokens;
+  String recordScriptResult(String text) {
+    final remaining = (tokenBudget - usedTokens - 48).clamp(0, tokenBudget);
+    if (remaining < 16) {
+      return 'Script finished; result omitted by the skill token budget.';
+    }
+    final kept = TokenEstimator.truncate(text, remaining);
+    _scriptTokens += TokenEstimator.estimateText(kept);
+    return kept;
+  }
+
   List<String> get sections => [
     for (final skill in skills) SkillSelector.sectionFor(skill),
   ];

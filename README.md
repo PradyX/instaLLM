@@ -260,6 +260,14 @@ pick that member without an `@mention`. Disabled, unassigned or out-of-workspace
 skills cannot be invoked. Old conversations/rooms need no rewriting; these
 preferences also remain outside existing backup/sync coverage.
 
+After a skill-backed request, tap the ordinary chat’s context readout, or
+**Skills · Context details** below the room history, to open the shared inspector. It shows estimates for instructions, references, script
+results, other input, the answer reservation and the context window for the
+last prompt actually sent. Skill text is counted once; numeric snapshots stay
+in memory only. Script results also share the skill budget. If a tool exchange
+cannot fit alongside the system prompt and answer reservation, the result is
+recorded and the app explains why it cannot generate the follow-up.
+
 ### Context and memory
 
 - Every request is assembled against a token budget derived from the model's context window, the tokens reserved for the answer and the safety margin; the system prompt always stays, and older turns are dropped oldest-first only when the budget runs out.

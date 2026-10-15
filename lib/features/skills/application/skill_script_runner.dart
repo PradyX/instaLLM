@@ -14,10 +14,12 @@ import 'package:installm/features/tools/domain/tool_definition.dart';
 class SkillScriptRunner {
   SkillScriptRunner({
     required this.isCurrent,
+    this.onResult,
     this.timeout = const Duration(seconds: 15),
     ToolPlatform? platform,
   }) : platform = platform ?? currentToolPlatform();
   final bool Function(Skill) isCurrent;
+  final String Function(String)? onResult;
   final Duration timeout;
   final ToolPlatform? platform;
   final Set<Process> _processes = {};
@@ -70,8 +72,14 @@ class SkillScriptRunner {
                 platforms: const {ToolPlatform.macOS, ToolPlatform.linux},
                 timeout: timeout + const Duration(seconds: 5),
               ),
-              handler: (args) =>
-                  _run(skill, script, args['arguments'] as String? ?? '[]'),
+              handler: (args) async {
+                final result = await _run(
+                  skill,
+                  script,
+                  args['arguments'] as String? ?? '[]',
+                );
+                return onResult?.call(result) ?? result;
+              },
             ),
   ];
 

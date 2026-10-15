@@ -926,6 +926,36 @@ class Translations$skills$en {
 
 	/// en: 'Send / to choose a skill or /chat to clear it.'
 	String get selectedHint => 'Send / to choose a skill or /chat to clear it.';
+
+	/// en: 'Last request · estimated tokens'
+	String get lastRequest => 'Last request · estimated tokens';
+
+	/// en: 'Other input (system, tools, history, documents)'
+	String get otherInput => 'Other input (system, tools, history, documents)';
+
+	/// en: 'Total input'
+	String get inputTotal => 'Total input';
+
+	/// en: 'Reserved output'
+	String get outputReservation => 'Reserved output';
+
+	/// en: 'Context window'
+	String get window => 'Context window';
+
+	/// en: 'The tool result is recorded, but it does not fit a follow-up with the system prompt and answer reservation. Reduce the task or increase the context budget.'
+	String get followUpBudget => 'The tool result is recorded, but it does not fit a follow-up with the system prompt and answer reservation. Reduce the task or increase the context budget.';
+
+	/// en: 'Message InstaLLM...'
+	String get chatHint => 'Message InstaLLM...';
+
+	/// en: 'Message ${name}...'
+	String botHint({required Object name}) => 'Message ${name}...';
+
+	/// en: 'Message the room (@name for a bot)...'
+	String get roomHint => 'Message the room (@name for a bot)...';
+
+	/// en: 'Scripts: ${names}'
+	String scriptFiles({required Object names}) => 'Scripts: ${names}';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -1181,6 +1211,16 @@ extension on Translations {
 			'skills.resourceTokens' => 'Skill resources',
 			'skills.observationTokens' => 'Skill script results',
 			'skills.selectedHint' => 'Send / to choose a skill or /chat to clear it.',
+			'skills.lastRequest' => 'Last request · estimated tokens',
+			'skills.otherInput' => 'Other input (system, tools, history, documents)',
+			'skills.inputTotal' => 'Total input',
+			'skills.outputReservation' => 'Reserved output',
+			'skills.window' => 'Context window',
+			'skills.followUpBudget' => 'The tool result is recorded, but it does not fit a follow-up with the system prompt and answer reservation. Reduce the task or increase the context budget.',
+			'skills.chatHint' => 'Message InstaLLM...',
+			'skills.botHint' => ({required Object name}) => 'Message ${name}...',
+			'skills.roomHint' => 'Message the room (@name for a bot)...',
+			'skills.scriptFiles' => ({required Object names}) => 'Scripts: ${names}',
 			_ => null,
 		};
 	}

@@ -1,3 +1,4 @@
+import 'package:installm/i18n/strings.g.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -232,7 +233,7 @@ void main() {
 
     await pumpChatPage(tester, room);
 
-    expect(find.text('Message the room (@name for a bot)...'), findsOneWidget);
+    expect(find.text(t.skills.roomHint), findsOneWidget);
     // A group room has no single bot to answer for it, so the pill names the
     // room's own choice: the app's model until the room picks one.
     expect(find.byType(ComposerModelPill), findsOneWidget);

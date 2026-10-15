@@ -70,11 +70,16 @@ Future<void> _openPicker(
   WidgetTester tester, {
   required _FakeWhisperModelService service,
   String? selectedId,
+  List<String>? notices,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         whisperModelServiceProvider.overrideWithValue(service),
+        if (notices != null)
+          modelDownloadNoticeProvider.overrideWithValue(
+            (name) async => notices.add(name),
+          ),
         voiceSettingsProvider.overrideWith(
           (ref) => _InMemoryVoiceSettings(whisperModelId: selectedId),
         ),
@@ -125,7 +130,8 @@ void main() {
 
   testWidgets('downloading a model installs it and chooses it', (tester) async {
     final service = _FakeWhisperModelService();
-    await _openPicker(tester, service: service);
+    final notices = <String>[];
+    await _openPicker(tester, service: service, notices: notices);
 
     // The first row is the smallest model, which is what the picker shows in
     // catalog order.
@@ -150,6 +156,8 @@ void main() {
       findsNWidgets(WhisperModelCatalog.models.length - 1),
     );
     expect(find.byTooltip('Remove downloaded model'), findsOneWidget);
+    // The user is told the model is ready even if they left this sheet.
+    expect(notices, ['Whisper ${tiny.name}']);
   });
 
   testWidgets('an installed model can be chosen, and removal asks first', (

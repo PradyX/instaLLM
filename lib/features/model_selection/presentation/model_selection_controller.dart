@@ -421,16 +421,20 @@ class ModelSelectionController extends _$ModelSelectionController {
         selectedModelId:
             state.selectedModelId ?? (isDownloaded ? model.id : null),
       );
-      if (!hadSelection) {
-        unawaited(_rememberSelectedModel(state.selectedModelId));
-      }
-      await _persistCustomModels(updatedModels);
-      await _refreshStorageInfo();
+      // The notice is owed as soon as the files are here. The bookkeeping
+      // below (remembering the selection, writing model records, reading
+      // storage figures) can fail, and a failure there must not swallow the
+      // one thing the user was waiting for.
       try {
         await _notificationService.showModelDownloadComplete(model.name);
       } catch (_) {
         // Notification failures should not affect download success.
       }
+      if (!hadSelection) {
+        unawaited(_rememberSelectedModel(state.selectedModelId));
+      }
+      await _persistCustomModels(updatedModels);
+      await _refreshStorageInfo();
     } catch (e) {
       _cancelTokens.remove(model.id);
 

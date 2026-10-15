@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/voice/data/whisper_model_service.dart';
 import 'package:installm/features/voice/domain/whisper_model_option.dart';
@@ -82,9 +83,19 @@ final whisperModelServiceProvider = Provider<WhisperModelService>((ref) {
   return WhisperModelService(ref.watch(modelStorageServiceProvider));
 });
 
+/// How a finished download reaches the user. A provider rather than a direct
+/// call so a test can watch the notice instead of the platform.
+final modelDownloadNoticeProvider =
+    Provider<Future<void> Function(String name)>(
+      (ref) => LocalNotificationService.instance.showModelDownloadComplete,
+    );
+
 final whisperModelsProvider =
     StateNotifierProvider<WhisperModelsController, WhisperModelsState>((ref) {
-      return WhisperModelsController(ref.watch(whisperModelServiceProvider));
+      return WhisperModelsController(
+        ref.watch(whisperModelServiceProvider),
+        notifyDownloadComplete: ref.watch(modelDownloadNoticeProvider),
+      );
     });
 
 /// Keeps the picker in step with the model directory.
@@ -92,11 +103,20 @@ final whisperModelsProvider =
 /// Downloads are the user's decision and always start from the picker; this
 /// only reports what happened, so nothing is fetched in the background.
 class WhisperModelsController extends StateNotifier<WhisperModelsState> {
-  WhisperModelsController(this._service) : super(const WhisperModelsState()) {
+  WhisperModelsController(
+    this._service, {
+    Future<void> Function(String name)? notifyDownloadComplete,
+  }) : _notifyDownloadComplete =
+           notifyDownloadComplete ??
+           LocalNotificationService.instance.showModelDownloadComplete,
+       super(const WhisperModelsState()) {
     refresh();
   }
 
   final WhisperModelService _service;
+
+  /// Called once a model is installed, with the name to show in the notice.
+  final Future<void> Function(String name) _notifyDownloadComplete;
   CancelToken? _cancelToken;
 
   /// Re-reads the model directory.
@@ -151,6 +171,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
         totalBytes: 0,
       );
       await refresh();
+      await _announce(option);
       return true;
     } catch (error) {
       _cancelToken = null;
@@ -164,6 +185,20 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
       );
       await refresh(clearError: false);
       return false;
+    }
+  }
+
+  /// Tells the user the model is installed.
+  ///
+  /// A notice is a convenience, not part of the download: a platform that
+  /// refuses it must not make a finished model look failed. The download
+  /// notice says nothing about the conversation or the model files.
+  Future<void> _announce(WhisperModelOption option) async {
+    try {
+      await _notifyDownloadComplete('Whisper ${option.name}');
+    } catch (_) {
+      // LocalNotificationService reports its own failures; nothing here can
+      // change the outcome of a download that already finished.
     }
   }
 

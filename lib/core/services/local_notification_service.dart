@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:installm/core/utils/logger.dart';
 
 class LocalNotificationService {
   LocalNotificationService._();
@@ -55,7 +55,7 @@ class LocalNotificationService {
       // available" used to skip the request and every notice after it.
       await _plugin.initialize(settings: settings);
     } catch (error, stackTrace) {
-      debugPrint(
+      AppLogger.warning(
         'LocalNotificationService initialization disabled notifications: '
         '$error\n$stackTrace',
       );
@@ -124,7 +124,7 @@ class LocalNotificationService {
     if (granted == null) return;
     _notificationsAvailable = granted;
     if (granted) return;
-    debugPrint(
+    AppLogger.warning(
       'LocalNotificationService: notifications are not allowed here, so '
       'download notices are skipped. Allow them in the system notification '
       'settings for InstaLLM to get them.',
@@ -170,7 +170,7 @@ class LocalNotificationService {
         notificationDetails: details,
       );
     } catch (error, stackTrace) {
-      debugPrint(
+      AppLogger.warning(
         'LocalNotificationService failed to show notification: '
         '$error\n$stackTrace',
       );

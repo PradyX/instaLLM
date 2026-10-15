@@ -68,7 +68,6 @@ Future<void> settle() async {
 void main() {
   final tiny = WhisperModelCatalog.models[0];
   final small = WhisperModelCatalog.models[2];
-
   test('reads the model directory when it is created', () async {
     final service = _FakeWhisperModelService(
       installed: [installedModel(small)],
@@ -161,4 +160,52 @@ void main() {
     expect(controller.state.isInstalled(tiny.id), isFalse);
     expect(controller.state.isLoading, isFalse);
   });
+
+  test('a finished download tells the user which model is ready', () async {
+    final notices = <String>[];
+    final service = _FakeWhisperModelService();
+    final controller = WhisperModelsController(
+      service,
+      notifyDownloadComplete: (name) async => notices.add(name),
+    );
+    addTearDown(controller.dispose);
+    await settle();
+
+    expect(await controller.download(tiny), isTrue);
+
+    expect(notices, ['Whisper ${tiny.name}']);
+  });
+
+  test('a failed or cancelled download raises no notice', () async {
+    final notices = <String>[];
+    final service = _FakeWhisperModelService()
+      ..downloadError = Exception('the connection dropped');
+    final controller = WhisperModelsController(
+      service,
+      notifyDownloadComplete: (name) async => notices.add(name),
+    );
+    addTearDown(controller.dispose);
+    await settle();
+
+    expect(await controller.download(tiny), isFalse);
+    expect(notices, isEmpty);
+  });
+
+  test(
+    'a notice that cannot be shown leaves the download successful',
+    () async {
+      final service = _FakeWhisperModelService();
+      final controller = WhisperModelsController(
+        service,
+        notifyDownloadComplete: (name) async => throw StateError('no platform'),
+      );
+      addTearDown(controller.dispose);
+      await settle();
+
+      expect(await controller.download(tiny), isTrue);
+
+      expect(controller.state.isInstalled(tiny.id), isTrue);
+      expect(controller.state.errorMessage, isNull);
+    },
+  );
 }

@@ -1,4 +1,9 @@
 import 'package:installm/features/agents/presentation/hooks_page.dart';
+import 'package:installm/features/documents/presentation/collection_tuning_page.dart';
+import 'package:installm/features/documents/presentation/knowledge_collections_page.dart';
+import 'package:installm/features/documents/presentation/network_policy_page.dart';
+import 'package:installm/features/reminders/presentation/reminders_page.dart';
+import 'package:installm/features/connections/presentation/connections_page.dart';
 import 'package:installm/features/benchmark/presentation/benchmark_screen.dart';
 import 'package:installm/features/context/presentation/context_budget_page.dart';
 import 'package:installm/features/conversations/presentation/conversations_page.dart';
@@ -54,6 +59,16 @@ abstract class AppRoutes {
 
   static const backup = '/backup';
   static const modelDetails = '/model-details';
+  static const networkPolicy = '/network';
+  static const collectionTuning = '/collection-tuning';
+  static const knowledge = '/knowledge';
+  static const reminders = '/reminders';
+  static const connections = '/connections';
+
+  /// Route to one collection's tuning screen.
+  static String collectionTuningFor(String collectionId) {
+    return '$collectionTuning?id=${Uri.encodeQueryComponent(collectionId)}';
+  }
 
   /// Route to the GGUF metadata inspector for [modelId].
   static String modelDetailsFor(String modelId) {
@@ -149,6 +164,28 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const KanbanPage(),
       ),
 
+      GoRoute(
+        path: AppRoutes.networkPolicy,
+        builder: (context, state) => const NetworkPolicyPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.reminders,
+        builder: (context, state) => const RemindersPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.connections,
+        builder: (context, state) => const ConnectionsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.knowledge,
+        builder: (context, state) => const KnowledgeCollectionsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.collectionTuning,
+        builder: (context, state) => CollectionTuningPage(
+          collectionId: state.uri.queryParameters['id'] ?? '',
+        ),
+      ),
       GoRoute(
         path: AppRoutes.workspace,
         builder: (context, state) => WorkspaceDetailPage(

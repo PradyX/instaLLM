@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' as io;
 import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
@@ -10,8 +11,11 @@ import 'package:installm/features/documents/application/document_embedding_model
 import 'package:installm/features/documents/application/document_library.dart';
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_extraction.dart';
+import 'package:installm/features/documents/data/web_fetch_service.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
 import 'package:installm/features/documents/domain/retrieval_tuning.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 import 'package:installm/features/documents/domain/knowledge_collection.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -459,6 +463,76 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
     );
   }
 
+  /// Indexes explicit web text the user asked for into the active collection.
+  ///
+  /// The snippet already carries its source URL and fetch time (Road Map 3
+  /// Phase 3.4): they are stored as the file header so the import reads as
+  /// web text, never as trusted facts. The staged file lives beside the index
+  /// and the original web page is never modified.
+  Future<void> ingestWebSnippet({
+    required String title,
+    required String text,
+    required String sourceUrl,
+    required DateTime fetchedAt,
+  }) async {
+    final library = _library;
+    if (library == null) return;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || sourceUrl.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'There is no web text to import.');
+      return;
+    }
+    final staged = await _stageImportText(
+      fileName: _importFileName(title.isEmpty ? sourceUrl : title),
+      content:
+          '# ${title.trim().isEmpty ? sourceUrl.trim() : title.trim()}\n\n'
+          'Source: ${sourceUrl.trim()}\n'
+          'Fetched: ${fetchedAt.toIso8601String()}\n\n$trimmed\n',
+    );
+    if (staged == null) return;
+    await addDocument(staged);
+  }
+
+  /// Imports a user-picked mbox file into the active collection as Markdown.
+  ///
+  /// Local files only: the mailbox is read where it already lives and one
+  /// Markdown file per mbox message is staged beside the index. Originals are
+  /// never touched.
+  Future<int> importMboxFile(String path) async {
+    final library = _library;
+    if (library == null) return 0;
+    final file = io.File(path);
+    if (!file.existsSync()) {
+      state = state.copyWith(errorMessage: 'That mailbox could not be read.');
+      return 0;
+    }
+    final content = await file.readAsString();
+    final messages = WebFetchService.parseMbox(content);
+    if (messages.isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'No messages were found in that mailbox.',
+      );
+      return 0;
+    }
+    var imported = 0;
+    for (final message in messages.take(200)) {
+      final staged = await _stageImportText(
+        fileName: _importFileName(
+          message.subject.isEmpty ? 'message' : message.subject,
+        ),
+        content:
+            '# ${message.subject.isEmpty ? 'Message' : message.subject}\n\n'
+            '${message.from.isEmpty ? '' : 'From: ${message.from}\n'}'
+            '${message.date.isEmpty ? '' : 'Date: ${message.date}\n'}'
+            'Source: mbox $path\n\n${message.body}\n',
+      );
+      if (staged == null || !mounted) break;
+      await addDocument(staged);
+      imported++;
+    }
+    return imported;
+  }
+
   /// The library this notifier owns, opened when it is not loaded yet.
   ///
   /// Anything that can run before the Documents screen was ever shown —
@@ -845,5 +919,35 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
   static String _fileNameOf(String path) {
     final separator = path.contains(r'\') ? r'\' : '/';
     return path.split(separator).last;
+  }
+
+  static String _importFileName(String hint) {
+    final slug = hint
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
+    final base = slug.isEmpty ? 'import' : slug;
+    final trimmed = base.length <= 60 ? base : base.substring(0, 60);
+    return '$trimmed-${DateTime.now().microsecondsSinceEpoch}.md';
+  }
+
+  Future<String?> _stageImportText({
+    required String fileName,
+    required String content,
+  }) async {
+    try {
+      final support = await getApplicationSupportDirectory();
+      final dir = io.Directory(p.join(support.path, 'documents', 'imports'));
+      await dir.create(recursive: true);
+      final file = io.File(p.join(dir.path, fileName));
+      await file.writeAsString(content, flush: true);
+      return file.path;
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: 'Could not stage the import: $error',
+      );
+      return null;
+    }
   }
 }

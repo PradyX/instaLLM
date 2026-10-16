@@ -346,6 +346,29 @@ class DocumentLibrary {
     return true;
   }
 
+  /// Changes how a collection slices documents: target size, overlap and cap.
+  ///
+  /// Index-time: documents already indexed keep their chunks and start
+  /// reporting a re-index reason, so a large collection is rebuilt
+  /// deliberately instead of as a side effect of a slider.
+  bool updateCollectionChunking(
+    String collectionId,
+    DocumentChunkingConfig chunking,
+  ) {
+    final collection = collectionById(collectionId);
+    if (collection == null) return false;
+    final normalized = chunking.normalized();
+    if (collection.chunking.sameAs(normalized)) return true;
+    _collections = [
+      for (final existing in _collections)
+        existing.id == collectionId
+            ? existing.copyWith(chunking: normalized, updatedAt: DateTime.now())
+            : existing,
+    ];
+    _persist();
+    return true;
+  }
+
   /// Points a collection at an embedding model, or back to lexical search.
   ///
   /// Documents already indexed for the collection are not rebuilt here: they

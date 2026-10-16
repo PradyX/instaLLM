@@ -110,6 +110,34 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.mcp),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.library_books_outlined),
+                  title: const Text('Knowledge'),
+                  subtitle: const Text(
+                    'Collections, tuning and retrieval preview',
+                  ),
+                  onTap: () => context.push(AppRoutes.knowledge),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications_outlined),
+                  title: const Text('Reminders'),
+                  subtitle: const Text('Scheduled tasks that fire offline'),
+                  onTap: () => context.push(AppRoutes.reminders),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.calendar_month_outlined),
+                  title: const Text('Connections'),
+                  subtitle: const Text('Calendars and inbox, read locally'),
+                  onTap: () => context.push(AppRoutes.connections),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.language_outlined),
+                  title: const Text('Network'),
+                  subtitle: const Text(
+                    'Explicit web use, off until enabled per workspace',
+                  ),
+                  onTap: () => context.push(AppRoutes.networkPolicy),
+                ),
+                ListTile(
                   leading: const Icon(Icons.folder_open),
                   title: Text(t.vault.title),
                   subtitle: Text(t.vault.description),

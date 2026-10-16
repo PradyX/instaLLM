@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resources the release build must not shrink away.
+
+  Release builds shrink resources (Flutter's Gradle plugin enables it by
+  default), and the shrinker only sees references in compiled resources and the
+  manifest. The notification's small icon is named from Dart
+  (core/services/local_notification_service.dart) and resolved by name at
+  runtime, so without this file a release APK drops ic_stat_installm and the
+  shade falls back to a blank circle — the debug build looks fine, which is
+  what makes it easy to miss.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_installm" />

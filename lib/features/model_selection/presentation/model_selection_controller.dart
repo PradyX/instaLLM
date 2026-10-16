@@ -12,6 +12,7 @@ import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/model_selection/domain/model_import.dart';
+import 'package:installm/features/model_selection/presentation/download_progress_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:installm/storage/secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -46,6 +47,9 @@ class ModelSelectionController extends _$ModelSelectionController {
     storageService: _storageService,
   );
   final Map<String, CancelToken> _cancelTokens = {};
+
+  DownloadProgressNotifier get _progress =>
+      ref.read(downloadProgressProvider.notifier);
 
   @override
   ModelSelectionState build() {
@@ -282,13 +286,8 @@ class ModelSelectionController extends _$ModelSelectionController {
     final assets = _downloadAssetsForModel(model);
     if (assets.isEmpty) return;
 
-    if (!state.downloadProgress.containsKey(model.id)) {
-      state = state.copyWith(
-        downloadProgress: {
-          ...state.downloadProgress,
-          model.id: DownloadProgress(received: 0, total: 0),
-        },
-      );
+    if (!_progress.isDownloading(model.id)) {
+      _progress.start(model.id);
     }
 
     final cancelToken = CancelToken();
@@ -323,11 +322,8 @@ class ModelSelectionController extends _$ModelSelectionController {
         final requiredBytes = remainingBytes + _downloadSafetyBytes;
         if (storageInfo.freeBytes < requiredBytes) {
           _cancelTokens.remove(model.id);
-          final updatedProgress = Map<String, DownloadProgress>.from(
-            state.downloadProgress,
-          )..remove(model.id);
+          _progress.clear(model.id);
           state = state.copyWith(
-            downloadProgress: updatedProgress,
             error:
                 'Not enough free storage for ${model.name}. '
                 'Need ${_formatBytes(requiredBytes)} (including safety buffer), '
@@ -345,14 +341,10 @@ class ModelSelectionController extends _$ModelSelectionController {
       }).fold<int>(0, (sum, size) => sum + size);
 
       if (completedBytes > 0) {
-        state = state.copyWith(
-          downloadProgress: {
-            ...state.downloadProgress,
-            model.id: DownloadProgress(
-              received: completedBytes,
-              total: totalRemoteBytes > 0 ? totalRemoteBytes : completedBytes,
-            ),
-          },
+        _progress.report(
+          model.id,
+          received: completedBytes,
+          total: totalRemoteBytes > 0 ? totalRemoteBytes : completedBytes,
         );
       }
 
@@ -383,14 +375,10 @@ class ModelSelectionController extends _$ModelSelectionController {
             final safeTotal = resolvedTotal > 0
                 ? resolvedTotal
                 : resolvedReceived;
-            state = state.copyWith(
-              downloadProgress: {
-                ...state.downloadProgress,
-                model.id: DownloadProgress(
-                  received: resolvedReceived,
-                  total: safeTotal,
-                ),
-              },
+            _progress.report(
+              model.id,
+              received: resolvedReceived,
+              total: safeTotal,
             );
           },
         );
@@ -401,6 +389,7 @@ class ModelSelectionController extends _$ModelSelectionController {
       }
 
       _cancelTokens.remove(model.id);
+      _progress.clear(model.id);
 
       final isDownloaded = await _isModelBundleDownloaded(model);
       final updatedModels = state.models
@@ -410,14 +399,9 @@ class ModelSelectionController extends _$ModelSelectionController {
           )
           .toList();
 
-      final updatedProgress = Map<String, DownloadProgress>.from(
-        state.downloadProgress,
-      )..remove(model.id);
-
       final hadSelection = state.selectedModelId != null;
       state = state.copyWith(
         models: updatedModels,
-        downloadProgress: updatedProgress,
         selectedModelId:
             state.selectedModelId ?? (isDownloaded ? model.id : null),
       );
@@ -438,15 +422,17 @@ class ModelSelectionController extends _$ModelSelectionController {
     } catch (e) {
       _cancelTokens.remove(model.id);
 
+      _progress.clear(model.id);
+
       if (e is DioException && CancelToken.isCancel(e)) {
+        // A paused download keeps its bytes and its resume metadata on disk.
+        // Dropping the progress entry is what hands the card back to a resume
+        // button: a card pinned to a download that is no longer running would
+        // offer pause and no way back.
         return;
       }
 
-      final updatedProgress = Map<String, DownloadProgress>.from(
-        state.downloadProgress,
-      )..remove(model.id);
       state = state.copyWith(
-        downloadProgress: updatedProgress,
         error: 'Failed to download ${model.name}: ${_friendlyDownloadError(e)}',
       );
     }

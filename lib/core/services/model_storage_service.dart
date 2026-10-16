@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/core/services/app_storage_service.dart';
+import 'package:installm/core/utils/logger.dart';
 
 class DownloadMetadata {
   final int totalSize;
@@ -58,6 +59,10 @@ class ChunkState {
 class ModelStorageService {
   ModelStorageService({AppStorageService? appStorage})
     : _appStorage = appStorage ?? AppStorageService();
+
+  /// How long one chunk stream may go without data before it is treated as
+  /// stalled. The download is resumable, so failing loudly beats waiting.
+  static const Duration _stallTimeout = Duration(seconds: 45);
 
   final AppStorageService _appStorage;
   final Dio _dio = Dio(
@@ -331,6 +336,7 @@ class ModelStorageService {
     void Function(int received, int total)? onProgress,
     CancelToken? cancelToken,
   }) async {
+    final elapsed = Stopwatch()..start();
     final dir = await getModelDir();
     final savePath = p.join(dir, fileName);
     final metadataPath = '$savePath.json';
@@ -407,6 +413,13 @@ class ModelStorageService {
     final List<Future<void>> chunkFutures = [];
     final totalSize = metadata.totalSize;
 
+    // Stream blocks arrive in ~8 KB pieces. Writing each piece straight to the
+    // file cost a file operation per piece, which dominated the transfer on a
+    // phone (measured: 82 s of an 85 s download for an 8 MB model), so each
+    // chunk buffers its bytes and lands them in larger blocks.
+    const int writeBlockBytes = 256 * 1024;
+    const Duration progressInterval = Duration(milliseconds: 100);
+
     // Simple async lock to synchronize file writes
     Future<void> lock = Future.value();
     Future<void> synchronizedWrite(int position, List<int> data) async {
@@ -422,6 +435,18 @@ class ModelStorageService {
       }
     }
 
+    // Bytes received but not yet on disk, so progress can move smoothly while
+    // only durable bytes are recorded as received (a resume depends on that).
+    var pendingBytes = 0;
+    var lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
+    void reportProgress({bool force = false}) {
+      final now = DateTime.now();
+      if (!force && now.difference(lastProgressAt) < progressInterval) return;
+      lastProgressAt = now;
+      final durable = metadata!.chunks.fold(0, (sum, c) => sum + c.received);
+      onProgress?.call(durable + pendingBytes, totalSize);
+    }
+
     // Timer to persist metadata periodically
     Timer? metadataTimer;
     metadataTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
@@ -430,10 +455,29 @@ class ModelStorageService {
       }
     });
 
+    final flushPending = <Future<void> Function()>[];
     for (int i = 0; i < metadata.chunks.length; i++) {
       final chunk = metadata.chunks[i];
       if (chunk.isFinished) continue;
 
+      final pending = <int>[];
+      var written = 0;
+      Future<void> flush() async {
+        if (pending.isEmpty) return;
+        final block = List<int>.from(pending);
+        pending.clear();
+        await synchronizedWrite(chunk.start + written, block);
+        written += block.length;
+        // Durable now: only written bytes count as received, so an interrupted
+        // download resumes from what is really on disk.
+        chunk.received += block.length;
+        pendingBytes -= block.length;
+        if (chunk.start + chunk.received > chunk.end) {
+          chunk.isFinished = true;
+        }
+      }
+
+      flushPending.add(flush);
       chunkFutures.add(
         _downloadChunk(
           url: url,
@@ -441,17 +485,12 @@ class ModelStorageService {
           end: chunk.end,
           cancelToken: cancelToken,
           onChunkData: (data, totalReceivedInChunk) async {
-            await synchronizedWrite(chunk.start + chunk.received, data);
-            chunk.received += data.length;
-            if (chunk.start + chunk.received > chunk.end) {
-              chunk.isFinished = true;
+            pending.addAll(data);
+            pendingBytes += data.length;
+            if (pending.length >= writeBlockBytes) {
+              await flush();
             }
-
-            final totalReceived = metadata!.chunks.fold(
-              0,
-              (sum, c) => sum + c.received,
-            );
-            onProgress?.call(totalReceived, totalSize);
+            reportProgress();
           },
         ),
       );
@@ -459,6 +498,10 @@ class ModelStorageService {
 
     try {
       await Future.wait(chunkFutures);
+      for (final flush in flushPending) {
+        await flush();
+      }
+      reportProgress(force: true);
       // Clean up metadata on success
       metadataTimer.cancel();
       if (await metadataFile.exists()) {
@@ -489,6 +532,11 @@ class ModelStorageService {
         await raf.close();
       }
     }
+
+    AppLogger.debug(
+      'Model download finished: ${p.basename(savePath)} ($totalSize bytes, '
+      '${elapsed.elapsedMilliseconds} ms).',
+    );
   }
 
   Future<void> _downloadChunk({
@@ -507,6 +555,9 @@ class ModelStorageService {
       options: Options(
         responseType: ResponseType.stream,
         headers: {'range': 'bytes=$start-$end'},
+        // A connection that goes quiet must fail rather than hang: without
+        // this a stalled stream left the whole download waiting forever.
+        receiveTimeout: _stallTimeout,
         validateStatus: (status) => (status ?? 500) < 400,
       ),
       cancelToken: cancelToken,
@@ -526,6 +577,23 @@ class ModelStorageService {
     await for (final chunk in response.data!.stream) {
       receivedInSession += chunk.length;
       await onChunkData(chunk, receivedInSession);
+    }
+
+    // The stream ending is not the same as the chunk arriving. A server that
+    // closes early (or ignores the range) used to look like a finished chunk,
+    // so the caller waited on work that would never complete. A 200 here means
+    // the range was ignored, which the caller answers by downloading the file
+    // in one stream.
+    final expected = end - start + 1;
+    if (receivedInSession != expected) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        response: response,
+        type: DioExceptionType.badResponse,
+        error:
+            'Chunk transfer ended early: received $receivedInSession of '
+            '$expected bytes.',
+      );
     }
   }
 

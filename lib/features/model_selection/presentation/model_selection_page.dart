@@ -8,6 +8,7 @@ import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/model_selection/domain/model_compatibility.dart';
+import 'package:installm/features/model_selection/presentation/download_progress_provider.dart';
 import 'package:installm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
 import 'package:installm/features/model_selection/presentation/model_import_dialog.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
@@ -16,6 +17,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Choices offered when the user taps "Add Model".
 enum _AddModelAction { importFile, huggingFaceRepo, directUrl }
+
+String _formatBytes(int bytes) {
+  if (bytes <= 0) return '0 B';
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+}
 
 class ModelSelectionPage extends ConsumerStatefulWidget {
   const ModelSelectionPage({super.key});
@@ -188,8 +199,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
 
           final model = filteredModels[index - 1];
           final isSelected = model.id == state.selectedModelId;
-          final downloadProgress = state.downloadProgress[model.id];
-          final isDownloading = downloadProgress != null;
           final isExpanded = _expandedModelIds.contains(model.id);
 
           return Padding(
@@ -208,7 +217,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () {
-                  if (model.isDownloaded && !isDownloading) {
+                  // Read rather than watch: whether a download is running only
+                  // matters at the moment of the tap, and watching it here
+                  // would rebuild the whole list on every progress report.
+                  final downloading =
+                      ref.read(downloadProgressProvider)[model.id] != null;
+                  if (model.isDownloaded && !downloading) {
                     ref
                         .read(modelSelectionControllerProvider.notifier)
                         .selectModel(model);
@@ -334,86 +348,20 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                                         .toList(growable: false),
                                   ),
                                 ],
-                                if (downloadProgress != null) ...[
-                                  const SizedBox(height: 8),
-                                  LinearProgressIndicator(
-                                    value: downloadProgress.progress,
-                                    backgroundColor:
-                                        colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${_formatBytes(downloadProgress.received)} / ${_formatBytes(downloadProgress.total)}',
-                                    style: textTheme.labelSmall?.copyWith(
-                                      color: isSelected
-                                          ? colorScheme.onPrimaryContainer
-                                                .withValues(alpha: 0.7)
-                                          : colorScheme.onSurfaceVariant,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
+                                _ModelDownloadBar(
+                                  modelId: model.id,
+                                  isSelected: isSelected,
+                                ),
                               ],
                             ),
                           ),
                           // Download / Selection / Delete Indicator
-                          if (model.isDownloaded)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (!isSelected)
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline_rounded,
-                                    ),
-                                    color: colorScheme.error,
-                                    onPressed: () {
-                                      _showDeleteConfirmation(context, model);
-                                    },
-                                  ),
-                                Icon(
-                                  isSelected
-                                      ? Icons.check_circle_rounded
-                                      : Icons.download_done_rounded,
-                                  color: isSelected
-                                      ? colorScheme.primary
-                                      : colorScheme.primary.withValues(
-                                          alpha: 0.5,
-                                        ),
-                                ),
-                              ],
-                            )
-                          else if (isDownloading)
-                            IconButton(
-                              icon: const Icon(
-                                Icons.pause_circle_outline_rounded,
-                              ),
-                              color: colorScheme.primary,
-                              onPressed: () {
-                                ref
-                                    .read(
-                                      modelSelectionControllerProvider.notifier,
-                                    )
-                                    .pauseDownload(model.id);
-                              },
-                            )
-                          else
-                            IconButton(
-                              icon: Icon(
-                                downloadProgress != null
-                                    ? Icons.play_circle_outline_rounded
-                                    : Icons.download_rounded,
-                              ),
-                              onPressed: () {
-                                ref
-                                    .read(
-                                      modelSelectionControllerProvider.notifier,
-                                    )
-                                    .downloadModel(model);
-                              },
-                              color: colorScheme.primary,
-                            ),
+                          _ModelCardAction(
+                            model: model,
+                            isSelected: isSelected,
+                            onDelete: () =>
+                                _showDeleteConfirmation(context, model),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -937,16 +885,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     };
   }
 
-  String _formatBytes(int bytes) {
-    if (bytes <= 0) return '0 B';
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) {
-      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
-
   /// Bottom sheet with the three ways a model can enter the app: a local
   /// GGUF import, a Hugging Face repository or a direct download link.
   Future<void> _showAddModelSheet() async {
@@ -1243,6 +1181,114 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The download bar of one model card.
+///
+/// Only this subtree watches [downloadProgressProvider]: a progress report a few
+/// times a second rebuilt the whole list when the state carried it, and the
+/// download's own stream is delivered on the same isolate. See the provider for
+/// the measured cost of that.
+class _ModelDownloadBar extends ConsumerWidget {
+  const _ModelDownloadBar({required this.modelId, required this.isSelected});
+
+  final String modelId;
+  final bool isSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progress = ref.watch(
+      downloadProgressProvider.select((all) => all[modelId]),
+    );
+    if (progress == null) return const SizedBox.shrink();
+
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: progress.progress,
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${_formatBytes(progress.received)} / ${_formatBytes(progress.total)}',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: isSelected
+                ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
+                : colorScheme.onSurfaceVariant,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The trailing control of a model card: installed state, pause or download.
+class _ModelCardAction extends ConsumerWidget {
+  const _ModelCardAction({
+    required this.model,
+    required this.isSelected,
+    required this.onDelete,
+  });
+
+  final LlmModel model;
+  final bool isSelected;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final progress = ref.watch(
+      downloadProgressProvider.select((all) => all[model.id]),
+    );
+
+    if (model.isDownloaded) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!isSelected)
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded),
+              tooltip: 'Delete model',
+              color: colorScheme.error,
+              onPressed: onDelete,
+            ),
+          Icon(
+            isSelected
+                ? Icons.check_circle_rounded
+                : Icons.download_done_rounded,
+            color: isSelected
+                ? colorScheme.primary
+                : colorScheme.primary.withValues(alpha: 0.5),
+          ),
+        ],
+      );
+    }
+
+    if (progress != null) {
+      return IconButton(
+        icon: const Icon(Icons.pause_circle_outline_rounded),
+        tooltip: 'Pause download',
+        color: colorScheme.primary,
+        onPressed: () => ref
+            .read(modelSelectionControllerProvider.notifier)
+            .pauseDownload(model.id),
+      );
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.download_rounded),
+      tooltip: 'Download',
+      color: colorScheme.primary,
+      onPressed: () => ref
+          .read(modelSelectionControllerProvider.notifier)
+          .downloadModel(model),
     );
   }
 }

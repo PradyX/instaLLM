@@ -8,6 +8,10 @@ class LocalNotificationService {
 
   static final LocalNotificationService instance = LocalNotificationService._();
 
+  /// Monochrome small icon for Android notifications, also set per notice so a
+  /// channel created earlier cannot pin the old one.
+  static const String _androidStatusIcon = '@drawable/ic_stat_installm';
+
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
@@ -22,9 +26,10 @@ class LocalNotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
+    // A status icon, not the launcher icon: Android paints the small icon from
+    // its alpha channel alone, and the full-colour mipmap turns into a blank
+    // circle in the shade. See res/drawable/ic_stat_installm.xml.
+    const androidSettings = AndroidInitializationSettings(_androidStatusIcon);
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -139,6 +144,7 @@ class LocalNotificationService {
       'model_downloads',
       'Model downloads',
       channelDescription: 'Notifies when model downloads complete',
+      icon: _androidStatusIcon,
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
@@ -194,6 +200,7 @@ class LocalNotificationService {
       'background_runs',
       'Agent runs',
       channelDescription: 'Notifies when an agent run finishes or needs you',
+      icon: _androidStatusIcon,
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,

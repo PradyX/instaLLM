@@ -1,21 +1,80 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Status bar / notification small icon.
+  Status bar / notification small icon: the app icon's own llama, as a
+  single-colour silhouette.
 
-  Android uses only this icon's alpha channel and paints it itself (white on
-  dark, dark on light), so it must be a single-colour silhouette on a
-  transparent background. The launcher icon is a full-colour mipmap and shows up
-  in the shade as a blank circle, which is why notifications use this instead.
+  Android draws this icon itself and uses only its alpha channel, painting it
+  white on a dark shade and dark on a light one. The full-colour launcher
+  mipmap therefore arrives in the shade as a blank circle, which is why notices
+  carry a silhouette instead — this one, so the notice still looks like InstaLLM
+  rather than a generic glyph.
 
-  The two lines are holes cut with evenOdd, so the bubble reads at 24dp.
+  Regenerate with scripts/generate_notification_icon.py after any change to
+  InstaLLM_llama_vector.svg; do not hand-edit the paths below.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="1254"
+    android:viewportHeight="1254">
+    <!-- Green back and left shoulder -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M20,2H4C2.9,2 2,2.9 2,4v18l4,-4h14c1.1,0 2,-0.9 2,-2V4C22,2.9 21.1,2 20,2zM7,9h10v2H7V9zM7,13h7v2H7V13z" />
+        android:pathData="M120 1093 C211 1028 280 970 296 865 C302 793 320 722 354 659 C417 723 517 859 572 987 C604 1063 625 1123 638 1183 H330 C245 1183 170 1144 120 1093 Z" />
+    <!-- Green back and left shoulder -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M298 816 C297 890 357 961 420 1026 C465 1073 484 1133 484 1183 L656 1183 C645 1034 573 955 467 876 C393 824 359 747 350 684 C323 721 308 767 298 816 Z" />
+    <!-- Soft ivory nape and tall neck -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M442 509 C378 573 345 636 344 701 C338 790 391 847 481 915 C586 990 651 1055 654 1183 L808 1183 C805 1073 773 973 725 894 C716 876 707 842 717 821 C728 800 748 802 783 809 C741 761 650 718 579 673 C531 643 479 571 471 533 Z" />
+    <!-- Far ear -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M586 429 C637 337 705 256 767 228 C785 219 798 225 804 245 C813 285 787 383 745 446 C708 438 664 424 621 421 Z" />
+    <!-- Far ear -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M666 425 C700 354 745 285 773 269 C781 262 785 270 782 292 C776 343 760 399 733 441 C714 434 688 428 666 425 Z" />
+    <!-- Near ear (no fur; clean smooth taper) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M472 530 C414 502 381 464 381 408 C376 316 444 231 521 171 C554 146 581 134 591 146 C613 167 617 286 594 429 C570 481 531 515 472 530 Z" />
+    <!-- Near ear (no fur; clean smooth taper) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M523 481 C487 454 475 414 476 368 C476 305 519 230 566 201 C574 196 580 200 581 213 C585 272 560 414 523 481 Z" />
+    <!-- Under-ledge neck shadow -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M520 750 C579 792 686 795 730 803 C701 835 720 884 748 933 C686 862 606 842 520 750 Z" />
+    <!-- Head, muzzle and chin are a continuous clean silhouette -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M592 429 C652 408 692 417 747 446 C786 468 797 507 810 554 C817 575 835 581 855 590 C885 602 923 618 951 630 C973 641 984 654 984 672 C985 703 970 749 954 761 C944 766 935 766 930 760 C928 774 915 795 891 811 C873 824 854 821 824 815 L741 802 C716 797 707 809 711 836 C693 832 648 811 607 801 C545 786 503 755 473 723 C444 686 443 641 453 596 C459 573 464 550 472 533 C510 485 554 450 592 429 Z" />
+    <!-- Lower muzzle cast-shadow -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M786 695 C809 736 855 760 900 764 C917 766 933 763 941 752 C934 788 914 810 884 820 C855 824 809 813 777 809 C768 775 772 728 786 695 Z" />
+    <!-- Delicate junction between muzzle and mouth -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M827 740 C857 759 890 770 926 758 C907 779 873 774 846 758 Z" />
+    <!-- A few fresh blades of grass held at the lips -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M914 757 C984 744 1066 772 1112 822 C1054 794 999 771 927 769 Z" />
+    <!-- A few fresh blades of grass held at the lips -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M913 756 C974 765 1036 829 1044 928 C1007 851 958 787 913 756 Z" />
+    <!-- A few fresh blades of grass held at the lips -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M913 756 C952 787 972 842 949 884 C946 832 926 778 913 756 Z" />
+    <!-- A few fresh blades of grass held at the lips -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M923 760 C953 779 979 811 993 841 C970 806 944 775 923 760 Z" />
 </vector>

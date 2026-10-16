@@ -432,3 +432,14 @@ On Homebrew macOS, install Cairo if missing and set
 `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` for the Python invocation when
 Cairo is not found. The SVG's transparent rounded tile is preserved for macOS;
 iOS icons use an opaque charcoal background, and Android has an adaptive icon.
+
+The Android notification's small icon needs a separate pass, because Android
+paints that one itself from its alpha channel alone and would turn the coloured
+launcher icon into a blank circle in the shade:
+`scripts/generate_notification_icon.py` derives the app icon's llama from the
+same SVG as a single-colour silhouette and writes it to
+`android/app/src/main/res/drawable/ic_stat_installm.xml`. Standard library only:
+
+```bash
+python3 scripts/generate_notification_icon.py
+```

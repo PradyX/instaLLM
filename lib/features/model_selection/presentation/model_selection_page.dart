@@ -49,6 +49,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// it, and this is what brings the list back.
   bool _narrowDetailOpen = false;
 
+  /// Whether the variant ledger's open row has its details folded away. The
+  /// focused variant still drives the pane; this only hides the quantization,
+  /// fit and file facts the row carries.
+  bool _variantDetailsCollapsed = false;
+
   final TextEditingController _searchController = TextEditingController();
 
   /// Memory estimates per model id, computed when a card is expanded.
@@ -484,6 +489,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             onOpen: (variant) {
               unawaited(_loadFitReport(variant.model));
               setState(() {
+                if (_focusedModelId != variant.id) {
+                  _variantDetailsCollapsed = false;
+                }
                 _focusedModelId = variant.id;
                 _narrowDetailOpen = !wide;
               });
@@ -1168,6 +1176,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     alignment: Alignment.centerRight,
                   ),
                 ),
+                // Keeps the action column over its own cells: each row ends
+                // with the chevron that opens and folds its details.
+                const SizedBox(width: 24),
               ],
             ),
           ),
@@ -1184,6 +1195,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               kvCacheMetadata: kvCacheMetadata,
               device: device,
               selected: family.variants[index].model.id == _focusedModelId,
+              expanded:
+                  family.variants[index].model.id == _focusedModelId &&
+                  !_variantDetailsCollapsed,
               sizeWidth: sizeColumnWidth,
               costWidth: costColumnWidth,
               actionWidth: actionColumnWidth,
@@ -1201,6 +1215,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required GgufMetadata? kvCacheMetadata,
     required DeviceProfile? device,
     required bool selected,
+    required bool expanded,
     required double sizeWidth,
     required double costWidth,
     required double actionWidth,
@@ -1288,9 +1303,17 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           : Colors.transparent,
       child: InkWell(
         onTap: () {
-          if (variant.model.id == _focusedModelId) return;
           unawaited(_loadFitReport(variant.model));
-          setState(() => _focusedModelId = variant.model.id);
+          setState(() {
+            // The open row folds away on a second tap; another row opens in
+            // its place.
+            if (variant.model.id == _focusedModelId) {
+              _variantDetailsCollapsed = !_variantDetailsCollapsed;
+            } else {
+              _focusedModelId = variant.model.id;
+              _variantDetailsCollapsed = false;
+            }
+          });
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1355,10 +1378,18 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       child: action ?? const SizedBox.shrink(),
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    expanded
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ],
               ),
             ),
-            if (selected)
+            if (expanded)
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 child: detail,

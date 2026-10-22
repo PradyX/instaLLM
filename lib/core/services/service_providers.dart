@@ -5,6 +5,7 @@ import 'package:installm/core/inference/embedding_engine.dart';
 import 'package:installm/core/inference/inference_engine.dart';
 import 'package:installm/core/services/android_tool_executor_service.dart';
 import 'package:installm/core/services/device_profile_service.dart';
+import 'package:installm/core/services/hugging_face_avatar_service.dart';
 import 'package:installm/core/services/llm_service.dart';
 import 'package:installm/core/services/local_embedding_service.dart';
 import 'package:installm/core/services/model_storage_service.dart';
@@ -101,4 +102,12 @@ final modelCompatibilityServiceProvider = Provider<ModelCompatibilityService>((
     storageService: ref.watch(modelStorageServiceProvider),
     deviceProfileService: ref.watch(deviceProfileServiceProvider),
   );
+});
+
+/// Publisher avatars for the model list rows; see the class for how narrow
+/// its network behaviour is.
+final huggingFaceAvatarServiceProvider = Provider<HuggingFaceAvatarService>((
+  ref,
+) {
+  return HuggingFaceAvatarService();
 });

@@ -295,6 +295,66 @@ class HuggingFaceRepositoryService {
     return HuggingFaceRepository(repoId: repoId, branch: 'main', files: files);
   }
 
+  /// Repository files that are the same model as [fileName] in another
+  /// quantization, best for a device first.
+  ///
+  /// A repository lists every quantization of everything it carries in one
+  /// flat list, so the model is matched with its own quantization label
+  /// removed: `qwen2.5-7b-instruct-q4_k_m.gguf` finds
+  /// `qwen2.5-7b-instruct-q8_0.gguf` and leaves out the 3B file. Split parts
+  /// (`...-00001-of-00002.gguf`) cannot be loaded alone, so they are never
+  /// offered, and a file with no readable label is not a choice either.
+  static List<HuggingFaceRepositoryFile> quantizationFilesFor(
+    List<HuggingFaceRepositoryFile> files, {
+    required String fileName,
+  }) {
+    final target = modelStemOf(fileName);
+    if (target.isEmpty) return const [];
+
+    final matches = <HuggingFaceRepositoryFile>[];
+    for (final file in files) {
+      if (!file.isGguf || file.isProjector) continue;
+      if (file.quantization == 'Unknown') continue;
+      if (modelStemOf(file.fileName) != target) continue;
+      matches.add(file);
+    }
+
+    matches.sort((a, b) {
+      final rank = _quantRank(
+        a.quantization,
+      ).compareTo(_quantRank(b.quantization));
+      if (rank != 0) return rank;
+      return _compareSize(a.sizeBytes, b.sizeBytes);
+    });
+    return matches;
+  }
+
+  /// A GGUF file name without its extension, its quantization label or its
+  /// separators: `Qwen2.5-7B-Instruct-Q4_K_M.gguf` → `qwen2_5_7b_instruct`.
+  ///
+  /// Empty for a file name that cannot stand for a model of its own: a split
+  /// part of a larger download.
+  static String modelStemOf(String fileName) {
+    var stem = fileName.trim().toLowerCase();
+    if (stem.endsWith('.gguf')) {
+      stem = stem.substring(0, stem.length - 5);
+    }
+    if (RegExp(r'-\d{5}-of-\d{5}$').hasMatch(stem)) return '';
+
+    // Labels are written with `-`, `.` or `_`; one separator makes every one
+    // of them matchable as a token of its own.
+    final normalized = stem.replaceAll(RegExp(r'[-.\s]+'), '_');
+    for (final label in _quantizationsByLength) {
+      final pattern = RegExp(
+        '(?:^|_)${RegExp.escape(label.toLowerCase())}(?:_|\$)',
+      );
+      if (pattern.hasMatch(normalized)) {
+        return normalized.replaceFirst(pattern, '_');
+      }
+    }
+    return normalized;
+  }
+
   /// Groups repository files into download-ready variants, pairing the
   /// repository's vision projector (mmproj) when one exists.
   static List<HuggingFaceModelVariant> variantsFromFiles(

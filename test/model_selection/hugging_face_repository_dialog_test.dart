@@ -143,7 +143,7 @@ void registerOpeningLifecycleTest() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Add Model'));
+      await tester.tap(find.text('Add model'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Browse a Hugging Face repository'));
       await tester.pumpAndSettle();
@@ -154,7 +154,7 @@ void registerOpeningLifecycleTest() {
       await tester.pumpAndSettle();
       expect(find.byType(AlertDialog), findsNothing);
       expect(tester.takeException(), isNull);
-      await tester.tap(find.text('Add Model'));
+      await tester.tap(find.text('Add model'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Browse a Hugging Face repository'));
       await tester.pumpAndSettle();

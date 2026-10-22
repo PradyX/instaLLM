@@ -108,28 +108,32 @@ void main() {
     expect(reported.last, bytes.length);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('a body that ends early fails instead of counting as complete', () async {
-    final bytes = payload(400000);
-    final served = serve(bytes, shortBy: 50000);
-    served.catchError((_) {});
+  test(
+    'a body that ends early fails instead of counting as complete',
+    () async {
+      final bytes = payload(400000);
+      final served = serve(bytes, shortBy: 50000);
+      served.catchError((_) {});
 
-    await expectLater(
-      service.downloadModel(
-        'http://127.0.0.1:${server.port}/short.gguf',
-        'short.gguf',
-      ),
-      throwsA(
-        isA<DioException>().having(
-          (error) => error.error.toString(),
-          'error',
-          contains('ended early'),
+      await expectLater(
+        service.downloadModel(
+          'http://127.0.0.1:${server.port}/short.gguf',
+          'short.gguf',
         ),
-      ),
-    );
+        throwsA(
+          isA<DioException>().having(
+            (error) => error.error.toString(),
+            'error',
+            contains('ended early'),
+          ),
+        ),
+      );
 
-    // What did arrive stays with its metadata, so the next attempt resumes
-    // instead of starting the model over.
-    final file = File(p.join(await service.getModelDir(), 'short.gguf'));
-    expect(File('${file.path}.json').existsSync(), isTrue);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+      // What did arrive stays with its metadata, so the next attempt resumes
+      // instead of starting the model over.
+      final file = File(p.join(await service.getModelDir(), 'short.gguf'));
+      expect(File('${file.path}.json').existsSync(), isTrue);
+    },
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
 }

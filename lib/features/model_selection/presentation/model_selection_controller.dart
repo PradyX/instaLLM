@@ -26,6 +26,28 @@ class _ModelDownloadAsset {
   const _ModelDownloadAsset({required this.url, required this.fileName});
 }
 
+/// The quantizations a model's own repository offers, together with the
+/// repository needed to download one of them.
+class ModelQuantizationChoices {
+  const ModelQuantizationChoices({
+    required this.repository,
+    required this.variants,
+  });
+
+  final HuggingFaceRepository repository;
+
+  /// Best for a device first, as the repository service orders them.
+  final List<HuggingFaceModelVariant> variants;
+
+  /// The variant that is [model]'s own file, when the repository lists it.
+  HuggingFaceModelVariant? variantFor(LlmModel model) {
+    for (final variant in variants) {
+      if (variant.fileName == model.localFileName) return variant;
+    }
+    return null;
+  }
+}
+
 @riverpod
 class ModelSelectionController extends _$ModelSelectionController {
   static const _customModelsStorageKey = 'custom_models_v1';
@@ -43,6 +65,8 @@ class ModelSelectionController extends _$ModelSelectionController {
       HuggingFaceModelCapabilityService();
   late final HuggingFaceModelDiscoveryService _discoveryService =
       HuggingFaceModelDiscoveryService();
+  late final HuggingFaceRepositoryService _repositoryService =
+      HuggingFaceRepositoryService();
   late final ModelImportService _importService = ModelImportService(
     storageService: _storageService,
   );
@@ -260,15 +284,22 @@ class ModelSelectionController extends _$ModelSelectionController {
     state = state.copyWith(prioritizeDownloadedModels: enabled);
   }
 
+  void setSortByFit(bool enabled) {
+    if (state.sortByFit == enabled) return;
+    state = state.copyWith(sortByFit: enabled);
+  }
+
   void clearFilters() {
     if (state.selectedCapabilityFilters.isEmpty &&
-        !state.prioritizeDownloadedModels) {
+        !state.prioritizeDownloadedModels &&
+        !state.sortByFit) {
       return;
     }
 
     state = state.copyWith(
       selectedCapabilityFilters: <ModelCapability>{},
       prioritizeDownloadedModels: false,
+      sortByFit: false,
     );
   }
 
@@ -725,6 +756,67 @@ class ModelSelectionController extends _$ModelSelectionController {
       isCustom: true,
       modelSource: ModelSource.imported,
       ggufMetadata: metadata,
+    );
+  }
+
+  /// The quantizations the repository behind [model] offers.
+  ///
+  /// Null when there is nothing to choose between — the model has no
+  /// repository, the repository cannot be read, or it carries only this one
+  /// file. The caller then downloads the catalog file as it always has, so a
+  /// device that is offline is not blocked by a lookup it never needed.
+  Future<ModelQuantizationChoices?> loadQuantizationChoices(
+    LlmModel model,
+  ) async {
+    final url = model.downloadUrl;
+    final fileName = model.localFileName;
+    if (url == null || fileName == null) return null;
+
+    final repoId = HuggingFaceRepositoryService.parseRepositoryInput(url);
+    if (repoId == null) return null;
+
+    try {
+      final repository = await _repositoryService.fetchRepository(repoId);
+      final files = HuggingFaceRepositoryService.quantizationFilesFor(
+        repository.files,
+        fileName: fileName,
+      );
+      if (files.length < 2) return null;
+
+      // Variants are built from every file so a vision projector still pairs
+      // with the quantization chosen, then narrowed to this model's files.
+      final paths = {for (final file in files) file.path};
+      final variants = HuggingFaceRepositoryService.variantsFromFiles(
+        repository.files,
+      ).where((variant) => paths.contains(variant.filePath)).toList();
+      if (variants.length < 2) return null;
+
+      return ModelQuantizationChoices(
+        repository: repository,
+        variants: List.unmodifiable(variants),
+      );
+    } on HuggingFaceRepositoryException {
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Downloads [variant] of [model]. The model's own file goes through the
+  /// normal pipeline; another quantization is registered the way a file added
+  /// from the Hugging Face dialog is, then downloaded the same way.
+  Future<void> downloadQuantization({
+    required LlmModel model,
+    required ModelQuantizationChoices choices,
+    required HuggingFaceModelVariant variant,
+  }) async {
+    if (variant.fileName == model.localFileName) {
+      await downloadModel(model);
+      return;
+    }
+    await addModelFromHuggingFaceRepo(
+      repository: choices.repository,
+      variant: variant,
     );
   }
 

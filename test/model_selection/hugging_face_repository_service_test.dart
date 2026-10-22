@@ -197,6 +197,95 @@ void main() {
     });
   });
 
+  group('quantizationFilesFor', () {
+    // A real repository layout: several quantizations of one model, another
+    // size beside it, a split download and a vision projector.
+    final files = [
+      _file(
+        'qwen2.5-7b-instruct-q4_k_m.gguf',
+        sizeBytes: 4683073056,
+        quantization: 'Q4_K_M',
+      ),
+      _file(
+        'qwen2.5-7b-instruct-q8_0.gguf',
+        sizeBytes: 8179000000,
+        quantization: 'Q8_0',
+      ),
+      _file(
+        'qwen2.5-7b-instruct-f16.gguf',
+        sizeBytes: 15000000000,
+        quantization: 'F16',
+      ),
+      _file(
+        'qwen2.5-3b-instruct-q4_k_m.gguf',
+        sizeBytes: 2000000000,
+        quantization: 'Q4_K_M',
+      ),
+      _file(
+        'qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf',
+        sizeBytes: 3000000000,
+        quantization: 'Q5_K_M',
+      ),
+      _file('mmproj-qwen2.5-7b-f16.gguf', isProjector: true),
+    ];
+
+    test('finds the model in every quantization and nothing else', () {
+      final matches = HuggingFaceRepositoryService.quantizationFilesFor(
+        files,
+        fileName: 'qwen2.5-7b-instruct-q4_k_m.gguf',
+      );
+
+      expect(matches.map((file) => file.quantization).toList(), [
+        'Q4_K_M',
+        'Q8_0',
+        'F16',
+      ]);
+    });
+
+    test('orders quantizations the way the device prefers them', () {
+      final matches = HuggingFaceRepositoryService.quantizationFilesFor(
+        files,
+        fileName: 'qwen2.5-7b-instruct-f16.gguf',
+      );
+
+      expect(matches.first.quantization, 'Q4_K_M');
+      expect(matches.last.quantization, 'F16');
+    });
+
+    test('a split part is not a choice of its own', () {
+      final matches = HuggingFaceRepositoryService.quantizationFilesFor(
+        files,
+        fileName: 'qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf',
+      );
+
+      expect(matches, isEmpty);
+      expect(
+        HuggingFaceRepositoryService.modelStemOf(
+          'qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf',
+        ),
+        isEmpty,
+      );
+    });
+
+    test('the same model spelled with other separators still matches', () {
+      expect(
+        HuggingFaceRepositoryService.modelStemOf(
+          'Qwen2.5-7B-Instruct-Q4_K_M.gguf',
+        ),
+        HuggingFaceRepositoryService.modelStemOf(
+          'qwen2.5_7b_instruct_q8_0.gguf',
+        ),
+      );
+    });
+
+    test('a model name is not read as a quantization', () {
+      expect(
+        HuggingFaceRepositoryService.modelStemOf('qwen2.5-0.5b-instruct.gguf'),
+        'qwen2_5_0_5b_instruct',
+      );
+    });
+  });
+
   group('guessParameterSize', () {
     test('reads sizes from repository names', () {
       expect(

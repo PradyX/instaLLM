@@ -259,6 +259,36 @@ class ModelCompatibilityEstimator {
     return budget <= 0 ? null : budget;
   }
 
+  /// Largest context whose KV cache still fits beside the weights.
+  ///
+  /// The cache grows linearly with the context, so what the budget leaves
+  /// after the weights, the projector and the runtime buffers is divided by
+  /// one token's cache. Returns null when the device memory or the KV shape is
+  /// unknown, and 0 when not even one token would fit.
+  static int? maxContextTokens({
+    required GgufMetadata metadata,
+    required int weightsBytes,
+    int projectorBytes = 0,
+    int? totalMemoryBytes,
+    int? availableMemoryBytes,
+  }) {
+    final budget = memoryBudget(
+      totalMemoryBytes: totalMemoryBytes,
+      availableMemoryBytes: availableMemoryBytes,
+    );
+    if (budget == null) return null;
+    final perToken = kvCacheBytes(metadata, 1);
+    if (perToken <= 0) return null;
+
+    final weights = weightsBytes > 0 ? weightsBytes : metadata.fileSizeBytes;
+    final overhead =
+        runtimeOverheadBaseBytes +
+        (weights * runtimeOverheadWeightsFraction).round();
+    final forCache = budget - weights - overhead - projectorBytes;
+    if (forCache <= 0) return 0;
+    return forCache ~/ perToken;
+  }
+
   /// Rating for a [requiredBytes] estimate against [budgetBytes].
   static ModelCompatibilityRating? ratingFor(
     int requiredBytes,

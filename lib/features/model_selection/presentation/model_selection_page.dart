@@ -23,6 +23,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Choices offered when the user taps "Add Model".
 enum _AddModelAction { importFile, huggingFaceRepo, directUrl }
 
+/// `4096` as `4K`, `32768` as `32K`, `5500` as `5.4K`; smaller values as is.
+String _formatContext(int tokens) {
+  if (tokens < 1024) return '$tokens';
+  final thousands = tokens / 1024;
+  final text = thousands == thousands.roundToDouble()
+      ? thousands.toStringAsFixed(0)
+      : thousands.toStringAsFixed(1);
+  return '${text}K';
+}
+
 String _formatBytes(int bytes) {
   if (bytes <= 0) return '0 B';
   if (bytes < 1024) return '$bytes B';
@@ -1173,6 +1183,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     }
 
     const sizeColumnWidth = 56.0;
+    const contextColumnWidth = 96.0;
     const costColumnWidth = 104.0;
     const actionColumnWidth = 104.0;
     Widget columnHeader(
@@ -1188,61 +1199,86 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       ),
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-            child: Row(
-              children: [
-                SizedBox(width: sizeColumnWidth, child: columnHeader('Params')),
-                Expanded(child: columnHeader('Fit on this Mac')),
-                SizedBox(
-                  width: costColumnWidth,
-                  child: columnHeader('Size', alignment: Alignment.centerRight),
-                ),
-                SizedBox(
-                  width: actionColumnWidth,
-                  child: columnHeader(
-                    'Action',
-                    alignment: Alignment.centerRight,
-                  ),
-                ),
-                // Keeps the action column over its own cells: each row ends
-                // with the chevron that opens and folds its details.
-                const SizedBox(width: 24),
-              ],
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // A narrow pane cannot hold every column; the context pair is the one
+        // that can stand down without taking the row's actions with it.
+        final showContext = constraints.maxWidth >= 560;
+
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(10),
           ),
-          for (var index = 0; index < family.variants.length; index++) ...[
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-            ),
-            _buildVariantLedgerRow(
-              context,
-              family,
-              family.variants[index],
-              kvCacheMetadata: kvCacheMetadata,
-              device: device,
-              selected: family.variants[index].model.id == _focusedModelId,
-              inUse: family.variants[index].model.id == selectedModelId,
-              expanded: family.variants[index].model.id == _expandedVariantId,
-              sizeWidth: sizeColumnWidth,
-              costWidth: costColumnWidth,
-              actionWidth: actionColumnWidth,
-            ),
-          ],
-        ],
-      ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: sizeColumnWidth,
+                      child: columnHeader('Params'),
+                    ),
+                    Expanded(child: columnHeader('Fit on this Mac')),
+                    if (showContext)
+                      SizedBox(
+                        width: contextColumnWidth,
+                        child: columnHeader(
+                          'Context',
+                          alignment: Alignment.centerRight,
+                        ),
+                      ),
+                    SizedBox(
+                      width: costColumnWidth,
+                      child: columnHeader(
+                        'Size',
+                        alignment: Alignment.centerRight,
+                      ),
+                    ),
+                    SizedBox(
+                      width: actionColumnWidth,
+                      child: columnHeader(
+                        'Action',
+                        alignment: Alignment.centerRight,
+                      ),
+                    ),
+                    // Keeps the action column over its own cells: each row
+                    // ends with the chevron that folds its details.
+                    const SizedBox(width: 24),
+                  ],
+                ),
+              ),
+              for (var index = 0; index < family.variants.length; index++) ...[
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+                _buildVariantLedgerRow(
+                  context,
+                  family,
+                  family.variants[index],
+                  kvCacheMetadata: kvCacheMetadata,
+                  device: device,
+                  selected: family.variants[index].model.id == _focusedModelId,
+                  inUse: family.variants[index].model.id == selectedModelId,
+                  expanded:
+                      family.variants[index].model.id == _expandedVariantId,
+                  sizeWidth: sizeColumnWidth,
+                  showContext: showContext,
+                  contextWidth: contextColumnWidth,
+                  costWidth: costColumnWidth,
+                  actionWidth: actionColumnWidth,
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1256,6 +1292,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required bool inUse,
     required bool expanded,
     required double sizeWidth,
+    required bool showContext,
+    required double contextWidth,
     required double costWidth,
     required double actionWidth,
   }) {
@@ -1279,6 +1317,40 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     };
     final exactBytes = variant.fileSizeBytes;
     final sizeBytes = exactBytes ?? variant.approximateFileSizeBytes;
+
+    // The pair the Context column shows: what the file declares, and how much
+    // of it the device's memory budget can hold beside the weights.
+    final metadata = variant.model.ggufMetadata;
+    final providedContext = metadata?.contextLength;
+    int? runnableContext;
+    if (metadata != null) {
+      runnableContext = ModelCompatibilityEstimator.maxContextTokens(
+        metadata: metadata,
+        weightsBytes: sizeBytes ?? 0,
+        totalMemoryBytes: device?.totalMemoryBytes,
+        availableMemoryBytes: device?.availableMemoryBytes,
+      );
+      if (runnableContext != null &&
+          providedContext != null &&
+          providedContext > 0 &&
+          runnableContext > providedContext) {
+        runnableContext = providedContext;
+      }
+    }
+    final hasContext = providedContext != null && providedContext > 0;
+    final contextLabel = !hasContext
+        ? '—'
+        : runnableContext == null || runnableContext <= 0
+        ? '${_formatContext(providedContext)} / —'
+        : '${_formatContext(providedContext)} / '
+              '${_formatContext(runnableContext)}';
+    final contextTooltip = !hasContext
+        ? 'Context is read from the GGUF file once the model is installed.'
+        : runnableContext == null || runnableContext <= 0
+        ? 'The model provides ${_formatContext(providedContext)} context; this '
+              'device cannot estimate how much of it fits.'
+        : 'The model provides ${_formatContext(providedContext)} context; about '
+              '${_formatContext(runnableContext)} fit this device.';
 
     final action = switch ((variant.model.isDownloaded, inUse)) {
       (true, true) => Row(
@@ -1389,6 +1461,22 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                             ),
                           ),
                   ),
+                  if (showContext)
+                    SizedBox(
+                      width: contextWidth,
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: Tooltip(
+                          message: contextTooltip,
+                          child: Text(
+                            contextLabel,
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   SizedBox(
                     width: costWidth,
                     child: Align(

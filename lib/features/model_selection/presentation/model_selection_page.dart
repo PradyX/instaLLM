@@ -831,6 +831,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         break;
       }
     }
+    // What any member of the family can do, in the capability bar's own
+    // order, so the row says what the model is for without a second line.
+    final capabilities = ModelCapability.values
+        .where(
+          (capability) => family.variants.any(
+            (variant) => variant.model.capabilities.contains(capability),
+          ),
+        )
+        .toList(growable: false);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -875,6 +884,29 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     ],
                   ),
                 ),
+                if (capabilities.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (
+                        var index = 0;
+                        index < capabilities.length;
+                        index++
+                      ) ...[
+                        if (index > 0) const SizedBox(width: 5),
+                        Tooltip(
+                          message: capabilities[index].label,
+                          child: Icon(
+                            _capabilityIcon(capabilities[index]),
+                            size: 14,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
                 if (progress != null) ...[
                   const SizedBox(width: 8),
                   Text(
@@ -1170,14 +1202,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
             child: Row(
               children: [
-                SizedBox(width: sizeColumnWidth, child: columnHeader('Size')),
+                SizedBox(width: sizeColumnWidth, child: columnHeader('Params')),
                 Expanded(child: columnHeader('Fit on this Mac')),
                 SizedBox(
                   width: costColumnWidth,
-                  child: columnHeader(
-                    'Disk size',
-                    alignment: Alignment.centerRight,
-                  ),
+                  child: columnHeader('Size', alignment: Alignment.centerRight),
                 ),
                 SizedBox(
                   width: actionColumnWidth,

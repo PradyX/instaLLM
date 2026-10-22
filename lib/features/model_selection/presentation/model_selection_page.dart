@@ -85,6 +85,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   final Map<String, GgufMetadata?> _liveGgufMetadata = {};
   final Set<String> _ggufMetadataRequests = {};
 
+  /// Context window per Hugging Face repository, read for models that are not
+  /// on disk. Null means "asked, unavailable"; absent means "never asked".
+  final Map<String, int?> _remoteContextByRepo = {};
+  final Set<String> _remoteContextRequests = {};
+  final HuggingFaceRepositoryService _repositoryService =
+      HuggingFaceRepositoryService();
+
   /// Publisher avatars per family, fetched once per distinct publisher and
   /// kept in memory for the page's life. Absent means "never asked"; a null
   /// means "asked, none found or unreachable", which is also final for the
@@ -158,6 +165,23 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       setState(() => _liveGgufMetadata[model.id] = null);
     } finally {
       _ggufMetadataRequests.remove(model.id);
+    }
+  }
+
+  /// Reads the context window a repository's GGUF files declare, so a model
+  /// that is not downloaded can still show what it provides. Only public
+  /// metadata is asked for, and the answer is kept per repository.
+  Future<void> _loadRemoteContext(String repoId) async {
+    if (_remoteContextByRepo.containsKey(repoId) ||
+        !_remoteContextRequests.add(repoId)) {
+      return;
+    }
+    try {
+      final context = await _repositoryService.fetchContextLength(repoId);
+      if (!mounted) return;
+      setState(() => _remoteContextByRepo[repoId] = context);
+    } finally {
+      _remoteContextRequests.remove(repoId);
     }
   }
 
@@ -1360,7 +1384,26 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         if (mounted) unawaited(_loadGgufMetadata(variant.model));
       });
     }
-    final providedContext = metadata?.contextLength;
+    // A model that is not on disk still declares its window in the
+    // repository's own GGUF metadata, which is public and can be shown
+    // before the download.
+    final repoId = switch (variant.model.downloadUrl) {
+      final url? => HuggingFaceRepositoryService.parseRepositoryInput(url),
+      _ => null,
+    };
+    final needsRemoteContext =
+        metadata?.contextLength == null &&
+        repoId != null &&
+        !_remoteContextByRepo.containsKey(repoId);
+    if (needsRemoteContext) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_loadRemoteContext(repoId));
+      });
+    }
+    final remoteContext = repoId == null ? null : _remoteContextByRepo[repoId];
+    final contextFromRemote =
+        metadata?.contextLength == null && remoteContext != null;
+    final providedContext = metadata?.contextLength ?? remoteContext;
     int? runnableContext;
     if (metadata != null) {
       runnableContext = ModelCompatibilityEstimator.maxContextTokens(
@@ -1386,7 +1429,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final contextTooltip = !hasContext
         ? 'Context is read from the GGUF file once the model is installed.'
         : runnableContext == null || runnableContext <= 0
-        ? 'The model provides ${_formatContext(providedContext)} context; this '
+        ? 'The model provides ${_formatContext(providedContext)} context'
+              '${contextFromRemote ? ', read from Hugging Face' : ''}; this '
               'device cannot estimate how much of it fits.'
         : 'The model provides ${_formatContext(providedContext)} context; about '
               '${_formatContext(runnableContext)} fit this device.';

@@ -295,6 +295,34 @@ class HuggingFaceRepositoryService {
     return HuggingFaceRepository(repoId: repoId, branch: 'main', files: files);
   }
 
+  /// Context window the repository's GGUF files declare, read from the
+  /// model's own metadata on huggingface.co (`gguf.context_length`).
+  ///
+  /// This is public metadata about a public file: no device, user or usage
+  /// information is sent, and the request is one field of the model page.
+  /// Repositories Hugging Face has not parsed, private or unreachable ones,
+  /// and files that declare no context all answer null, so an unknown value
+  /// never blocks the page that asks.
+  Future<int?> fetchContextLength(String repoInput) async {
+    final repoId = parseRepositoryInput(repoInput);
+    if (repoId == null) return null;
+    try {
+      final response = await _dio.get(
+        '/api/models/$repoId',
+        queryParameters: {'expand[]': 'gguf'},
+      );
+      final data = response.data;
+      final json = data is Map ? Map<String, dynamic>.from(data) : null;
+      final gguf = json?['gguf'];
+      if (gguf is! Map) return null;
+      final context = gguf['context_length'];
+      if (context is num && context > 0) return context.toInt();
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Repository files that are the same model as [fileName] in another
   /// quantization, best for a device first.
   ///

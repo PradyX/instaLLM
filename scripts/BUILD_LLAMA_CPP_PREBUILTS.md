@@ -1,13 +1,18 @@
 # Building InstaLLM llama.cpp libraries
 
-The app pins `llama_cpp_dart: 0.9.0-dev.12` and its matching llama.cpp revision:
+The app pins the `PradyX/llama_cpp_dart` fork rather than a pub.dev release,
+because no published binding carries the current llama.cpp. The fork keeps the
+`0.9.0-dev.12` package version and moves only its runtime pin:
 
 ```
-afeebe103bd99cda8f5dfaefcabadf890db7fda7 (b10182)
+0693dbfb915f33233818373b5f6969396658d02c (b11819)
 ```
 
-`0.9.0-dev.12` is the newest published binding and keeps the llama.cpp pin of
-`0.9.0-dev.10`, so generation behaviour does not change. It changes *packaging*:
+The Apple xcframework built from that commit is published at
+https://github.com/PradyX/llama_cpp_dart/releases/tag/llama-b11819 and
+`darwin/llama_cpp_dart/Package.swift` points at it. The published
+`0.9.0-dev.12` still pins `afeebe10` (b10182); the *packaging* it introduced is
+what this app relies on:
 macOS and iOS resolve through Swift Package Manager and link `llama.framework`
 (llama.cpp, its ggml backends and libmtmd in one image), and Android offers a
 native-assets build hook that extracts an arm64-only AAR. InstaLLM therefore
@@ -18,7 +23,7 @@ The 0.9 API is a rewrite: InstaLLM uses `LlamaEngine` worker isolates,
 `EngineSession`, streaming token events, and `LlamaMedia` for images.
 
 The pinned native source includes `qwen35`, `qwen35moe`, and `qwen3next`
-architectures. Individual GGUF files still need compatible quantization,
+architectures, and b11819 adds whatever landed after July. Individual GGUF files still need compatible quantization,
 adequate memory, and (for vision) a matching projector.
 
 ## Build
@@ -105,10 +110,11 @@ that requires a full vision model and its matching projector.
 ## Linux release artifact alternative
 
 On a non-Linux build machine, the exact upstream release also provides
-[Ubuntu x64 binaries](https://github.com/ggml-org/llama.cpp/releases/download/b10182/llama-b10182-bin-ubuntu-x64.tar.gz).
+[Ubuntu x64 binaries](https://github.com/ggml-org/llama.cpp/releases/download/b11819/llama-b11819-bin-ubuntu-x64.tar.gz).
 The archive SHA-256 is
-`9a087d633cc03a8e93f2d689bc80adbfb680efca025bc9a328d5e186d528757a`.
-The current local Linux bundle was refreshed from that verified archive.
+`98800bd7b1b7bd5f17ff32c0ee6ce2ea6dbcfe77eb58ff9fd96bdad967a4f286`.
+The local Linux bundle has not been refreshed from it yet: install that archive
+on a Linux host (or rebuild from source there) before packaging a Linux release.
 
 Copy the complete `libllama.so*`, `libmtmd.so*`, `libggml.so*`,
 `libggml-base.so*`, and `libggml-cpu-*.so` families together, preserving the

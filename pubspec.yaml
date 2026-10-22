@@ -27,8 +27,15 @@ dependencies:
   # Runtime". macOS links the plugin's `llama.framework` through Swift Package
   # Manager and Android uses this repository's own three-ABI jniLibs (see the
   # `hooks` section below), so no platform here runs the package's bundled
-  # Android AAR.
-  llama_cpp_dart: 0.9.0-dev.12
+  # Android AAR. The fork carries the llama.cpp pin and its artifacts, so this
+  # app can move the runtime without waiting for a pub.dev release. Pinned to a
+  # commit rather than a branch: the native libraries in android/ and ios/ are
+  # built from exactly this pin, and a branch would let the Dart binding drift
+  # from them. Bump the ref together with a native rebuild.
+  llama_cpp_dart:
+    git:
+      url: https://github.com/PradyX/llama_cpp_dart.git
+      ref: 0573bae438fbec2806f9d61c1174a5e2c7fff19c
   image_picker: ^1.1.2
   image: ^4.5.4
   path_provider: ^2.1.2

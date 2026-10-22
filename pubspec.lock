@@ -815,10 +815,11 @@ packages:
   llama_cpp_dart:
     dependency: "direct main"
     description:
-      name: llama_cpp_dart
-      sha256: "38472979c86f456a310e22e120a6dd82daeca4890efd426b9aaf47a668d4b930"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "0573bae438fbec2806f9d61c1174a5e2c7fff19c"
+      resolved-ref: "0573bae438fbec2806f9d61c1174a5e2c7fff19c"
+      url: "https://github.com/PradyX/llama_cpp_dart.git"
+    source: git
     version: "0.9.0-dev.12"
   logging:
     dependency: transitive

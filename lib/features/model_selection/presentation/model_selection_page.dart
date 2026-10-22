@@ -8,6 +8,7 @@ import 'package:installm/core/services/device_profile_service.dart';
 import 'package:installm/core/services/hugging_face_avatar_service.dart';
 import 'package:installm/core/services/hugging_face_repository_service.dart';
 import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
 import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -78,6 +79,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   final Set<String> _quantizationLoading = <String>{};
   final Map<String, String> _selectedQuantization = <String, String>{};
 
+  /// GGUF metadata of installed models whose own record carries none: the
+  /// built-in catalog stores no snapshot, so the file's header is read once
+  /// per model and kept here. A null value means "asked, unreadable".
+  final Map<String, GgufMetadata?> _liveGgufMetadata = {};
+  final Set<String> _ggufMetadataRequests = {};
+
   /// Publisher avatars per family, fetched once per distinct publisher and
   /// kept in memory for the page's life. Absent means "never asked"; a null
   /// means "asked, none found or unreachable", which is also final for the
@@ -128,6 +135,32 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }
 
   /// Estimates a model's memory use once, the first time its details open.
+  /// Reads an installed model's GGUF metadata from its file when the model
+  /// record has none. Header only: the weights are never touched.
+  Future<void> _loadGgufMetadata(LlmModel model) async {
+    if (!model.isDownloaded) return;
+    if (_liveGgufMetadata.containsKey(model.id) ||
+        !_ggufMetadataRequests.add(model.id)) {
+      return;
+    }
+    try {
+      final path = await ref
+          .read(modelStorageServiceProvider)
+          .resolveModelPath(model);
+      if (path == null || path.trim().isEmpty) {
+        throw const GgufFormatException('Model file location is unknown.');
+      }
+      final metadata = await const GgufReader().info(path);
+      if (!mounted) return;
+      setState(() => _liveGgufMetadata[model.id] = metadata);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _liveGgufMetadata[model.id] = null);
+    } finally {
+      _ggufMetadataRequests.remove(model.id);
+    }
+  }
+
   Future<void> _loadFitReport(LlmModel model) async {
     if (_fitRequests.contains(model.id) || _fitReports.containsKey(model.id)) {
       return;
@@ -1319,8 +1352,17 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final sizeBytes = exactBytes ?? variant.approximateFileSizeBytes;
 
     // The pair the Context column shows: what the file declares, and how much
-    // of it the device's memory budget can hold beside the weights.
-    final metadata = variant.model.ggufMetadata;
+    // of it the device's memory budget can hold beside the weights. A catalog
+    // record carries no snapshot, so an installed file is read on demand.
+    final metadata =
+        variant.model.ggufMetadata ?? _liveGgufMetadata[variant.model.id];
+    if (metadata == null &&
+        variant.model.isDownloaded &&
+        !_liveGgufMetadata.containsKey(variant.model.id)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_loadGgufMetadata(variant.model));
+      });
+    }
     final providedContext = metadata?.contextLength;
     int? runnableContext;
     if (metadata != null) {

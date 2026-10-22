@@ -69,6 +69,29 @@ USAGE
 
 human_time() { date -j -f "%s" "$1" "+%Y-%m-%d %H:%M %Z"; }
 
+# 'Error: Xcode not installed' here almost always means xcode-select is
+# pointing at the Command Line Tools (it gets reset there by OS updates and
+# some tool installs) while full Xcode in /Applications is fine — only the
+# system-wide selection changed. Both the profile renewal below and
+# `flutter run -d macos` need full Xcode, and both honour DEVELOPER_DIR, so
+# export it for this script only and never touch the system-wide selection.
+resolve_developer_dir() {
+  if command -v xcodebuild >/dev/null 2>&1 && xcodebuild -version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local xcode_app
+  xcode_app="$(ls -d /Applications/Xcode*.app 2>/dev/null | head -1 || true)"
+  if [ -n "$xcode_app" ] && [ -x "$xcode_app/Contents/Developer/usr/bin/xcodebuild" ]; then
+    export DEVELOPER_DIR="$xcode_app/Contents/Developer"
+    say "xcodebuild was unusable; using Xcode at $xcode_app for this run."
+  else
+    fail "xcodebuild is unavailable and no Xcode.app found in /Applications."
+    fail "Install Xcode, or set DEVELOPER_DIR to its Contents/Developer."
+    exit 1
+  fi
+}
+
 bundle_identifier() {
   sed -n 's/^[[:space:]]*PRODUCT_BUNDLE_IDENTIFIER[[:space:]]*=[[:space:]]*\(.*\)$/\1/p' \
     "$APP_INFO" | head -1
@@ -206,6 +229,7 @@ for arg in "$@"; do
   esac
 done
 
+resolve_developer_dir
 ensure_profile "$force_refresh"
 
 if [ "$ensure_only" -eq 1 ]; then

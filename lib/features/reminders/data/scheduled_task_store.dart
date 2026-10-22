@@ -60,10 +60,15 @@ class ScheduledTaskStore {
           if (tasks.length >= ScheduledTaskLimits.maxTasks) break;
         }
       }
+      // An entry this build could not read — or one past the cap — is loss
+      // the file does not show, so the original is backed up before the next
+      // save rewrites it rather than letting that task disappear silently.
       _preserve =
           version != currentVersion ||
           list is! List ||
-          raw.keys.any((key) => !const {'version', 'tasks'}.contains(key));
+          raw.keys.any((key) => !const {'version', 'tasks'}.contains(key)) ||
+          jsonEncode(list) !=
+              jsonEncode(tasks.map((task) => task.toJson()).toList());
       tasks.sort((a, b) => a.nextRunAt.compareTo(b.nextRunAt));
       return tasks;
     } on FormatException {

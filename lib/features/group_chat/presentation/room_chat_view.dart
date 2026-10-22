@@ -220,11 +220,17 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                               label: const Text('Create task'),
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
-                                foregroundColor: Theme.of(
-                                  context,
-                                ).colorScheme.primary,
+                                // Same pairing the bubble uses for its own
+                                // action row: a user bubble is filled with
+                                // primary, so primary text on it is invisible.
+                                foregroundColor: message.isUser
+                                    ? Theme.of(context).colorScheme.onPrimary
+                                    : Theme.of(context).colorScheme.primary,
                                 side: BorderSide(
-                                  color: Theme.of(context).colorScheme.outline,
+                                  color: message.isUser
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                            .withValues(alpha: 0.45)
+                                      : Theme.of(context).colorScheme.outline,
                                 ),
                               ),
                             ),

@@ -49,10 +49,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// it, and this is what brings the list back.
   bool _narrowDetailOpen = false;
 
-  /// Whether the variant ledger's open row has its details folded away. The
-  /// focused variant still drives the pane; this only hides the quantization,
-  /// fit and file facts the row carries.
-  bool _variantDetailsCollapsed = false;
+  /// The variant whose details are open in the family ledger, if any. The
+  /// chevron at the end of a row opens and closes this; tapping the row itself
+  /// chooses the model without unfolding it.
+  String? _expandedVariantId;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -495,9 +495,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   .selectModel(variant.model);
               unawaited(_loadFitReport(variant.model));
               setState(() {
-                if (_focusedModelId != variant.id) {
-                  _variantDetailsCollapsed = false;
-                }
                 _focusedModelId = variant.id;
                 _narrowDetailOpen = !wide;
               });
@@ -647,17 +644,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       },
     );
 
+    // Installed families always come first, and the summary line above already
+    // says how many there are, so no chip stands for that ordering.
     final chips = <Widget>[
-      // Installed families always come first, so this chip shows a fixed
-      // state rather than offering a switch: there is no off position.
-      FilterChip(
-        selected: true,
-        showCheckmark: false,
-        visualDensity: VisualDensity.compact,
-        avatar: const Icon(Icons.download_done_rounded, size: 16),
-        label: Text('Installed ($installedCount)'),
-        onSelected: (_) {},
-      ),
       FilterChip(
         selected: state.sortByFit,
         showCheckmark: false,
@@ -1217,9 +1206,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               device: device,
               selected: family.variants[index].model.id == _focusedModelId,
               inUse: family.variants[index].model.id == selectedModelId,
-              expanded:
-                  family.variants[index].model.id == _focusedModelId &&
-                  !_variantDetailsCollapsed,
+              expanded: family.variants[index].model.id == _expandedVariantId,
               sizeWidth: sizeColumnWidth,
               costWidth: costColumnWidth,
               actionWidth: actionColumnWidth,
@@ -1328,18 +1315,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         onTap: () {
           unawaited(_loadFitReport(variant.model));
           // The row is the model: tapping an installed variant makes it the
-          // app's model, the same as its Use button. The rest only opens.
+          // app's model, the same as its Use button. Its details stay folded
+          // until the chevron is pressed.
           controller.selectModel(variant.model);
-          setState(() {
-            // The open row folds away on a second tap; another row opens in
-            // its place.
-            if (variant.model.id == _focusedModelId) {
-              _variantDetailsCollapsed = !_variantDetailsCollapsed;
-            } else {
-              _focusedModelId = variant.model.id;
-              _variantDetailsCollapsed = false;
-            }
-          });
+          setState(() => _focusedModelId = variant.model.id);
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1405,12 +1384,30 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Icon(
-                    expanded
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 18,
+                  IconButton(
+                    onPressed: () {
+                      unawaited(_loadFitReport(variant.model));
+                      setState(() {
+                        _expandedVariantId =
+                            _expandedVariantId == variant.model.id
+                            ? null
+                            : variant.model.id;
+                      });
+                    },
+                    icon: Icon(
+                      expanded
+                          ? Icons.expand_less_rounded
+                          : Icons.expand_more_rounded,
+                      size: 18,
+                    ),
                     color: colorScheme.onSurfaceVariant,
+                    tooltip: expanded ? 'Hide details' : 'Show details',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 24,
+                      height: 32,
+                    ),
                   ),
                 ],
               ),

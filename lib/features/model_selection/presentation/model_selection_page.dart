@@ -881,32 +881,32 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                if (capabilities.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (
-                        var index = 0;
-                        index < capabilities.length;
-                        index++
-                      ) ...[
-                        if (index > 0) const SizedBox(width: 5),
-                        Tooltip(
-                          message: capabilities[index].label,
-                          child: Icon(
-                            _capabilityIcon(capabilities[index]),
-                            size: 14,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
+                      if (capabilities.isNotEmpty) ...[
+                        const SizedBox(height: 5),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (
+                              var index = 0;
+                              index < capabilities.length;
+                              index++
+                            ) ...[
+                              if (index > 0) const SizedBox(width: 6),
+                              Tooltip(
+                                message: capabilities[index].label,
+                                child: Icon(
+                                  _capabilityIcon(capabilities[index]),
+                                  size: 14,
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ],
                     ],
                   ),
-                ],
+                ),
                 if (progress != null) ...[
                   const SizedBox(width: 8),
                   Text(

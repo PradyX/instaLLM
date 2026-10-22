@@ -487,6 +487,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             families,
             focused,
             onOpen: (variant) {
+              // A tap chooses the model outright when it is already on disk,
+              // exactly as the pane's Use button would; a model that still has
+              // to download is only opened.
+              ref
+                  .read(modelSelectionControllerProvider.notifier)
+                  .selectModel(variant.model);
               unawaited(_loadFitReport(variant.model));
               setState(() {
                 if (_focusedModelId != variant.id) {
@@ -800,7 +806,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   family.variants.any(
                     (variant) => variant.model.id == focused.id,
                   ),
-              onTap: () => onOpen(family.variants.first),
+              // Tap the variant that is already here, so the tap that opens
+              // a family also chooses the member it can use.
+              onTap: () => onOpen(
+                family.variants.firstWhere(
+                  (variant) => variant.model.isDownloaded,
+                  orElse: () => family.variants.first,
+                ),
+              ),
             ),
           ),
       ],
@@ -1080,7 +1093,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         ],
         if (showVariants) ...[
           const SizedBox(height: 20),
-          _buildVariantLedger(context, family),
+          _buildVariantLedger(
+            context,
+            family,
+            selectedModelId: state.selectedModelId,
+          ),
         ],
         if (!showVariants) ...[
           const SizedBox(height: 20),
@@ -1115,7 +1132,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// estimate and the file facts that belong to it. Picking a row switches
   /// the pane to that variant; nothing is downloaded or chosen for the app
   /// by doing so.
-  Widget _buildVariantLedger(BuildContext context, ModelFamily family) {
+  Widget _buildVariantLedger(
+    BuildContext context,
+    ModelFamily family, {
+    required String? selectedModelId,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final device = ref.watch(deviceProfileProvider).valueOrNull;
 
@@ -1195,6 +1216,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               kvCacheMetadata: kvCacheMetadata,
               device: device,
               selected: family.variants[index].model.id == _focusedModelId,
+              inUse: family.variants[index].model.id == selectedModelId,
               expanded:
                   family.variants[index].model.id == _focusedModelId &&
                   !_variantDetailsCollapsed,
@@ -1215,6 +1237,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required GgufMetadata? kvCacheMetadata,
     required DeviceProfile? device,
     required bool selected,
+    required bool inUse,
     required bool expanded,
     required double sizeWidth,
     required double costWidth,
@@ -1241,7 +1264,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final exactBytes = variant.fileSizeBytes;
     final sizeBytes = exactBytes ?? variant.approximateFileSizeBytes;
 
-    final action = switch ((variant.model.isDownloaded, selected)) {
+    final action = switch ((variant.model.isDownloaded, inUse)) {
       (true, true) => Row(
         mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
@@ -1304,6 +1327,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       child: InkWell(
         onTap: () {
           unawaited(_loadFitReport(variant.model));
+          // The row is the model: tapping an installed variant makes it the
+          // app's model, the same as its Use button. The rest only opens.
+          controller.selectModel(variant.model);
           setState(() {
             // The open row folds away on a second tap; another row opens in
             // its place.

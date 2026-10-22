@@ -1050,11 +1050,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }
 
   /// The right pane: everything about one model, including the quantization
-  /// it will download and what it costs this device. When the pane shows a
-  /// family rather than the only member of one, the family's variants are a
-  /// ledger — one row per variant with its size, fit on this device, cost and
-  /// action — and the focused member opens in place to carry its own
-  /// quantization, fit meter and file facts.
+  /// it will download and what it costs this device. A family is always a
+  /// ledger — one row per variant with its context, size, fit on this device
+  /// and action, whether it holds one variant or several — and a row opens in
+  /// place to carry its own quantization, fit meter and file facts.
   Widget _buildDetailPane(
     BuildContext context,
     ModelSelectionState state,
@@ -1065,7 +1064,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isSelected = model.id == state.selectedModelId;
-    final showVariants = family != null && family.variantCount > 1;
 
     // The pane is the details, so the estimate it shows is asked for on
     // arrival rather than after a tap.
@@ -1077,7 +1075,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     }
 
     final identity = <String>[
-      showVariants ? family.parameterRange : model.parameterSize,
+      family?.parameterRange ?? model.parameterSize,
       model.promptFormatId,
       model.isCustom ? 'Custom' : model.effectiveSource.label,
     ].join(' · ');
@@ -1099,7 +1097,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             ),
           ),
         Text(
-          showVariants ? family.displayName : model.name,
+          family?.displayName ?? model.name,
           style: textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w600,
             letterSpacing: -0.4,
@@ -1155,15 +1153,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                 .toList(growable: false),
           ),
         ],
-        if (showVariants) ...[
+        if (family != null) ...[
           const SizedBox(height: 20),
           _buildVariantLedger(
             context,
             family,
             selectedModelId: state.selectedModelId,
           ),
-        ],
-        if (!showVariants) ...[
+        ] else ...[
           const SizedBox(height: 20),
           _buildDetailSection(
             context,

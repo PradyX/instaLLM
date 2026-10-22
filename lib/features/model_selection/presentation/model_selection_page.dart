@@ -320,12 +320,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final selectableModels = state.models
         .where((model) => !model.isEmbeddingModel)
         .toList(growable: false);
+    // What is already on disk always leads the list; that is not a filter the
+    // page offers to switch off.
     final sortedModels = [...selectableModels]
-      ..sort(
-        (a, b) => state.prioritizeDownloadedModels
-            ? _compareModelsPrioritizingInstalled(a, b)
-            : _compareModelsByParamSize(a, b),
-      );
+      ..sort(_compareModelsPrioritizingInstalled);
     final capabilityCounts = _buildCapabilityCounts(selectableModels);
     final visibleCapabilities = ModelCapability.values
         .where((capability) => (capabilityCounts[capability] ?? 0) > 0)
@@ -374,30 +372,28 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final deviceForFit = state.sortByFit
         ? ref.watch(deviceProfileProvider).valueOrNull
         : null;
-    if (state.prioritizeDownloadedModels || state.sortByFit) {
-      if (state.sortByFit) {
-        sortFamiliesByFit(
-          families,
-          contextTokens: ModelCompatibilityService.defaultContextTokens,
-          totalMemoryBytes: deviceForFit?.totalMemoryBytes,
-          availableMemoryBytes: deviceForFit?.availableMemoryBytes,
-          installedFirst: state.prioritizeDownloadedModels,
+    if (state.sortByFit) {
+      sortFamiliesByFit(
+        families,
+        contextTokens: ModelCompatibilityService.defaultContextTokens,
+        totalMemoryBytes: deviceForFit?.totalMemoryBytes,
+        availableMemoryBytes: deviceForFit?.availableMemoryBytes,
+        installedFirst: true,
+      );
+    } else {
+      families.sort((a, b) {
+        final byInstalled = (b.hasInstalled ? 1 : 0).compareTo(
+          a.hasInstalled ? 1 : 0,
         );
-      } else {
-        families.sort((a, b) {
-          final byInstalled = (b.hasInstalled ? 1 : 0).compareTo(
-            a.hasInstalled ? 1 : 0,
-          );
-          if (byInstalled != 0) return byInstalled;
-          final bySize = a.lightest.parameterCount.compareTo(
-            b.lightest.parameterCount,
-          );
-          if (bySize != 0) return bySize;
-          return a.displayName.toLowerCase().compareTo(
-            b.displayName.toLowerCase(),
-          );
-        });
-      }
+        if (byInstalled != 0) return byInstalled;
+        final bySize = a.lightest.parameterCount.compareTo(
+          b.lightest.parameterCount,
+        );
+        if (bySize != 0) return bySize;
+        return a.displayName.toLowerCase().compareTo(
+          b.displayName.toLowerCase(),
+        );
+      });
     }
 
     ModelFamily? focusedFamily;
@@ -580,9 +576,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         ? ((total - free) / total).clamp(0.0, 1.0)
         : 0.0;
     final hasFilters =
-        state.selectedCapabilityFilters.isNotEmpty ||
-        state.prioritizeDownloadedModels ||
-        state.sortByFit;
+        state.selectedCapabilityFilters.isNotEmpty || !state.sortByFit;
 
     final summaryStyle = textTheme.bodySmall?.copyWith(
       color: colorScheme.onSurfaceVariant,
@@ -640,17 +634,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
 
     final chips = <Widget>[
+      // Installed families always come first, so this chip shows a fixed
+      // state rather than offering a switch: there is no off position.
       FilterChip(
-        selected: state.prioritizeDownloadedModels,
+        selected: true,
         showCheckmark: false,
         visualDensity: VisualDensity.compact,
         avatar: const Icon(Icons.download_done_rounded, size: 16),
         label: Text('Installed ($installedCount)'),
-        onSelected: (selected) {
-          ref
-              .read(modelSelectionControllerProvider.notifier)
-              .setPrioritizeDownloadedModels(selected);
-        },
+        onSelected: (_) {},
       ),
       FilterChip(
         selected: state.sortByFit,
@@ -1580,9 +1572,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
 
     final hasSearch = state.searchQuery.trim().isNotEmpty;
     final hasFilters =
-        state.selectedCapabilityFilters.isNotEmpty ||
-        state.prioritizeDownloadedModels ||
-        state.sortByFit;
+        state.selectedCapabilityFilters.isNotEmpty || !state.sortByFit;
     final message = hasSearch && hasFilters
         ? 'No models match the search query and selected filters.'
         : hasSearch

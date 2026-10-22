@@ -279,27 +279,17 @@ class ModelSelectionController extends _$ModelSelectionController {
     state = state.copyWith(selectedCapabilityFilters: <ModelCapability>{});
   }
 
-  void setPrioritizeDownloadedModels(bool enabled) {
-    if (state.prioritizeDownloadedModels == enabled) return;
-    state = state.copyWith(prioritizeDownloadedModels: enabled);
-  }
-
   void setSortByFit(bool enabled) {
     if (state.sortByFit == enabled) return;
     state = state.copyWith(sortByFit: enabled);
   }
 
   void clearFilters() {
-    if (state.selectedCapabilityFilters.isEmpty &&
-        !state.prioritizeDownloadedModels &&
-        !state.sortByFit) {
-      return;
-    }
+    if (state.selectedCapabilityFilters.isEmpty && state.sortByFit) return;
 
     state = state.copyWith(
       selectedCapabilityFilters: <ModelCapability>{},
-      prioritizeDownloadedModels: false,
-      sortByFit: false,
+      sortByFit: true,
     );
   }
 

@@ -11,15 +11,11 @@ class ModelSelectionState {
   final String? selectedModelId;
   final Set<ModelCapability> selectedCapabilityFilters;
 
-  /// Whether installed families are pulled to the top of the list before the
-  /// rest. On by default: the models you already have are the ones you will
-  /// act on first, and the chip turns this off when the raw catalog matters.
-  final bool prioritizeDownloadedModels;
-
   /// Whether families sort by how well their best-fitting variant is expected
   /// to run on this device, the biggest comfortable model first, instead of by
   /// parameter size. On by default, together with the installed ordering: the
-  /// list should start with what runs here.
+  /// list should start with what runs here. Installed families always lead
+  /// that order, which is not a setting.
   final bool sortByFit;
   final String searchQuery;
   final String? error;
@@ -30,7 +26,6 @@ class ModelSelectionState {
     required this.models,
     this.selectedModelId,
     this.selectedCapabilityFilters = const {},
-    this.prioritizeDownloadedModels = true,
     this.sortByFit = true,
     this.searchQuery = '',
     this.error,
@@ -51,7 +46,6 @@ class ModelSelectionState {
     List<LlmModel>? models,
     Object? selectedModelId = _unset,
     Set<ModelCapability>? selectedCapabilityFilters,
-    bool? prioritizeDownloadedModels,
     bool? sortByFit,
     String? searchQuery,
     Object? error = _unset,
@@ -65,8 +59,6 @@ class ModelSelectionState {
           : selectedModelId as String?,
       selectedCapabilityFilters:
           selectedCapabilityFilters ?? this.selectedCapabilityFilters,
-      prioritizeDownloadedModels:
-          prioritizeDownloadedModels ?? this.prioritizeDownloadedModels,
       sortByFit: sortByFit ?? this.sortByFit,
       searchQuery: searchQuery ?? this.searchQuery,
       error: error == _unset ? this.error : error as String?,

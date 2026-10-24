@@ -32,7 +32,7 @@ class ComposerReasoningControl extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (modelId.isEmpty) return const SizedBox.shrink();
 
-    final reasoning = ref.watch(modelReasoningProvider(modelId)).valueOrNull;
+    final reasoning = ref.watch(modelReasoningProvider(modelId)).value;
     if (reasoning == null) return const SizedBox.shrink();
 
     final choice =

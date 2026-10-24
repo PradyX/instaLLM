@@ -6,25 +6,68 @@ part of 'conversation_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$conversationControllerHash() =>
-    r'8f2b7c4e1a9d53f6c0e2b8d7a4f19c63e5b20d8a';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
+/// Application-level controller for conversation lifecycle: listing, opening,
+/// creating, renaming, pinning, deleting, exporting and importing.
 
-/// See also [ConversationController].
 @ProviderFor(ConversationController)
-final conversationControllerProvider =
-    AutoDisposeNotifierProvider<
-      ConversationController,
-      ConversationListState
-    >.internal(
-      ConversationController.new,
-      name: r'conversationControllerProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$conversationControllerHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final conversationControllerProvider = ConversationControllerProvider._();
 
-typedef _$ConversationController = AutoDisposeNotifier<ConversationListState>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+/// Application-level controller for conversation lifecycle: listing, opening,
+/// creating, renaming, pinning, deleting, exporting and importing.
+final class ConversationControllerProvider
+    extends $NotifierProvider<ConversationController, ConversationListState> {
+  /// Application-level controller for conversation lifecycle: listing, opening,
+  /// creating, renaming, pinning, deleting, exporting and importing.
+  ConversationControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'conversationControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$conversationControllerHash();
+
+  @$internal
+  @override
+  ConversationController create() => ConversationController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(ConversationListState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<ConversationListState>(value),
+    );
+  }
+}
+
+String _$conversationControllerHash() =>
+    r'87fbbfced27f2fc344a8685aad6e5cda807e5a3b';
+
+/// Application-level controller for conversation lifecycle: listing, opening,
+/// creating, renaming, pinning, deleting, exporting and importing.
+
+abstract class _$ConversationController
+    extends $Notifier<ConversationListState> {
+  ConversationListState build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<ConversationListState, ConversationListState>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<ConversationListState, ConversationListState>,
+              ConversationListState,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

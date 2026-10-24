@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/voice/data/whisper_model_service.dart';

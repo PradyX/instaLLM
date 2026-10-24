@@ -37,5 +37,15 @@ Future<void> main() async {
   await LegacyStoreCleanup.run();
 
   AppLogger.info('App started successfully');
-  runApp(TranslationProvider(child: const ProviderScope(child: MyApp())));
+  runApp(
+    TranslationProvider(
+      child: ProviderScope(retry: _noProviderRetry, child: const MyApp()),
+    ),
+  );
 }
+
+/// Riverpod 3 retries a failed provider ten times with backoff by default,
+/// which would keep a broken store behind a spinner for half a minute before
+/// the error the UI reports appears. The failures here are file and network
+/// errors the user needs to see, so retrying stays off.
+Duration? _noProviderRetry(int retryCount, Object error) => null;

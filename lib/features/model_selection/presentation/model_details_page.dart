@@ -276,7 +276,7 @@ class _ModelDetailsPageState extends ConsumerState<ModelDetailsPage> {
       return widgets;
     }
 
-    final device = _fit?.device ?? ref.read(deviceProfileProvider).valueOrNull;
+    final device = _fit?.device ?? ref.read(deviceProfileProvider).value;
     if (device != null) {
       widgets.add(_row(context, 'System', device.summaryLabel));
       widgets.add(

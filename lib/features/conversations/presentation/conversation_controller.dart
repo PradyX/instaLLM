@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/conversations/data/conversation_migration.dart';
 import 'package:installm/features/conversations/data/conversation_repository.dart';

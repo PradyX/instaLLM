@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/voice/application/recording_controller.dart';

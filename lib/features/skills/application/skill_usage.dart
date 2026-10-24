@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
 
 /// Estimates for the last prompt actually sent, not a persisted content log.

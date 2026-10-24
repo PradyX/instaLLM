@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/features/reminders/data/scheduled_task_store.dart';
 import 'package:installm/features/reminders/domain/scheduled_task.dart';

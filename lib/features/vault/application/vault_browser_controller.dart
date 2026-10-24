@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/vault/application/vault_browser_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';

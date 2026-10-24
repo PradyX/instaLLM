@@ -117,7 +117,7 @@ class VoiceSettingsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(voiceSettingsProvider);
     final settingsController = ref.read(voiceSettingsProvider.notifier);
-    final platformStatus = ref.watch(platformSttStatusProvider).valueOrNull;
+    final platformStatus = ref.watch(platformSttStatusProvider).value;
     final platformAvailable = platformStatus == PlatformSpeechStatus.ready;
     // macOS credits a privacy request to the program that started the app, so
     // a launch another program started cannot be granted device recognition.

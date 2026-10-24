@@ -114,7 +114,7 @@ class _RoomTasksPanelState extends ConsumerState<RoomTasksPanel> {
         .messagesFor(room.id)
         .map((message) => message.id)
         .toSet();
-    final all = data.valueOrNull ?? const <ProjectTask>[];
+    final all = data.value ?? const <ProjectTask>[];
     final linked = all
         .where(
           (task) =>

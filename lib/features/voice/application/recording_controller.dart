@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/voice/data/microphone_recorder.dart';
 
 /// The microphone recorder, injectable so tests never touch a device.

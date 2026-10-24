@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/documents/data/network_policy_store.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
 import 'package:installm/storage/secure_storage.dart';

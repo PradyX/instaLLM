@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:installm/features/skills/data/skill_bundle_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
 import 'package:installm/features/skills/domain/built_in_skills.dart';
 import 'package:installm/features/skills/domain/skill.dart';

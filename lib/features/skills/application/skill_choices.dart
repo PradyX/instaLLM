@@ -3,6 +3,7 @@ import 'package:installm/features/skills/domain/skill_selector.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:installm/features/skills/domain/skill.dart';

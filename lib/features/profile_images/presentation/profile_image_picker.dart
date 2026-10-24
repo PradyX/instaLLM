@@ -106,9 +106,9 @@ class _ProfileImagePickerState extends ConsumerState<ProfileImagePicker> {
   Widget build(BuildContext context) {
     final selected = widget.profileKey == null
         ? widget.initialSelection
-        : ref.watch(profileImagesProvider).valueOrNull?[widget.profileKey];
+        : ref.watch(profileImagesProvider).value?[widget.profileKey];
     final saved = PetdexService.browse(
-      ref.watch(profileImagesProvider).valueOrNull?.values.toList() ?? [],
+      ref.watch(profileImagesProvider).value?.values.toList() ?? [],
     );
     final catalog = _savedOnly ? null : ref.watch(petdexCatalogProvider);
     return AlertDialog(

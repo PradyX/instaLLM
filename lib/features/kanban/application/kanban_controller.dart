@@ -1,4 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:installm/features/kanban/application/board_task_operations.dart';
 import 'package:installm/features/kanban/data/task_repository.dart';
 import 'package:installm/features/kanban/domain/task.dart';

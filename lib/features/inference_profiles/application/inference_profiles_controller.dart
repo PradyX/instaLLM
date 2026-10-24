@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
 import 'package:installm/features/inference_profiles/domain/inference_profile.dart';

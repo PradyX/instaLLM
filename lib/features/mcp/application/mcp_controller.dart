@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/mcp/data/mcp_client.dart';
 import 'package:installm/features/mcp/data/mcp_store.dart';
 import 'package:installm/features/mcp/domain/mcp_server.dart';

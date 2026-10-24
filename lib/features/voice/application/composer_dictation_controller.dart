@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/settings/voice_settings_provider.dart';
 import 'package:installm/core/widgets/chat_composer.dart' show ComposerMicState;
 import 'package:installm/features/voice/application/recording_controller.dart';

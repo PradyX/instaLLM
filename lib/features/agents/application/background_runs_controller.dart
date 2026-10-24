@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/core/utils/logger.dart';

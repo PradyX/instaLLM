@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 import 'package:installm/storage/secure_storage.dart';
 

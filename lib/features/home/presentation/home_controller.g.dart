@@ -6,21 +6,57 @@ part of 'home_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$homeControllerHash() => r'978e06718d55552915e89a7ceadc539aa9d2b1cd';
+// GENERATED CODE - DO NOT MODIFY BY HAND
+// ignore_for_file: type=lint, type=warning
 
-/// See also [HomeController].
 @ProviderFor(HomeController)
-final homeControllerProvider =
-    AutoDisposeNotifierProvider<HomeController, List<Message>>.internal(
-      HomeController.new,
-      name: r'homeControllerProvider',
-      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-          ? null
-          : _$homeControllerHash,
-      dependencies: null,
-      allTransitiveDependencies: null,
-    );
+final homeControllerProvider = HomeControllerProvider._();
 
-typedef _$HomeController = AutoDisposeNotifier<List<Message>>;
-// ignore_for_file: type=lint
-// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
+final class HomeControllerProvider
+    extends $NotifierProvider<HomeController, List<Message>> {
+  HomeControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'homeControllerProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$homeControllerHash();
+
+  @$internal
+  @override
+  HomeController create() => HomeController();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(List<Message> value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<List<Message>>(value),
+    );
+  }
+}
+
+String _$homeControllerHash() => r'41c07f42b89ea1c3813bcdbe67aeb8249d111be6';
+
+abstract class _$HomeController extends $Notifier<List<Message>> {
+  List<Message> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref = this.ref as $Ref<List<Message>, List<Message>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<List<Message>, List<Message>>,
+              List<Message>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

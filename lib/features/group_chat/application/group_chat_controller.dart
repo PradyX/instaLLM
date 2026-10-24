@@ -7,6 +7,7 @@ import 'package:installm/core/permissions/workspace_permission.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/core/utils/logger.dart';

@@ -20,7 +20,7 @@ class ProfileAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pet = ref.watch(profileImagesProvider).valueOrNull?[profileKey];
+    final pet = ref.watch(profileImagesProvider).value?[profileKey];
     final defaultImage = fallback ?? DefaultBotAvatar(size: size);
     return pet == null
         ? SizedBox.square(
@@ -45,7 +45,7 @@ class PetdexAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final file = ref.watch(petdexImageProvider(pet)).valueOrNull;
+    final file = ref.watch(petdexImageProvider(pet)).value;
     return SizedBox.square(
       dimension: size,
       child: file == null
@@ -73,7 +73,7 @@ class PetdexPreviewAvatar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bytes = ref.watch(petdexPreviewProvider(pet)).valueOrNull;
+    final bytes = ref.watch(petdexPreviewProvider(pet)).value;
     return SizedBox.square(
       dimension: size,
       child: bytes == null

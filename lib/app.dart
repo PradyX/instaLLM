@@ -12,7 +12,7 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(appRouterProvider);
-    final themeMode = ref.watch(themeModeNotifierProvider);
+    final themeMode = ref.watch(themeModeProvider);
     final textTheme = Theme.of(context).textTheme;
     final appearance = ref.watch(appearanceProvider).preferences;
     final theme = MaterialTheme(

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 

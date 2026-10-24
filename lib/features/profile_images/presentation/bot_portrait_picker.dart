@@ -83,7 +83,7 @@ class _BotPortraitPickerState extends ConsumerState<BotPortraitPicker> {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final saved = PetdexService.browse(
-      ref.watch(profileImagesProvider).valueOrNull?.values.toList() ?? [],
+      ref.watch(profileImagesProvider).value?.values.toList() ?? [],
     );
     final catalog = _savedOnly ? null : ref.watch(petdexCatalogProvider);
     return Column(

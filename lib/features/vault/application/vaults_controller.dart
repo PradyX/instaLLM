@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/app_storage_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/data/vault_store.dart';

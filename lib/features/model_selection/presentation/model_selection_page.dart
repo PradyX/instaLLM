@@ -442,7 +442,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     // model first — using the device's memory budget; families whose weights
     // or budget cannot be estimated stay unranked and last.
     final deviceForFit = state.sortByFit
-        ? ref.watch(deviceProfileProvider).valueOrNull
+        ? ref.watch(deviceProfileProvider).value
         : null;
     if (state.sortByFit) {
       sortFamiliesByFit(
@@ -643,7 +643,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final device = ref.watch(deviceProfileProvider).valueOrNull;
+    final device = ref.watch(deviceProfileProvider).value;
     final free = state.freeStorageBytes;
     final total = state.totalStorageBytes;
     final hasStorage = free != null && total != null && total > 0;
@@ -1223,7 +1223,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required String? selectedModelId,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    final device = ref.watch(deviceProfileProvider).valueOrNull;
+    final device = ref.watch(deviceProfileProvider).value;
 
     // Siblings share an architecture, so one member's GGUF metadata supplies
     // the KV-cache shape for every member's rough `fit` estimate.

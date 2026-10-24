@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/settings/inference_settings_provider.dart';

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:installm/features/benchmark/application/model_comparison_service.dart';
 import 'package:installm/features/benchmark/data/comparison_set_store.dart';

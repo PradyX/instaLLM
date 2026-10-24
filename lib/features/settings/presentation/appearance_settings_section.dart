@@ -12,7 +12,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mode = ref.watch(themeModeNotifierProvider);
+    final mode = ref.watch(themeModeProvider);
     final appearance = ref.watch(appearanceProvider);
     final preferences = appearance.preferences;
     final editable = appearance.isReady && !appearance.isReadOnly;
@@ -49,7 +49,7 @@ class AppearanceSettingsSection extends ConsumerWidget {
                           if (!selected) return;
                           try {
                             await ref
-                                .read(themeModeNotifierProvider.notifier)
+                                .read(themeModeProvider.notifier)
                                 .setThemeMode(value);
                           } catch (_) {
                             if (context.mounted) {

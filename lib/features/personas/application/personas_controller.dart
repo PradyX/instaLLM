@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:installm/core/data/legacy_export_formats.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/personas/data/persona_store.dart';
 import 'package:installm/features/personas/domain/persona.dart';
 

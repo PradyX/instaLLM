@@ -40,7 +40,7 @@ class ProfileImagesController extends AsyncNotifier<Map<String, PetdexPet>> {
       if (service.store.isReadOnly) return false;
       if (pet != null) await service.image(pet);
       final next = Map<String, PetdexPet>.from(
-        state.valueOrNull ?? service.store.load(),
+        state.value ?? service.store.load(),
       );
       if (pet == null) {
         next.remove(key);

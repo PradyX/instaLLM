@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/utils/cancel_token.dart';
 import 'package:installm/core/utils/logger.dart';

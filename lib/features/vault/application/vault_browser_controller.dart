@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/vault/application/vault_browser_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
@@ -11,17 +10,8 @@ final vaultBrowserServiceProvider = Provider<VaultBrowserService>(
   (ref) => const VaultBrowserService(),
 );
 final vaultBrowserProvider =
-    StateNotifierProvider.autoDispose<
-      VaultBrowserController,
-      VaultBrowserState
-    >(createVaultBrowserController);
-
-VaultBrowserController createVaultBrowserController(Ref ref) =>
-    VaultBrowserController(
-      service: ref.watch(vaultBrowserServiceProvider),
-      isRegistered: (vault) =>
-          ref.read(vaultsProvider).snapshot.vaultById(vault.id)?.rootPath ==
-          vault.rootPath,
+    NotifierProvider.autoDispose<VaultBrowserController, VaultBrowserState>(
+      VaultBrowserController.new,
     );
 
 class VaultBrowserState {
@@ -76,11 +66,19 @@ class VaultBrowserState {
 
 /// Owns selection and disk operations, including stale route/read rejection.
 /// Manual note actions do not enable any bot permission or journal ownership.
-class VaultBrowserController extends StateNotifier<VaultBrowserState> {
-  VaultBrowserController({required this.service, required this.isRegistered})
-    : super(const VaultBrowserState());
-  final VaultBrowserService service;
-  final bool Function(VaultRegistration vault) isRegistered;
+class VaultBrowserController extends Notifier<VaultBrowserState> {
+  late VaultBrowserService service;
+  late bool Function(VaultRegistration vault) isRegistered;
+
+  @override
+  VaultBrowserState build() {
+    service = ref.watch(vaultBrowserServiceProvider);
+    isRegistered = (vault) =>
+        ref.read(vaultsProvider).snapshot.vaultById(vault.id)?.rootPath ==
+        vault.rootPath;
+    return const VaultBrowserState();
+  }
+
   static const notes = VaultNotesService();
   static const maxNoteBytes = 512 * 1024;
   static const userPermissions = VaultPermissions(canDelete: true);
@@ -93,7 +91,7 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
   bool get _available => state.vault != null && isRegistered(state.vault!);
 
   Future<void> selectVault(VaultRegistration vault) async {
-    if (!mounted || state.busy) return;
+    if (!ref.mounted || state.busy) return;
     _vaultEpoch++;
     _noteEpoch++;
     _searchEpoch++;
@@ -107,7 +105,7 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
     final epoch = _vaultEpoch;
     state = state.copyWith(loadingFolders: {...state.loadingFolders, folder});
     final (listing, error) = await service.list(paths, folder);
-    if (!mounted || epoch != _vaultEpoch) return;
+    if (!ref.mounted || epoch != _vaultEpoch) return;
     state = state.copyWith(
       folders: listing == null ? null : {...state.folders, folder: listing},
       loadingFolders: {...state.loadingFolders}..remove(folder),
@@ -140,9 +138,9 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
     final (results, error) = await service.search(
       paths,
       query.trim(),
-      cancelled: () => !mounted || epoch != _searchEpoch || !_available,
+      cancelled: () => !ref.mounted || epoch != _searchEpoch || !_available,
     );
-    if (!mounted || epoch != _searchEpoch) return;
+    if (!ref.mounted || epoch != _searchEpoch) return;
     state = state.copyWith(
       results: results,
       searching: false,
@@ -167,7 +165,9 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
       relativePath: path,
       maxBytes: maxNoteBytes,
     );
-    if (!mounted || epoch != _noteEpoch || vaultEpoch != _vaultEpoch) return;
+    if (!ref.mounted || epoch != _noteEpoch || vaultEpoch != _vaultEpoch) {
+      return;
+    }
     state = state.copyWith(
       note: note,
       busy: false,
@@ -216,7 +216,7 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
             expectedModified: baseline.modified,
             expectedContent: baseline.content,
           );
-    if (!mounted) return error == null;
+    if (!ref.mounted) return error == null;
     if (error != null) {
       state = state.copyWith(busy: false, error: error);
       return false;
@@ -250,7 +250,7 @@ class VaultBrowserController extends StateNotifier<VaultBrowserState> {
         relativePath: baseline.relativePath,
         maxBytes: maxNoteBytes,
       );
-      if (!mounted) return true;
+      if (!ref.mounted) return true;
       state = state.copyWith(
         note: updated,
         busy: false,

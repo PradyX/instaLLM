@@ -3,7 +3,6 @@ import 'package:installm/features/skills/domain/skill_selector.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:installm/features/skills/domain/skill.dart';
@@ -126,20 +125,22 @@ final skillChoiceStoreProvider = FutureProvider<SkillChoiceStore>(
   ),
 );
 final skillChoicesProvider =
-    StateNotifierProvider<SkillChoicesNotifier, Map<String, SkillChoice>>(
-      (ref) => SkillChoicesNotifier(ref),
+    NotifierProvider<SkillChoicesNotifier, Map<String, SkillChoice>>(
+      SkillChoicesNotifier.new,
     );
 
-class SkillChoicesNotifier extends StateNotifier<Map<String, SkillChoice>> {
-  SkillChoicesNotifier(this.ref) : super({}) {
+class SkillChoicesNotifier extends Notifier<Map<String, SkillChoice>> {
+  @override
+  Map<String, SkillChoice> build() {
     whenReady = _load();
+    return {};
   }
-  final Ref ref;
-  late final Future<void> whenReady;
+
+  late Future<void> whenReady;
   Future<void> _load() async {
     try {
       final store = await ref.read(skillChoiceStoreProvider.future);
-      if (mounted) state = store.load();
+      if (ref.mounted) state = store.load();
     } catch (_) {}
   }
 
@@ -154,7 +155,7 @@ class SkillChoicesNotifier extends StateNotifier<Map<String, SkillChoice>> {
         next[key] = choice;
       }
       if (!store.save(next)) return false;
-      if (mounted) state = next;
+      if (ref.mounted) state = next;
       return true;
     } catch (_) {
       return false;

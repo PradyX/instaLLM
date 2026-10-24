@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/core/utils/logger.dart';
@@ -76,8 +75,8 @@ class BackgroundRunsState {
 }
 
 final backgroundRunsProvider =
-    StateNotifierProvider<BackgroundRunsController, BackgroundRunsState>(
-      (ref) => BackgroundRunsController(ref),
+    NotifierProvider<BackgroundRunsController, BackgroundRunsState>(
+      BackgroundRunsController.new,
     );
 
 /// Runs one room turn out of sight and tells the user how it ended
@@ -89,20 +88,21 @@ final backgroundRunsProvider =
 /// not do with the room open. What this adds is a record the user can see from
 /// anywhere, a cancel that reaches the run, and a notice when it finishes or
 /// needs an answer — without which \"background\" would only mean \"hidden\".
-class BackgroundRunsController extends StateNotifier<BackgroundRunsState> {
-  BackgroundRunsController(this._ref) : super(const BackgroundRunsState()) {
+class BackgroundRunsController extends Notifier<BackgroundRunsState> {
+  @override
+  BackgroundRunsState build() {
     _ready = _load();
+    return const BackgroundRunsState();
   }
 
-  final Ref _ref;
-  late final Future<void> _ready;
+  late Future<void> _ready;
   final Set<String> _stopping = {};
 
   Future<void> get whenReady => _ready;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(backgroundRunStoreProvider.future);
+      final store = await ref.read(backgroundRunStoreProvider.future);
       final snapshot = store.load();
       // A record still marked running belongs to a process that is gone: no
       // run survives a restart, and a stale "Running" would be a lie about
@@ -139,7 +139,7 @@ class BackgroundRunsController extends StateNotifier<BackgroundRunsState> {
 
   Future<bool> _persist(BackgroundRunsSnapshot snapshot) async {
     try {
-      final store = await _ref.read(backgroundRunStoreProvider.future);
+      final store = await ref.read(backgroundRunStoreProvider.future);
       return store.save(snapshot);
     } catch (error) {
       state = state.copyWith(errorMessage: 'Could not save the run: $error');
@@ -203,15 +203,15 @@ class BackgroundRunsController extends StateNotifier<BackgroundRunsState> {
     final run = state.byId(runId);
     if (run == null || !run.isRunning) return false;
     _stopping.add(run.id);
-    _ref.read(groupChatsProvider.notifier).cancelTurn(run.chatId);
+    ref.read(groupChatsProvider.notifier).cancelTurn(run.chatId);
     AppLogger.info('Background run ${run.id} was stopped by the user.');
     return true;
   }
 
   /// Waits for the turn, then says how it ended — and tells the user once.
   Future<void> _supervise(BackgroundRun run) async {
-    final chats = _ref.read(groupChatsProvider.notifier);
-    if (_ref.read(groupChatsProvider).runningChatIds.contains(run.chatId)) {
+    final chats = ref.read(groupChatsProvider.notifier);
+    if (ref.read(groupChatsProvider).runningChatIds.contains(run.chatId)) {
       chats.forgetStopRequest(run.chatId);
       await _finish(
         run,
@@ -240,7 +240,7 @@ class BackgroundRunsController extends StateNotifier<BackgroundRunsState> {
       );
       return;
     }
-    final snapshot = _ref.read(groupChatsProvider).snapshot;
+    final snapshot = ref.read(groupChatsProvider).snapshot;
     final messages = snapshot.messagesFor(run.chatId);
     String? answer;
     for (final message in messages.reversed) {
@@ -300,7 +300,7 @@ class BackgroundRunsController extends StateNotifier<BackgroundRunsState> {
     var next = finished;
     if (stored && !finished.notified) {
       try {
-        await _ref.read(backgroundRunNoticeProvider)(
+        await ref.read(backgroundRunNoticeProvider)(
           finished.title,
           finished.body,
         );

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/features/bots/data/bot_store.dart';
 import 'package:installm/features/bots/domain/bot.dart';
@@ -45,8 +44,8 @@ class BotsState {
   }
 }
 
-final botsProvider = StateNotifierProvider<BotsNotifier, BotsState>(
-  (ref) => BotsNotifier(ref),
+final botsProvider = NotifierProvider<BotsNotifier, BotsState>(
+  BotsNotifier.new,
 );
 
 /// Owns the bot registry.
@@ -54,13 +53,14 @@ final botsProvider = StateNotifierProvider<BotsNotifier, BotsState>(
 /// Only user-created bots enter the registry. Optional templates create
 /// editable copies. Bots are full records: soul, model and profile choice,
 /// skills, MCP servers, tool permissions, memory scope and workspaces.
-class BotsNotifier extends StateNotifier<BotsState> {
-  BotsNotifier(this._ref) : super(const BotsState()) {
+class BotsNotifier extends Notifier<BotsState> {
+  @override
+  BotsState build() {
     _loaded = _load();
+    return const BotsState();
   }
 
-  final Ref _ref;
-  late final Future<void> _loaded;
+  late Future<void> _loaded;
   Future<void> get whenReady => _loaded;
   Future<void> _pending = Future<void>.value();
 
@@ -75,7 +75,7 @@ class BotsNotifier extends StateNotifier<BotsState> {
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(botStoreProvider.future);
+      final store = await ref.read(botStoreProvider.future);
       final snapshot = store.load();
       state = BotsState(
         bots: snapshot.allBots,
@@ -96,7 +96,7 @@ class BotsNotifier extends StateNotifier<BotsState> {
 
   Future<bool> _persist(List<Bot> bots) async {
     try {
-      final store = await _ref.read(botStoreProvider.future);
+      final store = await ref.read(botStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

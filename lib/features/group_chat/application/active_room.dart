@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 
@@ -10,17 +9,27 @@ import 'package:installm/features/group_chat/domain/group_chat.dart';
 /// of that difference — a room id here means the page draws that room, and
 /// nothing here touches which conversation is loaded, so going back to a chat
 /// is instant and nothing is torn down.
-final activeRoomIdProvider = StateProvider<String?>((ref) => null);
+final activeRoomIdProvider = NotifierProvider<ActiveRoomIdNotifier, String?>(
+  ActiveRoomIdNotifier.new,
+);
+
+/// The room shown on the chat page, or null for the conversation.
+class ActiveRoomIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String? roomId) => state = roomId;
+}
 
 /// Shows [roomId] on the chat page. Every list that can open a room goes
 /// through this, so "a room is open" has exactly one meaning.
 void showRoom(WidgetRef ref, String roomId) {
-  ref.read(activeRoomIdProvider.notifier).state = roomId;
+  ref.read(activeRoomIdProvider.notifier).select(roomId);
 }
 
 /// Returns the chat page to the conversation, which stays exactly as it was.
 void showConversation(WidgetRef ref) {
-  ref.read(activeRoomIdProvider.notifier).state = null;
+  ref.read(activeRoomIdProvider.notifier).select(null);
 }
 
 /// The open room itself, or null when the page is showing the conversation.

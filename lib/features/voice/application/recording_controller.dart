@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/voice/data/microphone_recorder.dart';
 
 /// The microphone recorder, injectable so tests never touch a device.
@@ -62,8 +61,8 @@ class RecordingState {
 }
 
 final recordingControllerProvider =
-    StateNotifierProvider<RecordingController, RecordingState>(
-      (ref) => RecordingController(ref),
+    NotifierProvider<RecordingController, RecordingState>(
+      RecordingController.new,
     );
 
 /// Captures speech from the microphone, locally.
@@ -72,18 +71,28 @@ final recordingControllerProvider =
 /// app's own directory only until a transcript exists, and the caller removes
 /// it then. The controller stops capture at [maximumRecordingLength] rather
 /// than letting one recording grow past what a local model can hold.
-class RecordingController extends StateNotifier<RecordingState> {
-  RecordingController(
-    this._ref, {
-    Duration? maximumLength,
-    Duration tickInterval = const Duration(seconds: 1),
-  }) : _maximumLength = maximumLength ?? maximumRecordingLength,
-       _tickInterval = tickInterval,
-       super(const RecordingState());
+class RecordingController extends Notifier<RecordingState> {
+  /// Whether a capture is running, for callers that hold the controller.
+  bool get isRecording => state.isRecording;
 
-  final Ref _ref;
-  final Duration _maximumLength;
-  final Duration _tickInterval;
+  /// The clip the last capture wrote, if it finished rather than cancelled.
+  String? get recordedPath => state.recordedPath;
+
+  @override
+  RecordingState build() {
+    ref.onDispose(() {
+      _stopTimer();
+      final capturing = _capturing;
+      _capturing = null;
+      if (capturing != null) {
+        unawaited(capturing.cancel());
+      }
+    });
+    return const RecordingState();
+  }
+
+  final Duration _maximumLength = maximumRecordingLength;
+  final Duration _tickInterval = const Duration(seconds: 1);
 
   Timer? _timer;
 
@@ -97,10 +106,10 @@ class RecordingController extends StateNotifier<RecordingState> {
   Future<void> start() async {
     if (state.isRecording) return;
 
-    final recorder = _ref.read(microphoneRecorderProvider);
+    final recorder = ref.read(microphoneRecorderProvider);
     try {
       if (!await recorder.requestPermission()) {
-        if (!mounted) return;
+        if (!ref.mounted) return;
         state = state.copyWith(
           errorMessage:
               'InstaLLM needs microphone access to record. Grant it for this '
@@ -110,12 +119,12 @@ class RecordingController extends StateNotifier<RecordingState> {
       }
 
       final path = await recorder.start();
-      if (!mounted) return;
+      if (!ref.mounted) return;
       _capturing = recorder;
       state = RecordingState(isRecording: true, recordedPath: path);
       _timer = Timer.periodic(_tickInterval, (_) => _tick());
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(errorMessage: _failureMessage(error));
     }
   }
@@ -127,8 +136,8 @@ class RecordingController extends StateNotifier<RecordingState> {
     _stopTimer();
     final captured = state.recordedPath;
     try {
-      final stopped = await _ref.read(microphoneRecorderProvider).stop();
-      if (!mounted) return null;
+      final stopped = await ref.read(microphoneRecorderProvider).stop();
+      if (!ref.mounted) return null;
       state = state.copyWith(
         isRecording: false,
         recordedPath: stopped ?? captured,
@@ -136,7 +145,7 @@ class RecordingController extends StateNotifier<RecordingState> {
       );
       return stopped ?? captured;
     } catch (error) {
-      if (!mounted) return captured;
+      if (!ref.mounted) return captured;
       state = state.copyWith(
         isRecording: false,
         errorMessage: _failureMessage(error),
@@ -158,7 +167,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         // screen never gets stuck showing a recording that is over.
       }
     }
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = const RecordingState();
   }
 
@@ -205,16 +214,5 @@ class RecordingController extends StateNotifier<RecordingState> {
     const prefix = 'Exception: ';
     final text = error.toString();
     return text.startsWith(prefix) ? text.substring(prefix.length) : text;
-  }
-
-  @override
-  void dispose() {
-    _stopTimer();
-    final capturing = _capturing;
-    _capturing = null;
-    if (state.isRecording && capturing != null) {
-      unawaited(capturing.cancel());
-    }
-    super.dispose();
   }
 }

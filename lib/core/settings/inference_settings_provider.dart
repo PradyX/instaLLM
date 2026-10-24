@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/storage/secure_storage.dart';
 
 enum SamplingPreset { precise, balanced, creative }
@@ -72,15 +72,17 @@ class InferenceSettingsState {
 }
 
 final inferenceSettingsProvider =
-    StateNotifierProvider<InferenceSettingsNotifier, InferenceSettingsState>(
-      (ref) => InferenceSettingsNotifier(),
+    NotifierProvider<InferenceSettingsNotifier, InferenceSettingsState>(
+      InferenceSettingsNotifier.new,
     );
 
-class InferenceSettingsNotifier extends StateNotifier<InferenceSettingsState> {
+class InferenceSettingsNotifier extends Notifier<InferenceSettingsState> {
   static const _settingsKey = 'inference_settings';
 
-  InferenceSettingsNotifier() : super(const InferenceSettingsState()) {
+  @override
+  InferenceSettingsState build() {
     _loadSettings();
+    return const InferenceSettingsState();
   }
 
   Future<void> _loadSettings() async {

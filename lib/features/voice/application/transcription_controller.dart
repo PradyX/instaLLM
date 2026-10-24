@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/voice_settings_provider.dart';
@@ -149,8 +148,8 @@ class TranscriptionState {
 }
 
 final transcriptionControllerProvider =
-    StateNotifierProvider<TranscriptionController, TranscriptionState>(
-      (ref) => TranscriptionController(ref),
+    NotifierProvider<TranscriptionController, TranscriptionState>(
+      TranscriptionController.new,
     );
 
 /// Runs one clip through the chosen speech model.
@@ -158,14 +157,19 @@ final transcriptionControllerProvider =
 /// Only one clip runs at a time, and a run never writes to a conversation on
 /// its own: the transcript is handed to the user, who edits it and decides
 /// whether it is sent.
-class TranscriptionController extends StateNotifier<TranscriptionState> {
-  TranscriptionController(this._ref) : super(const TranscriptionState());
+class TranscriptionController extends Notifier<TranscriptionState> {
+  /// Whether a clip is being transcribed, for callers that hold the controller.
+  bool get isBusy => state.isBusy;
+
+  @override
+  TranscriptionState build() {
+    return const TranscriptionState();
+  }
 
   /// How often streaming text is pushed to the UI. Transcribing on a phone
   /// emits tokens too fast to rebuild on every one of them.
   static const Duration _emitGap = Duration(milliseconds: 120);
 
-  final Ref _ref;
   final StringBuffer _buffer = StringBuffer();
   bool _cancelled = false;
   DateTime? _lastEmitAt;
@@ -183,12 +187,12 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
 
     // Whisper is its own engine with its own models: the GGUF model with an
     // audio projector that the local engine needs has nothing to do with it.
-    if (_ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
+    if (ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
       await _startWhisper(audioPath: audioPath);
       return;
     }
 
-    final model = _ref.read(transcriptionModelProvider);
+    final model = ref.read(transcriptionModelProvider);
     if (model == null) {
       state = const TranscriptionState(
         stage: TranscriptionStage.failed,
@@ -198,10 +202,10 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
       return;
     }
 
-    final path = audioPath ?? await _ref.read(voiceAudioPickerProvider)();
+    final path = audioPath ?? await ref.read(voiceAudioPickerProvider)();
     if (path == null || path.trim().isEmpty) return;
 
-    final service = _ref.read(speechToTextServiceProvider);
+    final service = ref.read(speechToTextServiceProvider);
     _cancelled = false;
     _lastEmitAt = null;
     _buffer.clear();
@@ -266,11 +270,11 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
     if (_whisperStarting) return;
     _whisperStarting = true;
     try {
-      final modelService = _ref.read(whisperModelServiceProvider);
-      final runner = _ref.read(whisperRunnerProvider);
-      final preferredId = _ref.read(voiceSettingsProvider).whisperModelId;
+      final modelService = ref.read(whisperModelServiceProvider);
+      final runner = ref.read(whisperRunnerProvider);
+      final preferredId = ref.read(voiceSettingsProvider).whisperModelId;
       final model = await modelService.resolve(preferredId);
-      if (!mounted || state.isBusy) return;
+      if (!ref.mounted || state.isBusy) return;
 
       if (model == null) {
         state = const TranscriptionState(
@@ -282,7 +286,7 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
         return;
       }
 
-      final path = audioPath ?? await _ref.read(voiceAudioPickerProvider)();
+      final path = audioPath ?? await ref.read(voiceAudioPickerProvider)();
       if (path == null || path.trim().isEmpty) return;
 
       _cancelled = false;
@@ -311,7 +315,7 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
           audioPath: path,
         );
         stopwatch.stop();
-        if (!mounted) return;
+        if (!ref.mounted) return;
         state = state.copyWith(
           stage: TranscriptionStage.finished,
           transcript: transcript,
@@ -322,7 +326,7 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
         );
       } catch (error) {
         stopwatch.stop();
-        if (!mounted) return;
+        if (!ref.mounted) return;
         // A stop the user asked for surfaces here as a native abort; that is
         // not a failure to report.
         state = state.copyWith(
@@ -347,13 +351,13 @@ class TranscriptionController extends StateNotifier<TranscriptionState> {
     if (!state.isBusy) return;
     _cancelled = true;
     state = state.copyWith(statusText: 'Stopping...');
-    if (_ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
+    if (ref.read(voiceSettingsProvider).sttEngine == SttEngine.whisper) {
       // An offline Whisper decode cannot be interrupted; the runner reports
       // the stop and the pass's own words are kept (see [WhisperRunner]).
-      unawaited(_ref.read(whisperRunnerProvider).cancel());
+      unawaited(ref.read(whisperRunnerProvider).cancel());
       return;
     }
-    _ref.read(speechToTextServiceProvider).cancel();
+    ref.read(speechToTextServiceProvider).cancel();
   }
 
   /// Clears the transcript and any error, leaving the chosen model in place.

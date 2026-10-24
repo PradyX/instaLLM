@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/features/reminders/data/scheduled_task_store.dart';
 import 'package:installm/features/reminders/domain/scheduled_task.dart';
@@ -35,10 +34,9 @@ class RemindersState {
   }
 }
 
-final remindersProvider =
-    StateNotifierProvider<RemindersNotifier, RemindersState>(
-      (ref) => RemindersNotifier(ref),
-    );
+final remindersProvider = NotifierProvider<RemindersNotifier, RemindersState>(
+  RemindersNotifier.new,
+);
 
 /// Owns scheduled tasks: create, edit, delete and fire due ones.
 ///
@@ -46,16 +44,16 @@ final remindersProvider =
 /// task content runs only when the user opens it. Due tasks are fired by an
 /// explicit `fireDue` call from the app lifecycle, never by a background
 /// daemon this file invents.
-class RemindersNotifier extends StateNotifier<RemindersState> {
-  RemindersNotifier(this._ref) : super(const RemindersState()) {
+class RemindersNotifier extends Notifier<RemindersState> {
+  @override
+  RemindersState build() {
     _open();
+    return const RemindersState();
   }
-
-  final Ref _ref;
 
   Future<void> _open() async {
     try {
-      final store = await _ref.read(scheduledTaskStoreProvider.future);
+      final store = await ref.read(scheduledTaskStoreProvider.future);
       state = state.copyWith(
         tasks: store.load(),
         isOpen: true,
@@ -68,7 +66,7 @@ class RemindersNotifier extends StateNotifier<RemindersState> {
 
   Future<bool> _persist(List<ScheduledTask> tasks) async {
     try {
-      final store = await _ref.read(scheduledTaskStoreProvider.future);
+      final store = await ref.read(scheduledTaskStoreProvider.future);
       if (store.isReadOnly) return false;
       tasks.sort((a, b) => a.nextRunAt.compareTo(b.nextRunAt));
       if (!store.save(tasks)) return false;

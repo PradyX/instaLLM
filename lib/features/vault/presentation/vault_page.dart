@@ -27,9 +27,7 @@ class VaultPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ProviderScope(
-    overrides: [
-      vaultBrowserProvider.overrideWith(createVaultBrowserController),
-    ],
+    overrides: [vaultBrowserProvider.overrideWith(VaultBrowserController.new)],
     child: const _VaultPageBody(),
   );
 }

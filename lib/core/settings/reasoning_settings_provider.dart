@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -26,17 +26,19 @@ class ReasoningSettingsState {
 }
 
 final reasoningSettingsProvider =
-    StateNotifierProvider<ReasoningSettingsNotifier, ReasoningSettingsState>(
-      (ref) => ReasoningSettingsNotifier(),
+    NotifierProvider<ReasoningSettingsNotifier, ReasoningSettingsState>(
+      ReasoningSettingsNotifier.new,
     );
 
-class ReasoningSettingsNotifier extends StateNotifier<ReasoningSettingsState> {
+class ReasoningSettingsNotifier extends Notifier<ReasoningSettingsState> {
   /// Versioned: the stored shape is a map of model id to state id, and a
   /// different shape needs a migration rather than a silent reset.
   static const String settingsKey = 'reasoning_choices_v1';
 
-  ReasoningSettingsNotifier() : super(const ReasoningSettingsState()) {
+  @override
+  ReasoningSettingsState build() {
     _load();
+    return const ReasoningSettingsState();
   }
 
   Future<void> _load() async {

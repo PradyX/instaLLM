@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
 
 /// Estimates for the last prompt actually sent, not a persisted content log.
@@ -35,4 +35,18 @@ class SkillUsage {
   int get otherInput => math.max(0, inputTokens - skills);
 }
 
-final skillUsageProvider = StateProvider<Map<String, SkillUsage>>((ref) => {});
+final skillUsageProvider =
+    NotifierProvider<SkillUsageNotifier, Map<String, SkillUsage>>(
+      SkillUsageNotifier.new,
+    );
+
+/// The last prompt's token split, keyed by conversation or room.
+///
+/// Recorded after a turn is assembled so the Context screen can show what the
+/// skills share of the prompt actually cost.
+class SkillUsageNotifier extends Notifier<Map<String, SkillUsage>> {
+  @override
+  Map<String, SkillUsage> build() => const {};
+
+  void replace(Map<String, SkillUsage> usage) => state = usage;
+}

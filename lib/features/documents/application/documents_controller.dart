@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/utils/cancel_token.dart';
 import 'package:installm/core/utils/logger.dart';
@@ -268,22 +267,21 @@ class DocumentsState {
   }
 }
 
-final documentsProvider =
-    StateNotifierProvider<DocumentsNotifier, DocumentsState>(
-      (ref) => DocumentsNotifier(ref),
-    );
+final documentsProvider = NotifierProvider<DocumentsNotifier, DocumentsState>(
+  DocumentsNotifier.new,
+);
 
 /// Owns the document library for the UI: adding files, re-indexing, removing
 /// and previewing what retrieval would return.
 ///
 /// Every operation is cancellable and leaves nothing behind when it fails, and
 /// nothing here ever writes to the files the user added.
-class DocumentsNotifier extends StateNotifier<DocumentsState> {
-  DocumentsNotifier(this._ref) : super(const DocumentsState()) {
+class DocumentsNotifier extends Notifier<DocumentsState> {
+  @override
+  DocumentsState build() {
     _load();
+    return const DocumentsState();
   }
-
-  final Ref _ref;
 
   DocumentLibrary? _library;
   CancelToken? _activeIngest;
@@ -293,7 +291,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
 
   Future<void> _load() async {
     try {
-      final library = await _ref.read(documentLibraryProvider.future);
+      final library = await ref.read(documentLibraryProvider.future);
       _library = library;
       _publishFromLibrary();
     } catch (error) {
@@ -410,7 +408,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
 
     final List<String> paths;
     try {
-      paths = await _ref.read(documentPickerProvider)();
+      paths = await ref.read(documentPickerProvider)();
     } catch (error) {
       state = state.copyWith(
         errorMessage: 'Could not open the file picker: $error',
@@ -434,7 +432,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
           onProgress: onProgress,
         ),
       );
-      if (!indexed || !mounted) break;
+      if (!indexed || !ref.mounted) break;
     }
     return paths.length;
   }
@@ -527,7 +525,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
             '${message.date.isEmpty ? '' : 'Date: ${message.date}\n'}'
             'Source: mbox $path\n\n${message.body}\n',
       );
-      if (staged == null || !mounted) break;
+      if (staged == null || !ref.mounted) break;
       await addDocument(staged);
       imported++;
     }
@@ -543,7 +541,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
     final loaded = _library;
     if (loaded != null) return loaded;
     try {
-      final opened = await _ref.read(documentLibraryProvider.future);
+      final opened = await ref.read(documentLibraryProvider.future);
       _library = opened;
       return opened;
     } catch (error) {
@@ -628,7 +626,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
           onProgress: onProgress,
         ),
       );
-      if (!refreshed || !mounted) break;
+      if (!refreshed || !ref.mounted) break;
     }
   }
 
@@ -667,7 +665,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
     }
     final collectionId = library.activeCollectionId;
     final queryVector = await _queryVectorFor(library, collectionId, trimmed);
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(
       searchQuery: trimmed,
       searchResults: library.search(
@@ -713,7 +711,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
 
     final target = embeddingModelId?.trim();
     if (target != null && target.isNotEmpty) {
-      final resolver = _ref.read(documentEmbeddingModelsProvider);
+      final resolver = ref.read(documentEmbeddingModelsProvider);
       final model = await resolver.resolve(target);
       if (model == null) {
         final name = resolver.modelById(target)?.name ?? target;
@@ -779,7 +777,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
 
     try {
       final result = await operation(token, (progress) {
-        if (!mounted) return;
+        if (!ref.mounted) return;
         state = state.copyWith(progress: progress);
       });
       _publishFromLibrary(statusMessage: result.summaryLabel);
@@ -862,7 +860,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
     if (library == null || query.isEmpty) return;
     final collectionId = library.activeCollectionId;
     final queryVector = await _queryVectorFor(library, collectionId, query);
-    if (!mounted || state.searchQuery != query) return;
+    if (!ref.mounted || state.searchQuery != query) return;
     state = state.copyWith(
       searchResults: library.search(
         query,
@@ -885,7 +883,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
   ) async {
     final modelId = library.collectionById(collectionId)?.embeddingModelId;
     if (modelId == null || modelId.isEmpty) return null;
-    return _ref.read(documentEmbeddingModelsProvider).resolve(modelId);
+    return ref.read(documentEmbeddingModelsProvider).resolve(modelId);
   }
 
   /// The embedded query for a collection, or null when it has none.
@@ -901,7 +899,7 @@ class DocumentsNotifier extends StateNotifier<DocumentsState> {
 
   /// Every embedding model the picker can offer, installed first.
   List<EmbeddingModelOption> _embeddingModelOptions() {
-    final resolver = _ref.read(documentEmbeddingModelsProvider);
+    final resolver = ref.read(documentEmbeddingModelsProvider);
     final options = [
       for (final model in resolver.embeddingModels)
         EmbeddingModelOption(

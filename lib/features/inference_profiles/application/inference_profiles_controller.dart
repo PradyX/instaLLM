@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/inference_profiles/data/inference_profile_store.dart';
 import 'package:installm/features/inference_profiles/domain/inference_profile.dart';
@@ -99,8 +98,8 @@ class InferenceProfilesState {
 }
 
 final inferenceProfilesProvider =
-    StateNotifierProvider<InferenceProfilesNotifier, InferenceProfilesState>(
-      (ref) => InferenceProfilesNotifier(ref),
+    NotifierProvider<InferenceProfilesNotifier, InferenceProfilesState>(
+      InferenceProfilesNotifier.new,
     );
 
 /// Owns the profile list and the persisted selection.
@@ -108,17 +107,16 @@ final inferenceProfilesProvider =
 /// Built-in profiles are read-only: they can be selected or duplicated, never
 /// edited or deleted, so a future release can improve them without clashing
 /// with user edits.
-class InferenceProfilesNotifier extends StateNotifier<InferenceProfilesState> {
-  InferenceProfilesNotifier(this._ref)
-    : super(InferenceProfilesState(profiles: BuiltInProfiles.all())) {
+class InferenceProfilesNotifier extends Notifier<InferenceProfilesState> {
+  @override
+  InferenceProfilesState build() {
     _load();
+    return InferenceProfilesState(profiles: BuiltInProfiles.all());
   }
-
-  final Ref _ref;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(inferenceProfileStoreProvider.future);
+      final store = await ref.read(inferenceProfileStoreProvider.future);
       final snapshot = store.load();
       final profiles = snapshot.allProfiles;
       final hasActive = profiles.any(
@@ -208,7 +206,7 @@ class InferenceProfilesNotifier extends StateNotifier<InferenceProfilesState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(inferenceProfileStoreProvider.future);
+      final store = await ref.read(inferenceProfileStoreProvider.future);
       if (store.save(state.toSnapshot())) return true;
       state = state.copyWith(
         errorMessage: store.isReadOnly

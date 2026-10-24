@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/voice_settings_provider.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -81,10 +80,9 @@ class VoiceState {
   }
 }
 
-final voiceControllerProvider =
-    StateNotifierProvider<VoiceController, VoiceState>(
-      (ref) => VoiceController(ref),
-    );
+final voiceControllerProvider = NotifierProvider<VoiceController, VoiceState>(
+  VoiceController.new,
+);
 
 /// Owns the local-speech model catalog and which model the user chose.
 ///
@@ -96,14 +94,13 @@ final voiceControllerProvider =
 ///
 /// Audio itself never leaves the device: choosing a model here only records a
 /// preference, and the transcription path keeps the audio local.
-class VoiceController extends StateNotifier<VoiceState> {
-  VoiceController(this._ref) : super(const VoiceState()) {
-    state = state.copyWith(
-      selectedModelId: _ref.read(voiceSettingsProvider).sttModelId,
+class VoiceController extends Notifier<VoiceState> {
+  @override
+  VoiceState build() {
+    return const VoiceState().copyWith(
+      selectedModelId: ref.read(voiceSettingsProvider).sttModelId,
     );
   }
-
-  final Ref _ref;
 
   /// True when [model] could serve as a speech model at all.
   static bool isVoiceCandidate(LlmModel model) {
@@ -120,14 +117,14 @@ class VoiceController extends StateNotifier<VoiceState> {
   Future<void> refresh() async {
     if (state.isInspecting) return;
 
-    final models = _ref.read(modelSelectionControllerProvider).models;
+    final models = ref.read(modelSelectionControllerProvider).models;
     final candidates = [
       for (final model in models)
         if (isVoiceCandidate(model)) model,
     ];
     state = state.copyWith(isInspecting: true, clearError: true);
 
-    final inspector = _ref.read(voiceModelInspectorProvider);
+    final inspector = ref.read(voiceModelInspectorProvider);
     final options = <VoiceModelOption>[];
     for (final model in candidates) {
       if (!model.isDownloaded) {
@@ -155,14 +152,14 @@ class VoiceController extends StateNotifier<VoiceState> {
       return a.model.name.toLowerCase().compareTo(b.model.name.toLowerCase());
     });
 
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(options: options, isInspecting: false);
   }
 
   /// Chooses the model that transcribes speech, or clears the choice.
   Future<void> select(String? modelId) async {
-    await _ref.read(voiceSettingsProvider.notifier).setSttModel(modelId);
-    if (!mounted) return;
+    await ref.read(voiceSettingsProvider.notifier).setSttModel(modelId);
+    if (!ref.mounted) return;
     state = state.copyWith(
       selectedModelId: modelId == null || modelId.trim().isEmpty
           ? null

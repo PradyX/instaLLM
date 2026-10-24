@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/features/agents/data/hook_store.dart';
 import 'package:installm/features/agents/domain/agent_hook.dart';
@@ -48,30 +47,30 @@ class HooksState {
   }
 }
 
-final hooksProvider = StateNotifierProvider<HooksController, HooksState>(
-  (ref) => HooksController(ref),
+final hooksProvider = NotifierProvider<HooksController, HooksState>(
+  HooksController.new,
 );
 
 /// Owns the hook list: what is listed, what is on, and which rules are owed to
 /// the user. Every change is one document write, and a store written by a newer
 /// build stays read-only rather than being rewritten.
-class HooksController extends StateNotifier<HooksState> {
-  HooksController(this._ref) : super(const HooksState()) {
+class HooksController extends Notifier<HooksState> {
+  @override
+  HooksState build() {
     _load();
+    return const HooksState();
   }
 
-  final Ref _ref;
-
   Future<void> get whenReady async {
-    await _ref.read(hookStoreProvider.future);
-    while (!state.isReady && mounted) {
+    await ref.read(hookStoreProvider.future);
+    while (!state.isReady && ref.mounted) {
       await Future<void>.delayed(Duration.zero);
     }
   }
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(hookStoreProvider.future);
+      final store = await ref.read(hookStoreProvider.future);
       final snapshot = store.load();
       state = HooksState(
         hooks: snapshot.hooks,
@@ -92,7 +91,7 @@ class HooksController extends StateNotifier<HooksState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(hookStoreProvider.future);
+      final store = await ref.read(hookStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

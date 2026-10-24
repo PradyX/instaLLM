@@ -123,7 +123,7 @@ void main() {
           ),
           microphoneRecorderProvider.overrideWithValue(recorder),
           speechSynthesisEngineProvider.overrideWithValue(engine),
-          voiceSettingsProvider.overrideWith((ref) => _InMemoryVoiceSettings()),
+          voiceSettingsProvider.overrideWith(_InMemoryVoiceSettings.new),
           transcriptionModelProvider.overrideWithValue(_speechModel),
           speechToTextServiceProvider.overrideWithValue(
             SpeechToTextService(

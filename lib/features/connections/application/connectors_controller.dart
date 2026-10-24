@@ -1,7 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/connections/domain/connector_config.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -39,13 +39,15 @@ class ConnectorsState {
 }
 
 final connectorsProvider =
-    StateNotifierProvider<ConnectorsNotifier, ConnectorsState>(
-      (ref) => ConnectorsNotifier(),
+    NotifierProvider<ConnectorsNotifier, ConnectorsState>(
+      ConnectorsNotifier.new,
     );
 
-class ConnectorsNotifier extends StateNotifier<ConnectorsState> {
-  ConnectorsNotifier() : super(const ConnectorsState()) {
+class ConnectorsNotifier extends Notifier<ConnectorsState> {
+  @override
+  ConnectorsState build() {
     _open();
+    return const ConnectorsState();
   }
 
   File? _file;

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:installm/core/data/legacy_export_formats.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/personas/data/persona_store.dart';
 import 'package:installm/features/personas/domain/persona.dart';
 
@@ -95,8 +94,8 @@ class PersonasState {
   }
 }
 
-final personasProvider = StateNotifierProvider<PersonasNotifier, PersonasState>(
-  (ref) => PersonasNotifier(ref),
+final personasProvider = NotifierProvider<PersonasNotifier, PersonasState>(
+  PersonasNotifier.new,
 );
 
 /// Owns the persona list and the default selection.
@@ -104,17 +103,16 @@ final personasProvider = StateNotifierProvider<PersonasNotifier, PersonasState>(
 /// Built-in personas are read-only: they can be used or duplicated, never
 /// edited or deleted, so a future release can improve their wording without
 /// clashing with user edits.
-class PersonasNotifier extends StateNotifier<PersonasState> {
-  PersonasNotifier(this._ref)
-    : super(PersonasState(personas: BuiltInPersonas.all())) {
+class PersonasNotifier extends Notifier<PersonasState> {
+  @override
+  PersonasState build() {
     _load();
+    return PersonasState(personas: BuiltInPersonas.all());
   }
-
-  final Ref _ref;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(personaStoreProvider.future);
+      final store = await ref.read(personaStoreProvider.future);
       final snapshot = store.load();
       final personas = snapshot.allPersonas;
       final hasDefault = personas.any(
@@ -286,7 +284,7 @@ class PersonasNotifier extends StateNotifier<PersonasState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(personaStoreProvider.future);
+      final store = await ref.read(personaStoreProvider.future);
       if (store.save(state.toSnapshot())) return true;
       state = state.copyWith(
         errorMessage: store.isReadOnly

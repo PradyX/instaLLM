@@ -226,9 +226,7 @@ void main() {
 /// whichever engine the developer last chose in Settings.
 ProviderContainer _container() {
   return ProviderContainer(
-    overrides: [
-      voiceSettingsProvider.overrideWith((ref) => _LocalEngineSettings()),
-    ],
+    overrides: [voiceSettingsProvider.overrideWith(_LocalEngineSettings.new)],
   );
 }
 

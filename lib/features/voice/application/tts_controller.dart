@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/settings/voice_settings_provider.dart';
 import 'package:installm/features/voice/data/platform_tts_service.dart';
 import 'package:installm/features/voice/domain/speech_voice.dart';
@@ -105,8 +104,8 @@ class TtsState {
   static const _unset = Object();
 }
 
-final ttsControllerProvider = StateNotifierProvider<TtsController, TtsState>(
-  (ref) => TtsController(ref),
+final ttsControllerProvider = NotifierProvider<TtsController, TtsState>(
+  TtsController.new,
 );
 
 /// Reads text aloud with the device's own speech engine.
@@ -115,19 +114,21 @@ final ttsControllerProvider = StateNotifierProvider<TtsController, TtsState>(
 /// download, works offline and sends nothing anywhere. The controller owns
 /// only the choice of voice and rate plus what is happening right now;
 /// long-form reading (assistant replies) is added on top of the same engine.
-class TtsController extends StateNotifier<TtsState> {
-  TtsController(this._ref) : super(const TtsState()) {
-    final settings = _ref.read(voiceSettingsProvider);
-    state = state.copyWith(
-      isSupported: _ref.read(speechSynthesisSupportedProvider),
+class TtsController extends Notifier<TtsState> {
+  /// Whether the engine is still speaking, for callers that hold the controller.
+  bool get isSpeaking => state.isSpeaking;
+
+  @override
+  TtsState build() {
+    final settings = ref.read(voiceSettingsProvider);
+    return const TtsState().copyWith(
+      isSupported: ref.read(speechSynthesisSupportedProvider),
       // Already migrated out of the older rate semantics by the settings
       // provider; clamping here keeps a stored value in range as well.
       rate: clampSpeechRate(settings.ttsRate),
       selectedVoice: SpeechVoice.fromId(settings.ttsVoiceId),
     );
   }
-
-  final Ref _ref;
 
   /// Counts utterances so a stopped one cannot report back over a newer one.
   int _utterance = 0;
@@ -146,8 +147,8 @@ class TtsController extends StateNotifier<TtsState> {
       clearError: true,
     );
     try {
-      final voices = await _ref.read(speechSynthesisEngineProvider).voices();
-      if (!mounted) return;
+      final voices = await ref.read(speechSynthesisEngineProvider).voices();
+      if (!ref.mounted) return;
       state = state.copyWith(
         voices: voices,
         isLoadingVoices: false,
@@ -158,7 +159,7 @@ class TtsController extends StateNotifier<TtsState> {
             : null,
       );
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(
         isLoadingVoices: false,
         statusText: '',
@@ -192,17 +193,17 @@ class TtsController extends StateNotifier<TtsState> {
       clearError: true,
     );
     try {
-      await _ref
+      await ref
           .read(speechSynthesisEngineProvider)
           .speak(text: prepared, rate: state.rate, voice: state.selectedVoice);
     } catch (error) {
-      if (!mounted || utterance != _utterance) return;
+      if (!ref.mounted || utterance != _utterance) return;
       state = state.copyWith(
         errorMessage:
             'The device could not read this aloud: ${_messageOf(error)}',
       );
     } finally {
-      if (mounted && utterance == _utterance) {
+      if (ref.mounted && utterance == _utterance) {
         state = state.copyWith(
           isSpeaking: false,
           isPaused: false,
@@ -220,16 +221,16 @@ class TtsController extends StateNotifier<TtsState> {
   Future<void> pause() async {
     if (!state.isSpeaking || state.isPaused) return;
     try {
-      await _ref.read(speechSynthesisEngineProvider).pause();
+      await ref.read(speechSynthesisEngineProvider).pause();
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(
         errorMessage:
             'The device could not hold this reading: ${_messageOf(error)}',
       );
       return;
     }
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(isPaused: true, statusText: 'Paused');
   }
 
@@ -237,16 +238,16 @@ class TtsController extends StateNotifier<TtsState> {
   Future<void> resume() async {
     if (!state.isSpeaking || !state.isPaused) return;
     try {
-      await _ref.read(speechSynthesisEngineProvider).resume();
+      await ref.read(speechSynthesisEngineProvider).resume();
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(
         errorMessage:
             'The device could not continue this reading: ${_messageOf(error)}',
       );
       return;
     }
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(isPaused: false, statusText: 'Speaking...');
   }
 
@@ -255,12 +256,12 @@ class TtsController extends StateNotifier<TtsState> {
     if (!state.isSpeaking) return;
     _utterance++;
     try {
-      await _ref.read(speechSynthesisEngineProvider).stop();
+      await ref.read(speechSynthesisEngineProvider).stop();
     } catch (_) {
       // A platform that cannot stop is still reported as stopped, so the UI
       // never gets stuck showing an utterance that is over.
     }
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(isSpeaking: false, isPaused: false, statusText: '');
   }
 
@@ -271,13 +272,13 @@ class TtsController extends StateNotifier<TtsState> {
 
   /// Stores the rate after a drag or a tap, so dragging writes once.
   Future<void> storeRate() async {
-    await _ref.read(voiceSettingsProvider.notifier).setTtsRate(state.rate);
+    await ref.read(voiceSettingsProvider.notifier).setTtsRate(state.rate);
   }
 
   /// Chooses the voice to speak with, or null for the device default.
   Future<void> selectVoice(SpeechVoice? voice) async {
     state = state.copyWith(selectedVoice: voice);
-    await _ref.read(voiceSettingsProvider.notifier).setTtsVoiceId(voice?.id);
+    await ref.read(voiceSettingsProvider.notifier).setTtsVoiceId(voice?.id);
   }
 
   /// `Exception: something` reads badly in the UI, so the prefix is dropped.

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/app_storage_service.dart';
 import 'package:installm/features/vault/application/vault_notes_service.dart';
 import 'package:installm/features/vault/data/vault_store.dart';
@@ -46,8 +45,8 @@ class VaultsState {
   }
 }
 
-final vaultsProvider = StateNotifierProvider<VaultsNotifier, VaultsState>(
-  (ref) => VaultsNotifier(ref),
+final vaultsProvider = NotifierProvider<VaultsNotifier, VaultsState>(
+  VaultsNotifier.new,
 );
 
 /// Owns vault registrations and workspace bindings.
@@ -56,27 +55,29 @@ final vaultsProvider = StateNotifierProvider<VaultsNotifier, VaultsState>(
 /// the vault id plus the project folder on both the binding and the
 /// workspace itself, so the workspace keeps working when the vault is
 /// re-pointed at another device path.
-class VaultsNotifier extends StateNotifier<VaultsState> {
-  VaultsNotifier(this._ref) : super(const VaultsState()) {
+class VaultsNotifier extends Notifier<VaultsState> {
+  @override
+  VaultsState build() {
     whenReady = _load();
+    return const VaultsState();
   }
-  late final Future<void> whenReady;
 
-  final Ref _ref;
+  late Future<void> whenReady;
+
   VaultStore? _store;
   static const VaultNotesService _notes = VaultNotesService();
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(vaultStoreProvider.future);
-      if (!mounted) return;
+      final store = await ref.read(vaultStoreProvider.future);
+      if (!ref.mounted) return;
       _store = store;
       var snapshot = store.load();
       String? storageError;
       if (!store.isReadOnly &&
           snapshot.vaults.any((vault) => vault.isManaged)) {
         try {
-          final root = await _ref.read(vaultStorageProvider).directory('vault');
+          final root = await ref.read(vaultStorageProvider).directory('vault');
           var rebased = snapshot;
           for (final vault in snapshot.vaults) {
             if (vault.isManaged && vault.rootPath != root) {
@@ -96,7 +97,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
               'Managed Vault storage is unavailable. Resolve the resource storage error and retry.';
         }
       }
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = VaultsState(
         snapshot: snapshot,
         isReady: true,
@@ -117,7 +118,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
   Future<bool> _persist([VaultsSnapshot? snapshot]) async {
     try {
       final store = _store;
-      if (store == null || !mounted) return false;
+      if (store == null || !ref.mounted) return false;
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:
@@ -149,7 +150,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
 
   Future<VaultRegistration?> registerVault(String name, String rootPath) async {
     await whenReady;
-    if (!mounted || state.isReadOnly) return null;
+    if (!ref.mounted || state.isReadOnly) return null;
     final vault = VaultRegistration.create(name: name, rootPath: rootPath);
     final snapshot = state.snapshot.upsertVault(vault);
     if (!await _persist(snapshot)) return null;
@@ -162,7 +163,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     await whenReady;
     if (!state.isReady || state.isReadOnly) return null;
     try {
-      final root = await _ref.read(vaultStorageProvider).directory('vault');
+      final root = await ref.read(vaultStorageProvider).directory('vault');
       VaultRegistration? vault;
       for (final existing in state.vaults) {
         if (existing.isManaged) {
@@ -178,10 +179,10 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
         isManaged: true,
       );
       final snapshot = state.snapshot.upsertVault(vault);
-      if (!await _persist(snapshot) || !mounted) return null;
+      if (!await _persist(snapshot) || !ref.mounted) return null;
       return vault;
     } catch (_) {
-      if (mounted) {
+      if (ref.mounted) {
         state = state.copyWith(
           errorMessage:
               'Could not prepare the managed Vault. Resolve the resource storage error and retry.',
@@ -193,14 +194,14 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
 
   Future<void> removeVault(String vaultId) async {
     await whenReady;
-    if (!mounted) return;
+    if (!ref.mounted) return;
     final snapshot = state.snapshot.removeVault(vaultId);
-    if (!await _persist(snapshot) || !mounted) return;
+    if (!await _persist(snapshot) || !ref.mounted) return;
   }
 
   Future<bool> renameVault(String vaultId, String name) async {
     await whenReady;
-    if (!mounted || state.isReadOnly || name.trim().isEmpty) return false;
+    if (!ref.mounted || state.isReadOnly || name.trim().isEmpty) return false;
     final vault = state.snapshot.vaultById(vaultId);
     if (vault == null) return false;
     return _persist(
@@ -217,7 +218,7 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     VaultPermissions permissions = VaultPermissions.defaults,
   }) async {
     await whenReady;
-    if (!mounted) return const [];
+    if (!ref.mounted) return const [];
     final vault = state.snapshot.vaultById(vaultId);
     if (vault == null) return const [];
     final binding = WorkspaceVaultBinding(
@@ -227,12 +228,12 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
       permissions: permissions,
     );
     final snapshot = state.snapshot.upsertBinding(binding);
-    if (!await _persist(snapshot) || !mounted) return const [];
+    if (!await _persist(snapshot) || !ref.mounted) return const [];
 
-    final workspaces = _ref.read(workspacesProvider);
+    final workspaces = ref.read(workspacesProvider);
     for (final workspace in workspaces.workspaces) {
       if (workspace.id == workspaceId) {
-        await _ref
+        await ref
             .read(workspacesProvider.notifier)
             .updateWorkspace(
               workspace.copyWith(
@@ -258,9 +259,9 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
 
   Future<void> unlinkWorkspace(String workspaceId) async {
     await whenReady;
-    if (!mounted) return;
+    if (!ref.mounted) return;
     final snapshot = state.snapshot.removeBinding(workspaceId);
-    if (!await _persist(snapshot) || !mounted) return;
+    if (!await _persist(snapshot) || !ref.mounted) return;
   }
 
   Future<void> setPermissions(
@@ -268,13 +269,13 @@ class VaultsNotifier extends StateNotifier<VaultsState> {
     VaultPermissions permissions,
   ) async {
     await whenReady;
-    if (!mounted) return;
+    if (!ref.mounted) return;
     final binding = state.snapshot.bindingFor(workspaceId);
     if (binding == null) return;
     final snapshot = state.snapshot.upsertBinding(
       binding.copyWith(permissions: permissions),
     );
-    if (!await _persist(snapshot) || !mounted) return;
+    if (!await _persist(snapshot) || !ref.mounted) return;
   }
 
   /// Resolved paths for [workspaceId]'s vault link, or null when unlinked.

@@ -8,7 +8,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/settings/inference_settings_provider.dart';
@@ -106,9 +105,26 @@ class HomeGenerationStatus {
   }
 }
 
-final homeGenerationStatusProvider = StateProvider<HomeGenerationStatus>(
-  (ref) => const HomeGenerationStatus(),
-);
+final homeGenerationStatusProvider =
+    NotifierProvider<HomeGenerationStatusNotifier, HomeGenerationStatus>(
+      HomeGenerationStatusNotifier.new,
+    );
+
+/// The turn the chat page is running, held outside the page.
+///
+/// Room and benchmark screens read it to know the chat is busy, without asking
+/// the page's widget state.
+class HomeGenerationStatusNotifier extends Notifier<HomeGenerationStatus> {
+  @override
+  HomeGenerationStatus build() => const HomeGenerationStatus();
+
+  bool get isAlive => ref.mounted;
+
+  void setStatus(HomeGenerationStatus status) => state = status;
+
+  void update(HomeGenerationStatus Function(HomeGenerationStatus) change) =>
+      state = change(state);
+}
 
 /// What the next request from the open conversation would cost.
 ///
@@ -325,7 +341,17 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
 /// moves it into the message box, where it stays until the user edits and
 /// sends it. Nothing is submitted automatically: text a model produced is a
 /// draft, and sending it stays a deliberate action.
-final composerDraftProvider = StateProvider<String?>((ref) => null);
+final composerDraftProvider = NotifierProvider<ComposerDraftNotifier, String?>(
+  ComposerDraftNotifier.new,
+);
+
+/// A draft handed to the composer from outside the page, such as dictation.
+class ComposerDraftNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setDraft(String? draft) => state = draft;
+}
 
 @riverpod
 class HomeController extends _$HomeController {
@@ -478,10 +504,9 @@ class HomeController extends _$HomeController {
     } catch (_) {
       if (!_disposed) _appendAssistantError(t.memory.saveError);
     } finally {
-      if (statusController.mounted) {
-        statusController.state = statusController.state.copyWith(
-          statusText: '',
-          isGenerating: false,
+      if (statusController.isAlive) {
+        statusController.update(
+          (current) => current.copyWith(statusText: '', isGenerating: false),
         );
       }
       if (!_disposed) {
@@ -786,10 +811,9 @@ class HomeController extends _$HomeController {
     } catch (e) {
       if (!_disposed) _appendAssistantError('Error generating response: $e');
     } finally {
-      if (statusController.mounted) {
-        statusController.state = statusController.state.copyWith(
-          statusText: '',
-          isGenerating: false,
+      if (statusController.isAlive) {
+        statusController.update(
+          (current) => current.copyWith(statusText: '', isGenerating: false),
         );
       }
       _stopRequestedByUser = false;
@@ -1134,7 +1158,7 @@ class HomeController extends _$HomeController {
   }) async {
     final usage = ref.read(homeGenerationStatusProvider).contextUsage;
     if (usage != null && _activeConversationId != null) {
-      ref.read(skillUsageProvider.notifier).state = {
+      ref.read(skillUsageProvider.notifier).replace({
         ...ref.read(skillUsageProvider),
         'conversation:$_activeConversationId': SkillUsage.capture(
           _turnSkills,
@@ -1145,7 +1169,7 @@ class HomeController extends _$HomeController {
           reserved: maxTokens,
           window: usage.contextTokens,
         ),
-      };
+      });
     }
     final stopSequence = modelStopToken(promptFormatId);
     final responseBuffer = StringBuffer();
@@ -1536,14 +1560,18 @@ class HomeController extends _$HomeController {
     ContextUsage? contextUsage,
   }) {
     final current = ref.read(homeGenerationStatusProvider);
-    ref.read(homeGenerationStatusProvider.notifier).state = current.copyWith(
-      isGenerating: isGenerating,
-      statusText: text,
-      generatedTokens: generatedTokens,
-      elapsed: elapsed,
-      tokensPerSecond: tokensPerSecond,
-      contextUsage: contextUsage,
-    );
+    ref
+        .read(homeGenerationStatusProvider.notifier)
+        .setStatus(
+          current.copyWith(
+            isGenerating: isGenerating,
+            statusText: text,
+            generatedTokens: generatedTokens,
+            elapsed: elapsed,
+            tokensPerSecond: tokensPerSecond,
+            contextUsage: contextUsage,
+          ),
+        );
   }
 
   void stopGeneration() {

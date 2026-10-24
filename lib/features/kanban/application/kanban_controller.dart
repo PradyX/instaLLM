@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:installm/features/kanban/application/board_task_operations.dart';
 import 'package:installm/features/kanban/data/task_repository.dart';
@@ -99,40 +98,43 @@ class KanbanState {
   }
 }
 
-final kanbanProvider = StateNotifierProvider<KanbanNotifier, KanbanState>(
-  (ref) => KanbanNotifier(ref),
+final kanbanProvider = NotifierProvider<KanbanNotifier, KanbanState>(
+  KanbanNotifier.new,
 );
 
 /// Owns one workspace's board: tasks, moves, assignments and comments.
 ///
 /// Bots use the same operations the UI does (§9.3): create, assign, move,
 /// comment, link document, mark blocked, mark complete.
-class KanbanNotifier extends StateNotifier<KanbanState> {
-  KanbanNotifier(this._ref) : super(const KanbanState()) {
-    _ref.listen<String?>(
+class KanbanNotifier extends Notifier<KanbanState> {
+  @override
+  KanbanState build() {
+    ref.listen<String?>(
       activeWorkspaceIdProvider,
       (previous, next) => Future.microtask(() {
-        if (mounted) reload();
+        if (ref.mounted) reload();
       }),
     );
-    _ref.listen(
+    ref.listen(
       vaultsProvider,
       (previous, next) => Future.microtask(() {
-        if (mounted) reload();
+        if (ref.mounted) reload();
       }),
     );
-    reload();
+    // reload() touches state before its first await, and state does not exist
+    // until build returns.
+    Future.microtask(reload);
+    return const KanbanState();
   }
 
-  final Ref _ref;
   String? _workspaceId;
   var _loadEpoch = 0;
 
   Future<TaskRepository> _resolveRepository(String workspaceId) =>
-      resolveTaskRepository(_ref.read, workspaceId);
+      resolveTaskRepository(ref.read, workspaceId);
 
   Future<void> reload() async {
-    final workspaceId = _ref.read(activeWorkspaceIdProvider);
+    final workspaceId = ref.read(activeWorkspaceIdProvider);
     final epoch = ++_loadEpoch;
     final changedWorkspace = _workspaceId != workspaceId;
     _workspaceId = workspaceId;
@@ -148,9 +150,9 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
     try {
       final repository = await _resolveRepository(workspaceId);
       final tasks = await repository.load(workspaceId);
-      if (!mounted ||
+      if (!ref.mounted ||
           epoch != _loadEpoch ||
-          _ref.read(activeWorkspaceIdProvider) != workspaceId) {
+          ref.read(activeWorkspaceIdProvider) != workspaceId) {
         return;
       }
       state = KanbanState(
@@ -159,9 +161,9 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
         usesVault: repository is VaultTaskRepository,
       );
     } catch (error) {
-      if (!mounted ||
+      if (!ref.mounted ||
           epoch != _loadEpoch ||
-          _ref.read(activeWorkspaceIdProvider) != workspaceId) {
+          ref.read(activeWorkspaceIdProvider) != workspaceId) {
         return;
       }
       state = state.copyWith(
@@ -172,16 +174,16 @@ class KanbanNotifier extends StateNotifier<KanbanState> {
   }
 
   Future<T?> _edit<T>(Future<T> Function(TaskRepository, String) action) async {
-    final workspaceId = _ref.read(activeWorkspaceIdProvider);
+    final workspaceId = ref.read(activeWorkspaceIdProvider);
     if (workspaceId == null) return null;
     try {
       final repository = await _resolveRepository(workspaceId);
       final result = await action(repository, workspaceId);
-      if (!mounted) return result;
+      if (!ref.mounted) return result;
       if (_workspaceId == workspaceId) await reload();
       return result;
     } catch (error) {
-      if (mounted && _workspaceId == workspaceId) {
+      if (ref.mounted && _workspaceId == workspaceId) {
         state = state.copyWith(errorMessage: 'Could not save tasks: $error');
       }
       return null;

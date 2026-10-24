@@ -198,7 +198,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// appended to whatever the user already typed and waits there for review,
   /// instead of being sent on their behalf.
   void _applyComposerDraft(String draft) {
-    ref.read(composerDraftProvider.notifier).state = null;
+    ref.read(composerDraftProvider.notifier).setDraft(null);
     final prepared = draft.trim();
     if (prepared.isEmpty) return;
 

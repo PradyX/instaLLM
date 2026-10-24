@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/workspaces/data/workspace_store.dart';
 import 'package:installm/features/workspaces/domain/workspace.dart';
 
@@ -42,27 +41,28 @@ class WorkspacesState {
 }
 
 final workspacesProvider =
-    StateNotifierProvider<WorkspacesNotifier, WorkspacesState>(
-      (ref) => WorkspacesNotifier(ref),
+    NotifierProvider<WorkspacesNotifier, WorkspacesState>(
+      WorkspacesNotifier.new,
     );
 
 /// Owns the workspace list and the active selection.
 ///
 /// The first launch seeds one workspace so every workspace-scoped lookup has
 /// a boundary to filter by from the start.
-class WorkspacesNotifier extends StateNotifier<WorkspacesState> {
-  WorkspacesNotifier(this._ref) : super(const WorkspacesState()) {
+class WorkspacesNotifier extends Notifier<WorkspacesState> {
+  @override
+  WorkspacesState build() {
     whenReady = _load();
+    return const WorkspacesState();
   }
 
-  final Ref _ref;
-  late final Future<void> whenReady;
+  late Future<void> whenReady;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(workspaceStoreProvider.future);
+      final store = await ref.read(workspaceStoreProvider.future);
       final snapshot = store.load();
-      if (!mounted) return;
+      if (!ref.mounted) return;
       final effective = snapshot.workspaces.isEmpty
           ? WorkspacesSnapshot(
               workspaces: [Workspace.create(name: 'My workspace')],
@@ -81,7 +81,7 @@ class WorkspacesNotifier extends StateNotifier<WorkspacesState> {
         store.save(withActive);
       }
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       final fallback = Workspace.create(name: 'My workspace');
       state = WorkspacesState(
         snapshot: WorkspacesSnapshot(
@@ -96,7 +96,7 @@ class WorkspacesNotifier extends StateNotifier<WorkspacesState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(workspaceStoreProvider.future);
+      final store = await ref.read(workspaceStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

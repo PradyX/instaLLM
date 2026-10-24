@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 
 import 'package:installm/features/benchmark/application/model_comparison_service.dart';
 import 'package:installm/features/benchmark/data/comparison_set_store.dart';
@@ -252,8 +251,8 @@ class ModelComparisonState {
 }
 
 final modelComparisonControllerProvider =
-    StateNotifierProvider<ModelComparisonController, ModelComparisonState>(
-      (ref) => ModelComparisonController(ref),
+    NotifierProvider<ModelComparisonController, ModelComparisonState>(
+      ModelComparisonController.new,
     );
 
 /// Runs one prompt across the chosen installed models.
@@ -261,12 +260,13 @@ final modelComparisonControllerProvider =
 /// The controller owns the selection and the prompt, so the screen only draws
 /// them; nothing here writes to a conversation. Answers stay in this section
 /// until the user copies them or exports a run.
-class ModelComparisonController extends StateNotifier<ModelComparisonState> {
-  ModelComparisonController(this._ref) : super(const ModelComparisonState()) {
+class ModelComparisonController extends Notifier<ModelComparisonState> {
+  @override
+  ModelComparisonState build() {
     unawaited(_loadSets());
+    return const ModelComparisonState();
   }
 
-  final Ref _ref;
   bool _stopped = false;
 
   /// Reads the stored sets once per session.
@@ -276,15 +276,15 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
   /// without storage, and nothing is written over the file.
   Future<void> _loadSets() async {
     try {
-      final store = await _ref.read(comparisonSetStoreProvider.future);
-      if (!mounted) return;
+      final store = await ref.read(comparisonSetStoreProvider.future);
+      if (!ref.mounted) return;
       state = state.copyWith(
         savedSets: store.load(),
         savedSetsReadOnly: store.isReadOnly,
         savedSetsReady: true,
       );
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(
         savedSetsReady: true,
         errorMessage:
@@ -379,7 +379,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
   /// The selected models that are actually installed, in selection order.
   List<LlmModel> _selectedInstalledModels() {
     final installedById = {
-      for (final model in _ref.read(installedComparisonModelsProvider))
+      for (final model in ref.read(installedComparisonModelsProvider))
         model.id: model,
     };
     return [
@@ -417,7 +417,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
       return;
     }
 
-    final service = _ref.read(modelComparisonServiceProvider);
+    final service = ref.read(modelComparisonServiceProvider);
     _stopped = false;
     state = state.copyWith(
       stage: ComparisonStage.running,
@@ -526,7 +526,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
       return;
     }
 
-    final service = _ref.read(modelComparisonServiceProvider);
+    final service = ref.read(modelComparisonServiceProvider);
     _stopped = false;
     state = state.copyWith(
       stage: ComparisonStage.running,
@@ -574,7 +574,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
   void cancel() {
     if (!state.isBusy) return;
     _stopped = true;
-    _ref.read(modelComparisonServiceProvider).cancel();
+    ref.read(modelComparisonServiceProvider).cancel();
   }
 
   /// Clears results and errors, keeping the chosen models, the prompt, the
@@ -722,8 +722,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
     if (set == null) return;
 
     final installed = {
-      for (final model in _ref.read(installedComparisonModelsProvider))
-        model.id,
+      for (final model in ref.read(installedComparisonModelsProvider)) model.id,
     };
     final available = [
       for (final modelId in set.modelIds)
@@ -781,7 +780,7 @@ class ModelComparisonController extends StateNotifier<ModelComparisonState> {
   /// Writes the full set list, reporting why it could not be stored.
   Future<bool> _persistSets(List<ComparisonSet> sets) async {
     try {
-      final store = await _ref.read(comparisonSetStoreProvider.future);
+      final store = await ref.read(comparisonSetStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

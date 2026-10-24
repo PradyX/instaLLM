@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/mcp/data/mcp_client.dart';
 import 'package:installm/features/mcp/data/mcp_store.dart';
 import 'package:installm/features/mcp/domain/mcp_server.dart';
@@ -42,25 +41,23 @@ class McpState {
   }
 }
 
-final mcpProvider = StateNotifierProvider<McpNotifier, McpState>(
-  (ref) => McpNotifier(ref),
-);
+final mcpProvider = NotifierProvider<McpNotifier, McpState>(McpNotifier.new);
 
 /// Owns MCP servers, their permissions and their discovered capabilities.
 ///
 /// Connecting refreshes the cached capabilities; a failed connection keeps
 /// the previous cache and reports the error, so one offline server never
 /// hides the rest of the registry.
-class McpNotifier extends StateNotifier<McpState> {
-  McpNotifier(this._ref) : super(const McpState()) {
+class McpNotifier extends Notifier<McpState> {
+  @override
+  McpState build() {
     _load();
+    return const McpState();
   }
-
-  final Ref _ref;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(mcpStoreProvider.future);
+      final store = await ref.read(mcpStoreProvider.future);
       state = McpState(
         snapshot: store.load(),
         isReady: true,
@@ -80,7 +77,7 @@ class McpNotifier extends StateNotifier<McpState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(mcpStoreProvider.future);
+      final store = await ref.read(mcpStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

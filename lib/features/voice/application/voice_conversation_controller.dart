@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/voice/application/recording_controller.dart';
@@ -16,7 +15,23 @@ import 'package:installm/features/voice/domain/speakable_reply.dart';
 /// and never speaks while it records — but the chat screen's own read-aloud
 /// listener sits underneath this screen and would read the same reply a second
 /// time, so it has to be told that the loop is speaking for itself.
-final voiceConversationActiveProvider = StateProvider<bool>((ref) => false);
+final voiceConversationActiveProvider =
+    NotifierProvider<VoiceConversationActiveNotifier, bool>(
+      VoiceConversationActiveNotifier.new,
+    );
+
+/// Whether the loop owns the speaker right now.
+class VoiceConversationActiveNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  /// Ignored once the flag itself is gone, so a teardown that lands after the
+  /// container was disposed cannot throw.
+  void setActive(bool active) {
+    if (!ref.mounted) return;
+    state = active;
+  }
+}
 
 /// What a voice conversation needs before it can run, and what is missing.
 class VoiceConversationReadiness {
@@ -111,26 +126,26 @@ abstract class VoiceTurnRunner {
 /// `sendMessage` path as typing, so the message, the model that produced the
 /// reply and the conversation history are exactly what a typed turn leaves.
 class ChatVoiceTurnRunner implements VoiceTurnRunner {
-  ChatVoiceTurnRunner(this._ref);
+  ChatVoiceTurnRunner(this.ref);
 
-  final Ref _ref;
+  final Ref ref;
 
   @override
   Future<String?> say(String transcript) async {
-    if (_ref.read(homeGenerationStatusProvider).isGenerating) {
+    if (ref.read(homeGenerationStatusProvider).isGenerating) {
       // `sendMessage` refuses to queue behind a reply that is still running,
       // which would drop these words on the floor. They go to the chat's
       // message box instead, where the user can send them by hand.
-      _ref.read(composerDraftProvider.notifier).state = transcript;
+      ref.read(composerDraftProvider.notifier).setDraft(transcript);
       throw const VoiceTurnException(
         'The chat was still answering, so that was not sent. Your words are '
         'waiting in the message box.',
       );
     }
 
-    await _ref.read(homeControllerProvider.notifier).sendMessage(transcript);
+    await ref.read(homeControllerProvider.notifier).sendMessage(transcript);
 
-    final messages = _ref.read(homeControllerProvider);
+    final messages = ref.read(homeControllerProvider);
     if (messages.isEmpty) return null;
 
     final last = messages.last;
@@ -142,8 +157,8 @@ class ChatVoiceTurnRunner implements VoiceTurnRunner {
 
   @override
   void interrupt() {
-    if (!_ref.read(homeGenerationStatusProvider).isGenerating) return;
-    _ref.read(homeControllerProvider.notifier).stopGeneration();
+    if (!ref.read(homeGenerationStatusProvider).isGenerating) return;
+    ref.read(homeControllerProvider.notifier).stopGeneration();
   }
 }
 
@@ -248,10 +263,10 @@ class VoiceConversationState {
 
 /// Auto-disposed, so leaving the screen always gives the microphone back.
 final voiceConversationControllerProvider =
-    StateNotifierProvider.autoDispose<
+    NotifierProvider.autoDispose<
       VoiceConversationController,
       VoiceConversationState
-    >((ref) => VoiceConversationController(ref));
+    >(VoiceConversationController.new);
 
 /// Runs the hands-free loop: listen, transcribe, send, speak, listen again.
 ///
@@ -272,29 +287,26 @@ final voiceConversationControllerProvider =
 /// Every turn of work carries a number; interrupting bumps the number, so work
 /// started by an older turn notices it was superseded and stops without
 /// touching the new one.
-class VoiceConversationController
-    extends StateNotifier<VoiceConversationState> {
-  VoiceConversationController(this._ref)
-    : _activeFlag = _ref.read(voiceConversationActiveProvider.notifier),
-      _clipRecorder = _ref.read(microphoneRecorderProvider),
-      super(const VoiceConversationState()) {
-    _recordingSubscription = _ref.listen<RecordingState>(
+class VoiceConversationController extends Notifier<VoiceConversationState> {
+  @override
+  VoiceConversationState build() {
+    _activeFlag = ref.read(voiceConversationActiveProvider.notifier);
+    _clipRecorder = ref.read(microphoneRecorderProvider);
+    ref.listen<RecordingState>(
       recordingControllerProvider,
       _onRecordingChanged,
     );
+    ref.onDispose(_releaseResources);
+    return const VoiceConversationState();
   }
-
-  final Ref _ref;
 
   /// The shared "the loop owns speaking" flag, held directly so teardown does
   /// not have to read a provider that may already be gone.
-  final StateController<bool> _activeFlag;
+  late VoiceConversationActiveNotifier _activeFlag;
 
   /// The microphone, held for the same reason: a clip has to be removable even
   /// when this provider is the one being torn down.
-  final MicrophoneRecorder _clipRecorder;
-
-  ProviderSubscription<RecordingState>? _recordingSubscription;
+  late MicrophoneRecorder _clipRecorder;
 
   /// Parts of the app the loop has taken over, held for the same reason.
   RecordingController? _recording;
@@ -315,7 +327,7 @@ class VoiceConversationController
   Future<void> start() async {
     if (_active) return;
 
-    final blocker = _ref.read(voiceConversationReadinessProvider).blocker;
+    final blocker = ref.read(voiceConversationReadinessProvider).blocker;
     if (blocker != null) {
       state = VoiceConversationState(
         stage: VoiceConversationStage.failed,
@@ -325,7 +337,7 @@ class VoiceConversationController
     }
 
     _active = true;
-    _activeFlag.state = true;
+    _activeFlag.setActive(true);
     state = const VoiceConversationState(
       stage: VoiceConversationStage.listening,
     );
@@ -339,7 +351,7 @@ class VoiceConversationController
   Future<void> finishTurn() async {
     if (!_active || state.stage != VoiceConversationStage.listening) return;
 
-    final recording = _ref.read(recordingControllerProvider.notifier);
+    final recording = ref.read(recordingControllerProvider.notifier);
     _recording = recording;
     final clip = await recording.stop();
     if (clip == null || clip.trim().isEmpty) return;
@@ -357,7 +369,7 @@ class VoiceConversationController
     final stage = state.stage;
     if (stage == VoiceConversationStage.speaking) {
       final TtsController speech =
-          _speech ?? _ref.read(ttsControllerProvider.notifier);
+          _speech ?? ref.read(ttsControllerProvider.notifier);
       _speech = speech;
       // The pending turn is dropped first: the utterance ending must not start
       // the next listening turn on its own.
@@ -365,7 +377,7 @@ class VoiceConversationController
       await speech.stop();
     } else if (stage == VoiceConversationStage.thinking) {
       _turn++;
-      _ref.read(voiceTurnRunnerProvider).interrupt();
+      ref.read(voiceTurnRunnerProvider).interrupt();
     } else if (stage == VoiceConversationStage.transcribing) {
       _turn++;
       _transcription?.cancel();
@@ -383,7 +395,7 @@ class VoiceConversationController
     if (!_active && !state.hasFailed) return;
     final turns = state.turns;
     await _teardown();
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = VoiceConversationState(turns: turns);
   }
 
@@ -401,12 +413,12 @@ class VoiceConversationController
       clearError: true,
     );
 
-    final recording = _ref.read(recordingControllerProvider.notifier);
+    final recording = ref.read(recordingControllerProvider.notifier);
     _recording = recording;
     await recording.start();
     if (!_active || turn != _turn) return;
 
-    final failure = _ref.read(recordingControllerProvider).errorMessage;
+    final failure = ref.read(recordingControllerProvider).errorMessage;
     if (failure != null) await _fail(failure);
   }
 
@@ -439,7 +451,7 @@ class VoiceConversationController
       statusText: 'Transcribing...',
     );
 
-    final transcription = _ref.read(transcriptionControllerProvider.notifier);
+    final transcription = ref.read(transcriptionControllerProvider.notifier);
     _transcription = transcription;
     await transcription.start(audioPath: clip);
 
@@ -449,7 +461,7 @@ class VoiceConversationController
 
     if (!_active || turn != _turn) return;
 
-    final result = _ref.read(transcriptionControllerProvider);
+    final result = ref.read(transcriptionControllerProvider);
     if (result.hasFailed) {
       await _fail(result.errorMessage ?? 'The clip could not be transcribed.');
       return;
@@ -472,7 +484,7 @@ class VoiceConversationController
 
     final String? reply;
     try {
-      reply = await _ref.read(voiceTurnRunnerProvider).say(said);
+      reply = await ref.read(voiceTurnRunnerProvider).say(said);
     } catch (error) {
       if (!_active || turn != _turn) return;
       await _fail(_messageOf(error));
@@ -495,7 +507,7 @@ class VoiceConversationController
       turns: state.turns + 1,
     );
 
-    final speech = _ref.read(ttsControllerProvider.notifier);
+    final speech = ref.read(ttsControllerProvider.notifier);
     _speech = speech;
     await speech.speak(spoken);
     if (!_active || turn != _turn) return;
@@ -512,10 +524,10 @@ class VoiceConversationController
 
   /// Stops the loop with an explanation the user can act on.
   Future<void> _fail(String message) async {
-    if (!mounted) return;
+    if (!ref.mounted) return;
     final turns = state.turns;
     await _teardown();
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = VoiceConversationState(
       stage: VoiceConversationStage.failed,
       errorMessage: message,
@@ -543,18 +555,18 @@ class VoiceConversationController
   Future<void> _teardown() async {
     _active = false;
     _turn++;
-    _activeFlag.state = false;
+    _activeFlag.setActive(false);
 
     final recording = _recording;
-    if (recording != null && recording.state.isRecording) {
+    if (recording != null && recording.isRecording) {
       await recording.cancel();
     }
     final transcription = _transcription;
-    if (transcription != null && transcription.state.isBusy) {
+    if (transcription != null && transcription.isBusy) {
       transcription.cancel();
     }
     final speech = _speech;
-    if (speech != null && speech.state.isSpeaking) {
+    if (speech != null && speech.isSpeaking) {
       await speech.stop();
     }
   }
@@ -566,35 +578,36 @@ class VoiceConversationController
     return text.startsWith(prefix) ? text.substring(prefix.length) : text;
   }
 
-  @override
-  void dispose() {
-    _recordingSubscription?.close();
+  /// Gives the microphone and the speaker back when the screen goes away.
+  void _releaseResources() {
     _active = false;
     _turn++;
-    _activeFlag.state = false;
+    // A provider cannot be modified from inside a lifecycle callback, so the
+    // shared flag is released on the next microtask, once disposal has finished.
+    final flag = _activeFlag;
+    Future.microtask(() => flag.setActive(false));
 
     // Held references only: a provider must not be read while it is going away.
     final recording = _recording;
     if (recording != null) {
-      if (recording.state.isRecording) {
+      if (recording.isRecording) {
         unawaited(recording.cancel());
       } else {
         // A clip the loop recorded but never finished with is the loop's to
         // remove: leaving the screen must not leave audio behind.
-        final clip = recording.state.recordedPath;
+        final clip = recording.recordedPath;
         if (clip != null && clip.trim().isNotEmpty) {
           unawaited(_clipRecorder.deleteRecording(clip));
         }
       }
     }
     final transcription = _transcription;
-    if (transcription != null && transcription.state.isBusy) {
+    if (transcription != null && transcription.isBusy) {
       transcription.cancel();
     }
     final speech = _speech;
-    if (speech != null && speech.state.isSpeaking) {
+    if (speech != null && speech.isSpeaking) {
       unawaited(speech.stop());
     }
-    super.dispose();
   }
 }

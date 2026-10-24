@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/context/data/compaction_policy_store.dart';
 import 'package:installm/features/context/domain/compaction_policy.dart';
 
@@ -38,21 +37,21 @@ class CompactionPolicyState {
 }
 
 final compactionPolicyProvider =
-    StateNotifierProvider<CompactionPolicyNotifier, CompactionPolicyState>(
-      (ref) => CompactionPolicyNotifier(ref),
+    NotifierProvider<CompactionPolicyNotifier, CompactionPolicyState>(
+      CompactionPolicyNotifier.new,
     );
 
 /// Owns the stored compaction policy.
-class CompactionPolicyNotifier extends StateNotifier<CompactionPolicyState> {
-  CompactionPolicyNotifier(this._ref) : super(const CompactionPolicyState()) {
+class CompactionPolicyNotifier extends Notifier<CompactionPolicyState> {
+  @override
+  CompactionPolicyState build() {
     _load();
+    return const CompactionPolicyState();
   }
-
-  final Ref _ref;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(compactionPolicyStoreProvider.future);
+      final store = await ref.read(compactionPolicyStoreProvider.future);
       state = CompactionPolicyState(
         policy: store.load(),
         isReady: true,
@@ -72,7 +71,7 @@ class CompactionPolicyNotifier extends StateNotifier<CompactionPolicyState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(compactionPolicyStoreProvider.future);
+      final store = await ref.read(compactionPolicyStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

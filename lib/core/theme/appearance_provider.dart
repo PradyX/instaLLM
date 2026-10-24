@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/theme/appearance_preferences.dart';
 import 'package:installm/core/theme/appearance_store.dart';
 
@@ -24,23 +23,24 @@ class AppearanceState {
 }
 
 final appearanceProvider =
-    StateNotifierProvider<AppearanceNotifier, AppearanceState>(
-      (ref) =>
-          AppearanceNotifier(() => ref.read(appearanceStoreProvider.future)),
+    NotifierProvider<AppearanceNotifier, AppearanceState>(
+      AppearanceNotifier.new,
     );
 
-class AppearanceNotifier extends StateNotifier<AppearanceState> {
-  AppearanceNotifier(this._store) : super(const AppearanceState()) {
+class AppearanceNotifier extends Notifier<AppearanceState> {
+  @override
+  AppearanceState build() {
     _load();
+    return const AppearanceState();
   }
 
-  final Future<AppearanceStore> Function() _store;
+  Future<AppearanceStore> _store() => ref.read(appearanceStoreProvider.future);
 
   Future<void> _load() async {
     try {
       final store = await _store();
       final preferences = store.load();
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = AppearanceState(
         preferences: preferences,
         isReady: true,
@@ -48,7 +48,7 @@ class AppearanceNotifier extends StateNotifier<AppearanceState> {
         error: store.isReadOnly ? AppearanceError.newerVersion : null,
       );
     } catch (_) {
-      if (mounted) {
+      if (ref.mounted) {
         state = const AppearanceState(
           isReady: true,
           error: AppearanceError.load,
@@ -73,7 +73,7 @@ class AppearanceNotifier extends StateNotifier<AppearanceState> {
     if (!state.isReady || state.isReadOnly) return false;
     try {
       final store = await _store();
-      if (!mounted) return false;
+      if (!ref.mounted) return false;
       final preferences = state.preferences.copyWith(
         surfaceStyle: surfaceStyle,
         accent: accent,
@@ -94,7 +94,7 @@ class AppearanceNotifier extends StateNotifier<AppearanceState> {
       state = AppearanceState(preferences: preferences, isReady: true);
       return true;
     } catch (_) {
-      if (mounted) {
+      if (ref.mounted) {
         state = AppearanceState(
           preferences: state.preferences,
           isReady: true,

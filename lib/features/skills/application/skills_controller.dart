@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:installm/features/skills/data/skill_bundle_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/skills/data/skill_store.dart';
 import 'package:installm/features/skills/domain/built_in_skills.dart';
 import 'package:installm/features/skills/domain/skill.dart';
@@ -61,30 +60,31 @@ class SkillsState {
   }
 }
 
-final skillsProvider = StateNotifierProvider<SkillsNotifier, SkillsState>(
-  (ref) => SkillsNotifier(ref),
+final skillsProvider = NotifierProvider<SkillsNotifier, SkillsState>(
+  SkillsNotifier.new,
 );
 
 /// Owns the skill registry: install, enable/disable, assign, remove.
 ///
 /// Built-ins are read-only and can only be enabled or disabled; everything
 /// else can be edited. State changes persist as one document write.
-class SkillsNotifier extends StateNotifier<SkillsState> {
-  SkillsNotifier(this._ref) : super(SkillsState(skills: BuiltInSkills.all())) {
+class SkillsNotifier extends Notifier<SkillsState> {
+  @override
+  SkillsState build() {
     _load();
+    return SkillsState(skills: BuiltInSkills.all());
   }
 
-  final Ref _ref;
   Future<void> get whenReady async {
-    await _ref.read(skillStoreProvider.future);
-    while (!state.isReady && mounted) {
+    await ref.read(skillStoreProvider.future);
+    while (!state.isReady && ref.mounted) {
       await Future<void>.delayed(Duration.zero);
     }
   }
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(skillStoreProvider.future);
+      final store = await ref.read(skillStoreProvider.future);
       final snapshot = store.load();
       state = SkillsState(
         skills: snapshot.allSkills,
@@ -106,7 +106,7 @@ class SkillsNotifier extends StateNotifier<SkillsState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(skillStoreProvider.future);
+      final store = await ref.read(skillStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:

@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/features/voice/data/whisper_model_service.dart';
@@ -92,32 +91,27 @@ final modelDownloadNoticeProvider =
     );
 
 final whisperModelsProvider =
-    StateNotifierProvider<WhisperModelsController, WhisperModelsState>((ref) {
-      return WhisperModelsController(
-        ref.watch(whisperModelServiceProvider),
-        notifyDownloadComplete: ref.watch(modelDownloadNoticeProvider),
-      );
-    });
+    NotifierProvider<WhisperModelsController, WhisperModelsState>(
+      WhisperModelsController.new,
+    );
 
 /// Keeps the picker in step with the model directory.
 ///
 /// Downloads are the user's decision and always start from the picker; this
 /// only reports what happened, so nothing is fetched in the background.
-class WhisperModelsController extends StateNotifier<WhisperModelsState> {
-  WhisperModelsController(
-    this._service, {
-    Future<void> Function(String name)? notifyDownloadComplete,
-  }) : _notifyDownloadComplete =
-           notifyDownloadComplete ??
-           LocalNotificationService.instance.showModelDownloadComplete,
-       super(const WhisperModelsState()) {
+class WhisperModelsController extends Notifier<WhisperModelsState> {
+  @override
+  WhisperModelsState build() {
+    _service = ref.watch(whisperModelServiceProvider);
+    _notifyDownloadComplete = ref.watch(modelDownloadNoticeProvider);
     refresh();
+    return const WhisperModelsState();
   }
 
-  final WhisperModelService _service;
+  late WhisperModelService _service;
 
   /// Called once a model is installed, with the name to show in the notice.
-  final Future<void> Function(String name) _notifyDownloadComplete;
+  late Future<void> Function(String name) _notifyDownloadComplete;
   CancelToken? _cancelToken;
 
   /// Re-reads the model directory.
@@ -127,7 +121,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
   /// reason the user needs to see.
   Future<void> refresh({bool clearError = true}) async {
     final installed = await _service.installed();
-    if (!mounted) return;
+    if (!ref.mounted) return;
     state = state.copyWith(
       isLoading: false,
       installed: installed,
@@ -157,7 +151,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
         option,
         cancelToken: cancelToken,
         onProgress: (received, total) {
-          if (!mounted) return;
+          if (!ref.mounted) return;
           state = state.copyWith(
             receivedBytes: received,
             totalBytes: total > 0 ? total : option.approximateBytes,
@@ -165,7 +159,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
         },
       );
       _cancelToken = null;
-      if (!mounted) return true;
+      if (!ref.mounted) return true;
       state = state.copyWith(
         downloadingId: null,
         receivedBytes: 0,
@@ -176,7 +170,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
       return true;
     } catch (error) {
       _cancelToken = null;
-      if (!mounted) return false;
+      if (!ref.mounted) return false;
       final wasCancelled = cancelToken.isCancelled;
       state = state.copyWith(
         downloadingId: null,
@@ -215,7 +209,7 @@ class WhisperModelsController extends StateNotifier<WhisperModelsState> {
     try {
       await _service.remove(option);
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(errorMessage: _messageOf(error));
     }
     await refresh(clearError: false);

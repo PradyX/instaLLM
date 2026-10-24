@@ -211,7 +211,7 @@ Future<void> showBoardTaskDetails(
     builder: (_) => _TaskSheet(taskId: taskId),
   );
   if (!context.mounted || roomId == null) return;
-  roomSelection.state = roomId;
+  roomSelection.select(roomId);
   router.go(AppRoutes.home);
 }
 

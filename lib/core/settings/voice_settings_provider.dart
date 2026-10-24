@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/voice/domain/speech_voice.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -102,18 +102,20 @@ class VoiceSettingsState {
 }
 
 final voiceSettingsProvider =
-    StateNotifierProvider<VoiceSettingsNotifier, VoiceSettingsState>(
-      (ref) => VoiceSettingsNotifier(),
+    NotifierProvider<VoiceSettingsNotifier, VoiceSettingsState>(
+      VoiceSettingsNotifier.new,
     );
 
-class VoiceSettingsNotifier extends StateNotifier<VoiceSettingsState> {
+class VoiceSettingsNotifier extends Notifier<VoiceSettingsState> {
   static const _settingsKey = 'voice_settings';
   // V2 replaces the old GGUF default with Whisper. Legacy records are resolved
   // on read and written with this version only after an explicit change.
   static const _sttEngineVersion = 2;
 
-  VoiceSettingsNotifier() : super(const VoiceSettingsState()) {
+  @override
+  VoiceSettingsState build() {
     _loadSettings();
+    return const VoiceSettingsState();
   }
 
   Future<void> _loadSettings() async {

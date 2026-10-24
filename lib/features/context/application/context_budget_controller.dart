@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/context/data/context_budget_store.dart';
 import 'package:installm/features/context/domain/context_budget.dart';
 
@@ -46,8 +45,8 @@ class ContextBudgetState {
 }
 
 final contextBudgetProvider =
-    StateNotifierProvider<ContextBudgetNotifier, ContextBudgetState>(
-      (ref) => ContextBudgetNotifier(ref),
+    NotifierProvider<ContextBudgetNotifier, ContextBudgetState>(
+      ContextBudgetNotifier.new,
     );
 
 /// Owns the context budget preference (Road Map 2 Phase 2.1).
@@ -55,9 +54,11 @@ final contextBudgetProvider =
 /// Only the preference is stored; the numbers a request actually uses are
 /// derived on every request from the model, the active profile and this budget,
 /// so nothing here has to be kept in step with the runtime.
-class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
-  ContextBudgetNotifier(this._ref) : super(const ContextBudgetState()) {
+class ContextBudgetNotifier extends Notifier<ContextBudgetState> {
+  @override
+  ContextBudgetState build() {
     _load();
+    return const ContextBudgetState();
   }
 
   /// Cap a manual budget starts from when the user has not picked one.
@@ -67,14 +68,12 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
   /// caps it if it is larger than the window on offer.
   static const int defaultManualContextTokens = 2048;
 
-  final Ref _ref;
-
   Future<void> _load() async {
     try {
-      final store = await _ref.read(contextBudgetStoreProvider.future);
+      final store = await ref.read(contextBudgetStoreProvider.future);
       // The app can shut this provider down while the file is still opening,
       // and a disposed notifier must not be written to.
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = ContextBudgetState(
         budget: store.load(),
         isReady: true,
@@ -85,7 +84,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
             : null,
       );
     } catch (error) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = state.copyWith(
         isReady: true,
         errorMessage: 'Could not load the context budget: $error',
@@ -143,7 +142,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
     final previous = state.budget;
     state = state.copyWith(budget: budget.normalized(), clearError: true);
     if (await _persist()) return true;
-    if (!mounted) return false;
+    if (!ref.mounted) return false;
     // A failed write must not leave the screen describing a budget that was
     // never stored.
     state = state.copyWith(budget: previous);
@@ -152,9 +151,9 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(contextBudgetStoreProvider.future);
+      final store = await ref.read(contextBudgetStoreProvider.future);
       if (store.save(state.budget)) return true;
-      if (!mounted) return false;
+      if (!ref.mounted) return false;
       state = state.copyWith(
         errorMessage: store.isReadOnly
             ? 'The context budget was written by a newer version of InstaLLM '
@@ -163,7 +162,7 @@ class ContextBudgetNotifier extends StateNotifier<ContextBudgetState> {
       );
       return false;
     } catch (error) {
-      if (!mounted) return false;
+      if (!ref.mounted) return false;
       state = state.copyWith(
         errorMessage: 'Could not save the context budget: $error',
       );

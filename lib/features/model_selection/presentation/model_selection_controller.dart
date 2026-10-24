@@ -870,7 +870,8 @@ class ModelSelectionController extends _$ModelSelectionController {
     final resolvedCapabilities = await _capabilityService.refreshCapabilities(
       models,
     );
-    if (resolvedCapabilities.isEmpty) return;
+    // The scan can outlive the screen that started it.
+    if (!ref.mounted || resolvedCapabilities.isEmpty) return;
 
     final updatedModels = _mergeCapabilitiesIntoModels(
       state.models,

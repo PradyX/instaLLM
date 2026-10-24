@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/features/documents/data/network_policy_store.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
 import 'package:installm/storage/secure_storage.dart';
@@ -45,8 +44,8 @@ class NetworkPolicyState {
 }
 
 final networkPolicyControllerProvider =
-    StateNotifierProvider<NetworkPolicyNotifier, NetworkPolicyState>(
-      (ref) => NetworkPolicyNotifier(ref),
+    NotifierProvider<NetworkPolicyNotifier, NetworkPolicyState>(
+      NetworkPolicyNotifier.new,
     );
 
 /// Policy for the active workspace, for tool gating.
@@ -60,16 +59,16 @@ final activeNetworkPolicyProvider = Provider<NetworkPolicy>((ref) {
   return NetworkPolicy.closed;
 });
 
-class NetworkPolicyNotifier extends StateNotifier<NetworkPolicyState> {
-  NetworkPolicyNotifier(this._ref) : super(const NetworkPolicyState()) {
+class NetworkPolicyNotifier extends Notifier<NetworkPolicyState> {
+  @override
+  NetworkPolicyState build() {
     _open();
+    return const NetworkPolicyState();
   }
-
-  final Ref _ref;
 
   Future<void> _open() async {
     try {
-      final store = await _ref.read(networkPolicyStoreProvider.future);
+      final store = await ref.read(networkPolicyStoreProvider.future);
       state = state.copyWith(
         snapshot: store.load(),
         isOpen: true,
@@ -86,7 +85,7 @@ class NetworkPolicyNotifier extends StateNotifier<NetworkPolicyState> {
 
   Future<bool> setWorkspace(String workspaceId, NetworkPolicy policy) async {
     try {
-      final store = await _ref.read(networkPolicyStoreProvider.future);
+      final store = await ref.read(networkPolicyStoreProvider.future);
       if (store.isReadOnly) return false;
       final next = state.snapshot.setWorkspace(workspaceId, policy);
       if (!store.save(next)) return false;

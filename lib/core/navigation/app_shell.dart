@@ -707,7 +707,7 @@ Future<void> _createBot(
     );
     if (!navigator.mounted) return;
     if (chat != null) {
-      selection.state = chat.id;
+      selection.select(chat.id);
     } else {
       messenger.showSnackBar(SnackBar(content: Text(t.botCreation.chatError)));
     }
@@ -739,7 +739,7 @@ Future<void> _createRoom(
     name: name.trim(),
   );
   if (room == null || !context.mounted) return;
-  activeRoom.state = room.id;
+  activeRoom.select(room.id);
   onCreated?.call();
   context.go(AppRoutes.home);
 }

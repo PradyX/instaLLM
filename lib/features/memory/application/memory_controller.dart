@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/utils/id_generator.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart';
@@ -27,27 +26,28 @@ class MemoryState {
   final Map<String, String> conversationWorkspaces;
 }
 
-final memoryProvider = StateNotifierProvider<MemoryNotifier, MemoryState>(
-  (ref) => MemoryNotifier(ref),
+final memoryProvider = NotifierProvider<MemoryNotifier, MemoryState>(
+  MemoryNotifier.new,
 );
 
 /// Explicit operations only: no automatic extraction, network, or sync.
-class MemoryNotifier extends StateNotifier<MemoryState> {
-  MemoryNotifier(this._ref) : super(const MemoryState()) {
+class MemoryNotifier extends Notifier<MemoryState> {
+  @override
+  MemoryState build() {
     whenReady = _load();
+    return const MemoryState();
   }
 
-  final Ref _ref;
-  late final Future<void> whenReady;
+  late Future<void> whenReady;
   MemoryStore? _store;
   String? get errorMessage => state.errorMessage;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(memoryStoreProvider.future);
+      final store = await ref.read(memoryStoreProvider.future);
       final facts = store.load();
       _store = store;
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = MemoryState(
         facts: facts,
         conversationWorkspaces: store.conversationWorkspaces,
@@ -56,7 +56,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
         errorMessage: store.isReadOnly ? t.memory.unsupported : null,
       );
     } catch (_) {
-      if (!mounted) return;
+      if (!ref.mounted) return;
       state = MemoryState(isReady: true, errorMessage: t.memory.readError);
     }
   }
@@ -102,7 +102,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     bool globalOptIn = false,
   }) async {
     await whenReady;
-    if (!mounted) return null;
+    if (!ref.mounted) return null;
     if (scope == MemoryScope.global && !globalOptIn) {
       _error(t.memory.consentError);
       return null;
@@ -138,7 +138,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     bool? globalOptIn,
   }) async {
     await whenReady;
-    if (!mounted) return false;
+    if (!ref.mounted) return false;
     final index = state.facts.indexWhere((fact) => fact.id == id);
     if (index < 0) return _error(t.memory.missingFact);
     final existing = state.facts[index];
@@ -159,7 +159,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
 
   Future<bool> forget(String id) async {
     await whenReady;
-    if (!mounted) return false;
+    if (!ref.mounted) return false;
     if (!state.facts.any((fact) => fact.id == id)) {
       return _error(t.memory.missingFact);
     }
@@ -170,7 +170,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
   /// different workspace later never silently changes this boundary.
   Future<bool> bindConversation(String id, String workspaceId) async {
     await whenReady;
-    if (!mounted) return false;
+    if (!ref.mounted) return false;
     if (state.conversationWorkspaces.containsKey(id)) return true;
     if (id.isEmpty || workspaceId.isEmpty) return false;
     return _save(
@@ -190,7 +190,7 @@ class MemoryNotifier extends StateNotifier<MemoryState> {
     await whenReady;
     String normalized(String value) =>
         value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
-    if (!mounted) return t.memory.saveError;
+    if (!ref.mounted) return t.memory.saveError;
     final matches = state.facts
         .where(
           (fact) =>

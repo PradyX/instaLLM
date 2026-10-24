@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/legacy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/services/attachment_image_service.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -45,16 +45,17 @@ class AttachmentSettingsState {
 }
 
 final attachmentSettingsProvider =
-    StateNotifierProvider<AttachmentSettingsNotifier, AttachmentSettingsState>(
-      (ref) => AttachmentSettingsNotifier(),
+    NotifierProvider<AttachmentSettingsNotifier, AttachmentSettingsState>(
+      AttachmentSettingsNotifier.new,
     );
 
-class AttachmentSettingsNotifier
-    extends StateNotifier<AttachmentSettingsState> {
+class AttachmentSettingsNotifier extends Notifier<AttachmentSettingsState> {
   static const _settingsKey = 'attachment_settings';
 
-  AttachmentSettingsNotifier() : super(const AttachmentSettingsState()) {
+  @override
+  AttachmentSettingsState build() {
     _loadSettings();
+    return const AttachmentSettingsState();
   }
 
   Future<void> _loadSettings() async {

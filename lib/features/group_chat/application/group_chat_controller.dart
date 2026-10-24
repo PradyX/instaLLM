@@ -7,7 +7,6 @@ import 'package:installm/core/permissions/workspace_permission.dart';
 import 'package:installm/features/skills/application/skill_session.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:installm/core/services/service_providers.dart';
 import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/core/utils/logger.dart';
@@ -118,8 +117,8 @@ class GroupChatsState {
 }
 
 final groupChatsProvider =
-    StateNotifierProvider<GroupChatsNotifier, GroupChatsState>(
-      (ref) => GroupChatsNotifier(ref),
+    NotifierProvider<GroupChatsNotifier, GroupChatsState>(
+      GroupChatsNotifier.new,
     );
 
 /// Owns group chats: members, modes and turns.
@@ -130,12 +129,18 @@ final groupChatsProvider =
 /// the relevant skills, shared workspace memory, the recent room history
 /// and its assigned task — never the whole room history, and never another
 /// bot's private reasoning.
-class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
-  GroupChatsNotifier(this._ref) : super(const GroupChatsState()) {
+class GroupChatsNotifier extends Notifier<GroupChatsState> {
+  @override
+  GroupChatsState build() {
+    ref.onDispose(() {
+      for (final runner in _skillRunners.values) {
+        runner.cancel();
+      }
+    });
     _load();
+    return const GroupChatsState();
   }
 
-  final Ref _ref;
   static const VaultNotesService _notes = VaultNotesService();
 
   /// Who posts a review's answer, so `/review list` can find it again.
@@ -143,20 +148,12 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   final _cancelRequested = <String>{};
   final _skillRunners = <String, SkillScriptRunner>{};
 
-  @override
-  void dispose() {
-    for (final runner in _skillRunners.values) {
-      runner.cancel();
-    }
-    super.dispose();
-  }
-
   /// Recent room lines each bot hears.
   static const int recentHistoryLines = 20;
 
   Future<void> _load() async {
     try {
-      final store = await _ref.read(groupChatStoreProvider.future);
+      final store = await ref.read(groupChatStoreProvider.future);
       state = GroupChatsState(
         snapshot: store.load(),
         isReady: true,
@@ -176,7 +173,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
 
   Future<bool> _persist() async {
     try {
-      final store = await _ref.read(groupChatStoreProvider.future);
+      final store = await ref.read(groupChatStoreProvider.future);
       if (store.isReadOnly) {
         state = state.copyWith(
           errorMessage:
@@ -195,7 +192,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   }
 
   List<Bot> _membersOf(GroupChat chat) {
-    final bots = _ref.read(botsProvider);
+    final bots = ref.read(botsProvider);
     return [
       for (final id in chat.memberBotIds)
         if (bots.botById(id) != null) bots.botById(id)!,
@@ -232,7 +229,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
 
   Future<bool> removeChat(String chatId) async {
     try {
-      final store = await _ref.read(groupChatStoreProvider.future);
+      final store = await ref.read(groupChatStoreProvider.future);
       if (store.isReadOnly || state.runningChatIds.contains(chatId)) {
         state = state.copyWith(
           errorMessage:
@@ -257,7 +254,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// Clears messages after a successful write; the room and its settings stay.
   Future<bool> clearChat(String chatId) async {
     try {
-      final store = await _ref.read(groupChatStoreProvider.future);
+      final store = await ref.read(groupChatStoreProvider.future);
       if (store.isReadOnly || state.runningChatIds.contains(chatId)) {
         state = state.copyWith(
           errorMessage:
@@ -288,7 +285,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     _cancelRequested.add(chatId);
     _skillRunners[chatId]?.cancel();
     try {
-      _ref.read(agentLoopServiceProvider).cancel();
+      ref.read(agentLoopServiceProvider).cancel();
     } catch (_) {}
   }
 
@@ -312,7 +309,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
 
   Future<String?> _openTaskRoom(ProjectTask requested) async {
     final repository = await resolveTaskRepository(
-      _ref.read,
+      ref.read,
       requested.workspaceId,
     );
     final tasks = await repository.load(requested.workspaceId);
@@ -340,7 +337,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         )
         .firstOrNull;
     if (legacy != null) {
-      await _ref.read(roomBoardServiceProvider).linkTask(legacy, task.id);
+      await ref.read(roomBoardServiceProvider).linkTask(legacy, task.id);
       return legacy.id;
     }
     final members =
@@ -357,7 +354,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     if (task.description.isNotEmpty) brief.write('\n${task.description}');
     _append(GroupMessage.user(chatId: chat.id, text: brief.toString()));
     if (!await _persist()) return null;
-    await _ref.read(roomBoardServiceProvider).linkTask(chat, task.id);
+    await ref.read(roomBoardServiceProvider).linkTask(chat, task.id);
     return chat.id;
   }
 
@@ -426,7 +423,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       state = state.copyWith(runningChatIds: {...state.runningChatIds, chatId});
       try {
         final response = await applyMemoryCommand(
-          _ref.read(memoryProvider.notifier),
+          ref.read(memoryProvider.notifier),
           command,
           conversationId: chatId,
           workspaceId: commandChat.workspaceId,
@@ -450,15 +447,15 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       }
       return;
     }
-    await _ref.read(botsProvider.notifier).whenReady;
+    await ref.read(botsProvider.notifier).whenReady;
     final chat = _chatById(chatId);
     if (chat == null) return;
     if (chat.isDirect && _botById(chat.directBotId!) == null) return;
     var task = trimmed;
     if (trimmed.startsWith('/')) {
-      await _ref.read(skillsProvider.notifier).whenReady;
-      await _ref.read(skillChoicesProvider.notifier).whenReady;
-      final eligible = _ref
+      await ref.read(skillsProvider.notifier).whenReady;
+      await ref.read(skillChoicesProvider.notifier).whenReady;
+      final eligible = ref
           .read(skillsProvider)
           .skills
           .where(
@@ -476,7 +473,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       final command = SkillCommand.parse(trimmed, eligible)!;
       var message = command.message;
       if ((command.choice != null || command.clear) &&
-          !await _ref
+          !await ref
               .read(skillChoicesProvider.notifier)
               .select('room:$chatId', command.choice)) {
         message = t.skills.saveError;
@@ -520,7 +517,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         await _sayRewind(chat.id, command.message!);
         return;
       }
-      final store = await _ref.read(runCheckpointStoreProvider.future);
+      final store = await ref.read(runCheckpointStoreProvider.future);
       final runs = store.load().forContext('room:${chat.id}');
       if (command.list) {
         await _sayRewind(chat.id, rewindListing(runs));
@@ -540,10 +537,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         );
         return;
       }
-      final vaults = _ref.read(vaultsProvider.notifier);
+      final vaults = ref.read(vaultsProvider.notifier);
       await vaults.whenReady;
       final paths = vaults.pathsFor(chat.workspaceId);
-      final binding = _ref
+      final binding = ref
           .read(vaultsProvider)
           .snapshot
           .bindingFor(chat.workspaceId);
@@ -597,9 +594,9 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     required String task,
     String? requestedBot,
   }) async {
-    final runs = _ref.read(backgroundRunsProvider.notifier);
+    final runs = ref.read(backgroundRunsProvider.notifier);
     await runs.whenReady;
-    await _ref.read(botsProvider.notifier).whenReady;
+    await ref.read(botsProvider.notifier).whenReady;
     final members = _membersOf(chat);
     final bot = requestedBot == null
         ? (members.isEmpty ? null : members.first)
@@ -624,7 +621,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     if (run == null) {
       await _sayRewind(
         chat.id,
-        _ref.read(backgroundRunsProvider).errorMessage ??
+        ref.read(backgroundRunsProvider).errorMessage ??
             'The run could not be started.',
       );
       return;
@@ -657,14 +654,14 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     _append(GroupMessage.user(chatId: chat.id, text: text));
     await _persist();
     {
-      final runs = _ref.read(backgroundRunsProvider.notifier);
+      final runs = ref.read(backgroundRunsProvider.notifier);
       await runs.whenReady;
       if (command.message != null) {
         await _sayRewind(chat.id, command.message!);
         return;
       }
       final mine = [
-        for (final run in _ref.read(backgroundRunsProvider).runs)
+        for (final run in ref.read(backgroundRunsProvider).runs)
           if (run.chatId == chat.id) run,
       ];
       if (command.list) {
@@ -673,8 +670,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       }
       if (command.stopCurrent || command.stopId != null) {
         final target = command.stopId == null
-            ? _ref.read(backgroundRunsProvider).runningIn(chat.id)
-            : _ref.read(backgroundRunsProvider).byId(command.stopId!);
+            ? ref.read(backgroundRunsProvider).runningIn(chat.id)
+            : ref.read(backgroundRunsProvider).byId(command.stopId!);
         if (target == null || !target.isRunning) {
           await _sayRewind(
             chat.id,
@@ -703,7 +700,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         return;
       }
       if (state.runningChatIds.contains(chat.id) &&
-          _ref.read(backgroundRunsProvider).runningIn(chat.id) == null) {
+          ref.read(backgroundRunsProvider).runningIn(chat.id) == null) {
         await _sayRewind(
           chat.id,
           'This chat is answering right now, so a run was not started. Try '
@@ -771,10 +768,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     ReviewCommand command,
     String text,
   ) async {
-    final vaults = _ref.read(vaultsProvider.notifier);
+    final vaults = ref.read(vaultsProvider.notifier);
     await vaults.whenReady;
     final paths = vaults.pathsFor(chat.workspaceId);
-    final binding = _ref
+    final binding = ref
         .read(vaultsProvider)
         .snapshot
         .bindingFor(chat.workspaceId);
@@ -786,7 +783,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       );
       return;
     }
-    await _ref.read(botsProvider.notifier).whenReady;
+    await ref.read(botsProvider.notifier).whenReady;
     final members = _membersOf(chat);
     Bot? actor;
     if (command.botName != null) {
@@ -816,7 +813,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     String context;
     final requested = command.files;
     if (requested.isEmpty) {
-      final store = await _ref.read(runCheckpointStoreProvider.future);
+      final store = await ref.read(runCheckpointStoreProvider.future);
       final runs = store.load().forContext('room:${chat.id}');
       if (runs.isEmpty) {
         await _sayReview(
@@ -906,8 +903,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     if (roomAnswerModel(
           chat: chat,
           bot: actor,
-          installed: _ref.read(chatModelsProvider),
-          selected: _ref.read(selectedChatModelProvider),
+          installed: ref.read(chatModelsProvider),
+          selected: ref.read(selectedChatModelProvider),
         ) ==
         null) {
       await _sayReview(
@@ -1061,7 +1058,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   ) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty) return;
-    await _ref.read(botsProvider.notifier).whenReady;
+    await ref.read(botsProvider.notifier).whenReady;
     final messages = state.snapshot.messagesFor(chatId);
     GroupMessage? pending;
     for (final message in messages) {
@@ -1101,8 +1098,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         userText: text,
       );
       if (speaker == null) {
-        final choice = _ref.read(skillChoicesProvider)['room:$chatId'];
-        final skill = _ref.read(skillsProvider).skillById(choice?.skillId);
+        final choice = ref.read(skillChoicesProvider)['room:$chatId'];
+        final skill = ref.read(skillsProvider).skillById(choice?.skillId);
         if (skill != null) {
           for (final member in _membersOf(chat)) {
             if (eligibleSkill(
@@ -1154,11 +1151,11 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   /// What the model's own template writes where its reply begins, so a bot
   /// answers in the reasoning state this user set for that model.
   Future<String> _assistantPrefillFor(LlmModel model) async {
-    final reasoning = await _ref
+    final reasoning = await ref
         .read(modelReasoningServiceProvider)
         .resolve(model);
     return reasoning?.prefillFor(
-          _ref.read(reasoningSettingsProvider).choiceFor(model.id),
+          ref.read(reasoningSettingsProvider).choiceFor(model.id),
         ) ??
         '';
   }
@@ -1194,8 +1191,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     final model = roomAnswerModel(
       chat: chat,
       bot: bot,
-      installed: _ref.read(chatModelsProvider),
-      selected: _ref.read(selectedChatModelProvider),
+      installed: ref.read(chatModelsProvider),
+      selected: ref.read(selectedChatModelProvider),
     );
     if (model == null) {
       _append(
@@ -1215,10 +1212,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     // The room's board, through the same registry, validation and
     // permission gates as every other tool: listing is free, creating
     // and moving ask the user first.
-    final vaults = _ref.read(vaultsProvider.notifier);
+    final vaults = ref.read(vaultsProvider.notifier);
     await vaults.whenReady;
     final paths = vaults.pathsFor(chat.workspaceId);
-    final binding = _ref
+    final binding = ref
         .read(vaultsProvider)
         .snapshot
         .bindingFor(chat.workspaceId);
@@ -1228,7 +1225,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     RunCheckpointSession? runCheckpoints;
     try {
       runCheckpoints = RunCheckpointSession(
-        store: await _ref.read(runCheckpointStoreProvider.future),
+        store: await ref.read(runCheckpointStoreProvider.future),
         contextKey: 'room:${chat.id}',
         label: bot.name,
       );
@@ -1242,11 +1239,11 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           paths: paths,
           permissions: binding.permissions,
           botId: bot.id,
-          checkpoints: await _ref.read(journalCheckpointStoreProvider.future),
+          checkpoints: await ref.read(journalCheckpointStoreProvider.future),
           runCheckpoints: runCheckpoints,
           contextKey: '${binding.vaultId}|${chat.workspaceId}',
           resolvePermissions: () {
-            final current = _ref
+            final current = ref
                 .read(vaultsProvider)
                 .snapshot
                 .bindingFor(chat.workspaceId);
@@ -1272,19 +1269,19 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       for (final id in chat.memberBotIds)
         if (id != bot.id) ?_botById(id),
     ];
-    final registry = _ref.read(toolRegistryProvider).extendedWith([
+    final registry = ref.read(toolRegistryProvider).extendedWith([
       ...buildKanbanTools(
         KanbanToolContext(
           workspaceId: chat.workspaceId,
           roomId: chat.id,
           repositoryFor: (workspaceId) =>
-              resolveTaskRepository(_ref.read, workspaceId),
+              resolveTaskRepository(ref.read, workspaceId),
           actorName: bot.name,
           onBoardChanged: () async {
-            if (_ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
-              await _ref.read(kanbanProvider.notifier).reload();
+            if (ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
+              await ref.read(kanbanProvider.notifier).reload();
             }
-            _ref.invalidate(workspaceTasksProvider(chat.workspaceId));
+            ref.invalidate(workspaceTasksProvider(chat.workspaceId));
           },
         ),
       ),
@@ -1300,10 +1297,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
               actor: bot,
               members: delegatable,
               model: model,
-              budget: _ref.read(contextBudgetProvider).budget,
+              budget: ref.read(contextBudgetProvider).budget,
               registry: registry,
               runner: DelegationRunner(
-                loop: _ref.read(agentLoopServiceProvider),
+                loop: ref.read(agentLoopServiceProvider),
               ),
               assistantPrefill: assistantPrefill,
               readSlice: (requested) {
@@ -1322,25 +1319,25 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
             ),
           ]);
     try {
-      final run = await _ref
+      final run = await ref
           .read(agentLoopServiceProvider)
           .run(
             model: model,
             goal: prompt.goal,
             registry: answerRegistry,
             maxIterations: 6,
-            budget: _ref.read(contextBudgetProvider).budget,
+            budget: ref.read(contextBudgetProvider).budget,
             onContext: (input, reserved, window) {
-              if (!mounted) return;
-              _ref.read(skillUsageProvider.notifier).state = {
-                ..._ref.read(skillUsageProvider),
+              if (!ref.mounted) return;
+              ref.read(skillUsageProvider.notifier).replace({
+                ...ref.read(skillUsageProvider),
                 'room:${chat.id}': SkillUsage.capture(
                   prompt.skills,
                   input: input,
                   reserved: reserved,
                   window: window,
                 ),
-              };
+              });
             },
             systemPrompt: model.supportsToolCalling
                 ? '${prompt.systemPrompt}\n\n${AgentLoopService.systemPrompt}\n\n${answerRegistry.describeForPrompt()}'
@@ -1396,7 +1393,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   _assemblePrompt(GroupChat chat, Bot bot, {String? turnTask}) async {
     var projectMemory = '';
     if (bot.memoryScope != BotMemoryScope.none) {
-      final memory = _ref.read(memoryProvider.notifier);
+      final memory = ref.read(memoryProvider.notifier);
       await memory.whenReady;
       projectMemory = memory.promptFacts(
         scope: bot.memoryScope,
@@ -1419,8 +1416,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
         ? room.toString()
         : '${room.toString()}\n$turnTask';
 
-    await _ref.read(skillsProvider.notifier).whenReady;
-    final skills = _ref.read(skillsProvider);
+    await ref.read(skillsProvider.notifier).whenReady;
+    final skills = ref.read(skillsProvider);
     final ranked = SkillSelector.rank(
       skills: skills.skills,
       taskText: rankText,
@@ -1433,10 +1430,10 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     final answerModel = roomAnswerModel(
       chat: chat,
       bot: bot,
-      installed: _ref.read(chatModelsProvider),
-      selected: _ref.read(selectedChatModelProvider),
+      installed: ref.read(chatModelsProvider),
+      selected: ref.read(selectedChatModelProvider),
     );
-    final usable = _ref
+    final usable = ref
         .read(contextBudgetProvider)
         .budget
         .resolvePolicy(
@@ -1445,8 +1442,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
           reservedOutputTokens: AgentLoopService.defaultMaxTokens,
         )
         .usableInputTokens;
-    await _ref.read(skillChoicesProvider.notifier).whenReady;
-    final choice = _ref.read(skillChoicesProvider)['room:${chat.id}'];
+    await ref.read(skillChoicesProvider.notifier).whenReady;
+    final choice = ref.read(skillChoicesProvider)['room:${chat.id}'];
     final explicit = choice == null ? null : skills.skillById(choice.skillId);
     final selected = SkillSelector.select(
       ranked: [
@@ -1480,7 +1477,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
       skills: [for (final item in selected) item.skill],
       tokenBudget: usable ~/ SkillSelector.maximumSkillShare,
       isCurrent: (skill) {
-        final current = _ref.read(skillsProvider).skillById(skill.id);
+        final current = ref.read(skillsProvider).skillById(skill.id);
         final currentBot = _botById(bot.id);
         return current != null &&
             current.enabled &&
@@ -1514,8 +1511,8 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     ];
 
     var memory = '';
-    final paths = _ref.read(vaultsProvider.notifier).pathsFor(chat.workspaceId);
-    final binding = _ref
+    final paths = ref.read(vaultsProvider.notifier).pathsFor(chat.workspaceId);
+    final binding = ref
         .read(vaultsProvider)
         .snapshot
         .bindingFor(chat.workspaceId);
@@ -1539,7 +1536,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
     List<ProjectTask> boardTasks = const [];
     try {
       final repository = await resolveTaskRepository(
-        _ref.read,
+        ref.read,
         chat.workspaceId,
       );
       boardTasks = await repository.load(chat.workspaceId);
@@ -1604,7 +1601,7 @@ class GroupChatsNotifier extends StateNotifier<GroupChatsState> {
   }
 
   Bot? _botById(String botId) {
-    return _ref.read(botsProvider).botById(botId);
+    return ref.read(botsProvider).botById(botId);
   }
 
   void _append(GroupMessage message) {

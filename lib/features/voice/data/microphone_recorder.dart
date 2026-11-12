@@ -18,6 +18,17 @@ const Duration maximumRecordingLength = Duration(minutes: 2);
 /// read in one go instead of streaming a large buffer around.
 const int recordingSampleRate = 16000;
 
+/// The quietest reading a level meter still shows, in dBFS.
+///
+/// `record` reports decibels relative to full scale, so a quiet room sits far
+/// below zero. Everything under this floor reads as silence, which keeps an
+/// idle meter at zero instead of a bar that twitches at nothing.
+const double microphoneSilenceDb = -55;
+
+/// A dBFS reading as a 0..1 meter value.
+double microphoneLevelFromDb(double decibels) =>
+    ((decibels - microphoneSilenceDb) / -microphoneSilenceDb).clamp(0.0, 1.0);
+
 /// The microphone, behind an interface so the recording flow can be tested
 /// without a device.
 abstract class MicrophoneRecorder {
@@ -38,6 +49,12 @@ abstract class MicrophoneRecorder {
 
   /// Removes a clip that is no longer needed.
   Future<void> deleteRecording(String path);
+
+  /// Live input levels, 0..1, while a capture is running.
+  ///
+  /// [interval] is how often a reading arrives; the stream goes quiet when the
+  /// capture ends.
+  Stream<double> amplitudes({Duration interval});
 
   /// Releases the platform recorder.
   void dispose();
@@ -94,6 +111,17 @@ class RecordMicrophoneRecorder implements MicrophoneRecorder {
     final file = File(path);
     if (file.existsSync()) await file.delete();
   }
+
+  /// The recorder's own dBFS meter as a 0..1 level, sampled at [interval].
+  ///
+  /// The stream only ticks while a capture is running, so the page never has to
+  /// poll the device.
+  @override
+  Stream<double> amplitudes({
+    Duration interval = const Duration(milliseconds: 60),
+  }) => _recorder
+      .onAmplitudeChanged(interval)
+      .map((amplitude) => microphoneLevelFromDb(amplitude.current));
 
   @override
   void dispose() => _recorder.dispose();

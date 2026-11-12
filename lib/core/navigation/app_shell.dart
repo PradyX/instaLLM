@@ -25,7 +25,7 @@ import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/i18n/strings.g.dart';
 
 /// Which top-level surface the sidebar highlights.
-enum AppSection { chats, bots, rooms, vault, board, more }
+enum AppSection { companion, chats, bots, rooms, vault, board, more }
 
 /// Lets an owning page protect unsaved work before shell actions replace it.
 class ShellNavigationGuard extends InheritedWidget {
@@ -398,6 +398,27 @@ class AppNavigationPanel extends ConsumerWidget {
                             isGenerating: isGenerating,
                             onNavigate: onNavigate,
                           ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                        child: NavigationChatTile(
+                          key: const ValueKey('navigation-companion'),
+                          selected: section == AppSection.companion,
+                          leading: const Icon(
+                            Icons.auto_awesome_outlined,
+                            size: 18,
+                          ),
+                          title: 'Companion',
+                          trailing: Text(
+                            'voice',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant.withValues(
+                                alpha: 0.8,
+                              ),
+                            ),
+                          ),
+                          onPressed: () => navigate(AppRoutes.companion),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                         child: Column(

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/services/attachment_image_service.dart';
+import 'package:installm/features/companion/application/companion_settings_controller.dart';
 import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart'
@@ -24,6 +25,10 @@ class SettingsPage extends ConsumerWidget {
         .watch(inferenceProfilesProvider)
         .activeProfile
         .name;
+    final companion = ref.watch(companionSettingsProvider);
+    final companionSummary = !companion.isReady
+        ? 'Loading…'
+        : '${companion.settings.name} · ${companion.settings.enabled ? 'on' : 'off'}';
     final contextBudget = ref.watch(contextBudgetProvider).budget;
     final contextCap = contextBudget.windowCap;
     final contextBudgetSummary = contextCap == null
@@ -144,6 +149,24 @@ class SettingsPage extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.vaults),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Companion',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              leading: const Icon(Icons.auto_awesome_outlined),
+              title: const Text('Companion'),
+              subtitle: Text(companionSummary),
+              onTap: () => context.push(AppRoutes.companionSettings),
             ),
           ),
           const SizedBox(height: 24),

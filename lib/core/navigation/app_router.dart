@@ -5,6 +5,8 @@ import 'package:installm/features/documents/presentation/network_policy_page.dar
 import 'package:installm/features/reminders/presentation/reminders_page.dart';
 import 'package:installm/features/connections/presentation/connections_page.dart';
 import 'package:installm/features/benchmark/presentation/benchmark_screen.dart';
+import 'package:installm/features/companion/presentation/companion_page.dart';
+import 'package:installm/features/companion/presentation/companion_settings_page.dart';
 import 'package:installm/features/context/presentation/context_budget_page.dart';
 import 'package:installm/features/conversations/presentation/conversations_page.dart';
 import 'package:installm/features/home/presentation/home_page.dart';
@@ -32,6 +34,8 @@ part 'app_router.g.dart';
 /// Route path constants for type-safe navigation.
 abstract class AppRoutes {
   static const home = '/';
+  static const companion = '/companion';
+  static const companionSettings = '/companion-settings';
   static const settings = '/settings';
   static const modelSelection = '/model-selection';
   static const benchmark = '/benchmark';
@@ -83,6 +87,14 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.companion,
+        builder: (context, state) => const CompanionPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.companionSettings,
+        builder: (context, state) => const CompanionSettingsPage(),
       ),
       GoRoute(
         path: AppRoutes.conversations,

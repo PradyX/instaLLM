@@ -292,6 +292,11 @@ class _FakeRecorder implements MicrophoneRecorder {
   }
 
   @override
+  Stream<double> amplitudes({
+    Duration interval = const Duration(milliseconds: 60),
+  }) => const Stream<double>.empty();
+
+  @override
   void dispose() {}
 }
 

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
 
+/// One of the three shortcuts at the top of the rail.
+///
+/// It is an icon over its label on the rail itself, with no tile around it:
+/// the accent icon and the label carry the target, the same way the Voice
+/// mode entry below does.
 class NavigationShortcutTile extends StatelessWidget {
   const NavigationShortcutTile({
     super.key,
@@ -9,39 +14,34 @@ class NavigationShortcutTile extends StatelessWidget {
     required this.onPressed,
   });
 
-  final IconData icon;
+  final Widget icon;
   final String label;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: colors.primary.withValues(alpha: 0.18)),
-    );
-    return Material(
-      color: appearanceSurfaceColor(
-        context,
-        Color.alphaBlend(
-          colors.primary.withValues(alpha: 0.06),
-          colors.surfaceContainerLow,
-        ),
-      ),
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final radius = BorderRadius.circular(12);
+    return Semantics(
+      button: true,
+      label: label,
       child: InkWell(
         onTap: onPressed,
-        customBorder: shape,
+        borderRadius: radius,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 76),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 24, color: colors.primary),
-                const SizedBox(height: 8),
+                IconTheme(
+                  data: IconThemeData(size: 26, color: colors.primary),
+                  child: icon,
+                ),
+                const SizedBox(height: 10),
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
@@ -49,10 +49,10 @@ class NavigationShortcutTile extends StatelessWidget {
                     maxLines: 1,
                     softWrap: false,
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 13,
                       letterSpacing: 0,
-                      color: colors.onSurfaceVariant,
+                      color: colors.onSurface.withValues(alpha: 0.9),
                     ),
                   ),
                 ),
@@ -63,6 +63,53 @@ class NavigationShortcutTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The Models shortcut's mark: a rounded square holding a smaller one.
+class NavigationModelsIcon extends StatelessWidget {
+  const NavigationModelsIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final color =
+        IconTheme.of(context).color ?? Theme.of(context).colorScheme.primary;
+    return CustomPaint(
+      size: const Size.square(26),
+      painter: _ModelsIconPainter(color),
+    );
+  }
+}
+
+class _ModelsIconPainter extends CustomPainter {
+  const _ModelsIconPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeJoin = StrokeJoin.round
+      ..color = color;
+    final fill = Paint()..color = color;
+    final outer = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: size.center(Offset.zero), width: 19, height: 19),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(outer, stroke);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: size.center(Offset.zero), width: 7, height: 7),
+        const Radius.circular(2),
+      ),
+      fill,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ModelsIconPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 /// One title line, with a clipped accent stripe on the selected conversation.
@@ -152,13 +199,12 @@ class NavigationChatTile extends StatelessWidget {
   }
 }
 
-/// The Voice mode doorway above the chat search.
+/// The Voice mode entry above the chat search.
 ///
-/// It is a card rather than a chat row because it leaves the conversation
-/// list entirely: a tinted surface, the orb's face and a one-line promise,
-/// so it reads as the start of the rail instead of another chat.
-class NavigationVoiceCard extends StatelessWidget {
-  const NavigationVoiceCard({
+/// It sits directly on the rail, without a tile or card: the orb and the two
+/// lines are the target, and only an open page tints the row.
+class NavigationVoiceEntry extends StatelessWidget {
+  const NavigationVoiceEntry({
     super.key,
     required this.selected,
     required this.onPressed,
@@ -171,40 +217,40 @@ class NavigationVoiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final radius = BorderRadius.circular(12);
-    final shape = RoundedRectangleBorder(
-      borderRadius: radius,
-      side: BorderSide(
-        color: colors.primary.withValues(alpha: selected ? 1.0 : 0.38),
-      ),
-    );
+    final radius = BorderRadius.circular(14);
     final muted = colors.onSurfaceVariant;
+    final scale = (MediaQuery.textScalerOf(context).scale(13) / 13).clamp(
+      1.0,
+      1.2,
+    );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Semantics(
         selected: selected,
         button: true,
         child: Material(
-          color: appearanceSurfaceColor(
-            context,
-            Color.alphaBlend(
-              colors.primary.withValues(alpha: selected ? 0.3 : 0.14),
-              colors.surfaceContainerLow,
-            ),
-          ),
-          shape: shape,
+          color: selected
+              ? appearanceSurfaceColor(
+                  context,
+                  Color.alphaBlend(
+                    colors.primary.withValues(alpha: 0.12),
+                    colors.surfaceContainerLow,
+                  ),
+                )
+              : Colors.transparent,
+          borderRadius: radius,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onPressed,
-            customBorder: shape,
+            borderRadius: radius,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 58),
+              constraints: const BoxConstraints(minHeight: 78),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+                padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
                 child: Row(
                   children: [
-                    const _VoiceOrb(),
-                    const SizedBox(width: 11),
+                    _VoiceOrb(scale: scale),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,26 +258,26 @@ class NavigationVoiceCard extends StatelessWidget {
                         children: [
                           Text(
                             'Voice mode',
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontSize: 13,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontSize: 19,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: 0,
+                              letterSpacing: -0.2,
                               color: onPressed == null
                                   ? colors.onSurface.withValues(alpha: 0.38)
                                   : colors.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 2),
+                          const SizedBox(height: 3),
                           Text(
                             'Talk, hands free',
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 10.5,
+                              fontSize: 13,
                               letterSpacing: 0,
-                              color: colors.onSurface.withValues(alpha: 0.68),
+                              color: colors.onSurface.withValues(alpha: 0.66),
                             ),
                           ),
                         ],
@@ -239,13 +285,10 @@ class NavigationVoiceCard extends StatelessWidget {
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      size:
-                          21 *
-                          (MediaQuery.textScalerOf(context).scale(13) / 13)
-                              .clamp(1.0, 1.15),
+                      size: 24 * scale,
                       color: selected
                           ? colors.primary
-                          : muted.withValues(alpha: 0.85),
+                          : muted.withValues(alpha: 0.9),
                     ),
                   ],
                 ),
@@ -258,20 +301,16 @@ class NavigationVoiceCard extends StatelessWidget {
   }
 }
 
-/// The Companion orb at card size: one accent sphere with its two-dot face.
+/// The Companion orb at rail size: one accent sphere with its two-dot face.
 class _VoiceOrb extends StatelessWidget {
-  const _VoiceOrb();
+  const _VoiceOrb({required this.scale});
+
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    // Keep the orb in proportion with the two lines beside it, but stop it
-    // growing well before it would crowd the card at the largest text.
-    final scale = (MediaQuery.textScalerOf(context).scale(13) / 13).clamp(
-      1.0,
-      1.25,
-    );
-    final size = 34 * scale;
+    final size = 56 * scale;
     return SizedBox(
       width: size,
       height: size,
@@ -307,7 +346,8 @@ class _VoiceOrbPainter extends CustomPainter {
         ).createShader(bounds),
     );
 
-    // A soft rim keeps the sphere from looking like a flat circle on the card.
+    // A soft rim and a thin outline keep the sphere from looking like a flat
+    // circle sitting on the rail.
     canvas.drawCircle(
       centre,
       radius,
@@ -321,6 +361,17 @@ class _VoiceOrbPainter extends CustomPainter {
           stops: const [0, 0.66, 1],
         ).createShader(bounds),
     );
+    canvas.drawCircle(
+      centre,
+      radius - radius * 0.03,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = radius * 0.07
+        ..color = Color.alphaBlend(
+          Colors.black.withValues(alpha: 0.35),
+          primary,
+        ),
+    );
 
     // One small highlight, top left, the way the page's orb is lit.
     canvas.drawOval(
@@ -329,26 +380,35 @@ class _VoiceOrbPainter extends CustomPainter {
         width: radius * 0.62,
         height: radius * 0.34,
       ),
-      Paint()..color = Colors.white.withValues(alpha: 0.22),
+      Paint()..color = Colors.white.withValues(alpha: 0.2),
     );
 
     // Two dots and a short bar, not a smile: at this size a curve reads as
     // an emoji sticker rather than the page's orb. The face flips to light
-    // ink on a dark accent, where a dark face would vanish.
+    // ink on a dark accent, where a dark face would vanish. Everything is
+    // proportional so the same painter works at 34 and at 56 px.
     final ink = Paint()
       ..color = primary.computeLuminance() > 0.4
           ? const Color(0xCC2A1630)
           : Colors.white.withValues(alpha: 0.85);
-    canvas.drawCircle(centre.translate(-4.2, -2.8), 1.4, ink);
-    canvas.drawCircle(centre.translate(4.2, -2.8), 1.4, ink);
+    canvas.drawCircle(
+      centre.translate(-radius * 0.25, -radius * 0.15),
+      radius * 0.085,
+      ink,
+    );
+    canvas.drawCircle(
+      centre.translate(radius * 0.25, -radius * 0.15),
+      radius * 0.085,
+      ink,
+    );
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: centre.translate(0, 3.2),
-          width: 8,
-          height: 1.9,
+          center: centre.translate(0, radius * 0.19),
+          width: radius * 0.46,
+          height: radius * 0.11,
         ),
-        const Radius.circular(1),
+        Radius.circular(radius * 0.055),
       ),
       ink,
     );

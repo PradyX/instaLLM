@@ -365,17 +365,17 @@ class AppNavigationPanel extends ConsumerWidget {
                               children: [
                                 for (final (icon, label, route) in [
                                   (
-                                    Icons.smart_toy_outlined,
+                                    const NavigationModelsIcon(),
                                     t.navigation.models,
                                     AppRoutes.modelSelection,
                                   ),
                                   (
-                                    Icons.speed_outlined,
+                                    const Icon(Icons.speed_outlined),
                                     t.navigation.benchmark,
                                     AppRoutes.benchmark,
                                   ),
                                   (
-                                    Icons.settings_outlined,
+                                    const Icon(Icons.settings_outlined),
                                     t.navigation.settings,
                                     AppRoutes.settings,
                                   ),
@@ -395,7 +395,7 @@ class AppNavigationPanel extends ConsumerWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                        child: NavigationVoiceCard(
+                        child: NavigationVoiceEntry(
                           key: const ValueKey('navigation-companion'),
                           selected: section == AppSection.companion,
                           onPressed: () => navigate(AppRoutes.companion),

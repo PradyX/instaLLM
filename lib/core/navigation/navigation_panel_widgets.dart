@@ -231,7 +231,7 @@ class NavigationVoiceCard extends StatelessWidget {
                             style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 10.5,
                               letterSpacing: 0,
-                              color: colors.onSurface.withValues(alpha: 0.62),
+                              color: colors.onSurface.withValues(alpha: 0.68),
                             ),
                           ),
                         ],
@@ -239,7 +239,10 @@ class NavigationVoiceCard extends StatelessWidget {
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      size: 21,
+                      size:
+                          21 *
+                          (MediaQuery.textScalerOf(context).scale(13) / 13)
+                              .clamp(1.0, 1.15),
                       color: selected
                           ? colors.primary
                           : muted.withValues(alpha: 0.85),

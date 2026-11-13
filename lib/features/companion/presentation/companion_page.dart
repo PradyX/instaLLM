@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -211,6 +213,7 @@ class _CompanionStage extends StatelessWidget {
                   child: _CompanionOrb(
                     listening: listening,
                     speaking: phase == CompanionPhase.speaking,
+                    phase: phase,
                     level: level,
                   ),
                 ),
@@ -225,26 +228,81 @@ class _CompanionStage extends StatelessWidget {
   }
 }
 
-/// The orb: two rings, one glowing core, and a minimal two-dot face.
+/// The orb: two breathing rings, one glowing core, and a minimal two-dot face.
 ///
 /// The face is its own layer so the companion's Petdex portrait can replace the
-/// dots later without touching the page.
-class _CompanionOrb extends StatelessWidget {
+/// dots later without touching the page. The motion is slow on purpose: the orb
+/// breathes while idle, the rings and glow lean toward the room while the
+/// microphone is live, a thin arc sweeps once it starts thinking, and each
+/// spoken reply sends one quiet ripple outward. Everything stops at a still
+/// frame when the system asks for reduced motion.
+class _CompanionOrb extends StatefulWidget {
   const _CompanionOrb({
     required this.listening,
     required this.speaking,
+    required this.phase,
     required this.level,
   });
 
   final bool listening;
   final bool speaking;
+  final CompanionPhase phase;
   final double level;
+
+  @override
+  State<_CompanionOrb> createState() => _CompanionOrbState();
+}
+
+class _CompanionOrbState extends State<_CompanionOrb>
+    with TickerProviderStateMixin {
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 4200),
+  )..repeat(reverse: true);
+
+  /// One turn of the thinking arc, and the travel of a spoken ripple.
+  late final AnimationController _sweep = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..repeat();
+
+  /// A long pause with one short blink at the end, so the face stays still
+  /// most of the time.
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 6800),
+  )..repeat();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    if (still) {
+      _breath.stop();
+      _sweep.stop();
+      _blink.stop();
+      _breath.value = 0.5;
+    } else {
+      if (!_breath.isAnimating) _breath.repeat(reverse: true);
+      if (!_sweep.isAnimating) _sweep.repeat();
+      if (!_blink.isAnimating) _blink.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    _sweep.dispose();
+    _blink.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final active = listening || speaking;
-    final glow = active ? 0.16 + level * 0.42 : 0.10;
+    final active = widget.listening || widget.speaking;
+    final thinking = widget.phase == CompanionPhase.thinking;
+    final level = widget.level.clamp(0.0, 1.0);
     final highlight = Color.alphaBlend(
       Colors.white.withValues(alpha: 0.32),
       colors.primary,
@@ -257,42 +315,91 @@ class _CompanionOrb extends StatelessWidget {
     return SizedBox(
       width: 236,
       height: 236,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          _ring(colors, 232, active ? 0.16 : 0.08),
-          _ring(colors, 196, active ? 0.24 : 0.12),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 140),
-            curve: Curves.easeOut,
-            width: 168,
-            height: 168,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                center: const Alignment(-0.38, -0.42),
-                colors: [highlight, colors.primary, edge],
-                stops: const [0, 0.52, 1],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.primary.withValues(alpha: glow),
-                  blurRadius: active ? 46 + level * 26 : 36,
-                  spreadRadius: active ? 2 + level * 8 : 0,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_breath, _sweep, _blink]),
+        builder: (context, _) {
+          final breath = Curves.easeInOut.transform(_breath.value);
+          final sweep = _sweep.value;
+          // Eyes are open for most of the cycle and shut for a moment at the end.
+          final blink = ((_blink.value - 0.94) / 0.06).clamp(0.0, 1.0);
+          final eyeScale = 1 - 0.88 * math.sin(blink * math.pi);
+          final glow = (active ? 0.16 + level * 0.42 : 0.10) + 0.05 * breath;
+
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              if (widget.speaking)
+                Opacity(
+                  opacity: (1 - sweep) * 0.20,
+                  child: Transform.scale(
+                    scale: 0.82 + 0.18 * sweep,
+                    child: _ring(colors, 236, 1),
+                  ),
                 ),
-              ],
-            ),
-            child: Center(
-              child: Transform.translate(
-                offset: const Offset(0, -4),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [_Eye(), SizedBox(width: 26), _Eye()],
+              Transform.scale(
+                scale: 1 + 0.018 * breath,
+                child: _ring(
+                  colors,
+                  232,
+                  (active ? 0.16 : 0.08) + 0.05 * breath,
                 ),
               ),
-            ),
-          ),
-        ],
+              Transform.scale(
+                scale: 1 - 0.012 * breath,
+                child: _ring(
+                  colors,
+                  196,
+                  (active ? 0.24 : 0.12) + 0.06 * breath,
+                ),
+              ),
+              Transform.scale(
+                scale: 1 + 0.025 * breath + (active ? level * 0.05 : 0),
+                child: Container(
+                  width: 168,
+                  height: 168,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      center: const Alignment(-0.38, -0.42),
+                      colors: [highlight, colors.primary, edge],
+                      stops: const [0, 0.52, 1],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.primary.withValues(alpha: glow),
+                        blurRadius: active ? 46 + level * 26 : 36,
+                        spreadRadius: active ? 2 + level * 8 : 0,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Transform.translate(
+                      offset: const Offset(0, -4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _Eye(scaleY: eyeScale),
+                          const SizedBox(width: 26),
+                          _Eye(scaleY: eyeScale),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (thinking)
+                RotationTransition(
+                  turns: _sweep,
+                  child: CustomPaint(
+                    size: const Size.square(236),
+                    painter: _SweepArcPainter(
+                      color: colors.primary.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -309,17 +416,47 @@ class _CompanionOrb extends StatelessWidget {
   }
 }
 
+/// A fading arc on the orb's outer edge, rotated by the thinking sweep.
+class _SweepArcPainter extends CustomPainter {
+  const _SweepArcPainter({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        colors: [color.withValues(alpha: 0), color, color.withValues(alpha: 0)],
+        stops: const [0.5, 0.8, 1],
+      ).createShader(rect);
+    canvas.drawArc(rect.deflate(4), 0, math.pi * 1.25, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SweepArcPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
 class _Eye extends StatelessWidget {
-  const _Eye();
+  const _Eye({this.scaleY = 1});
+
+  final double scaleY;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0xFF102000).withValues(alpha: 0.58),
+    return Transform.scale(
+      scaleY: scaleY,
+      child: Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF102000).withValues(alpha: 0.58),
+        ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/navigation/app_shell.dart';
+import 'package:installm/core/services/reduce_motion.dart';
 import 'package:installm/core/widgets/composer_model_pill.dart';
 import 'package:installm/features/companion/application/companion_controller.dart';
 import 'package:installm/features/companion/application/companion_settings_controller.dart';
@@ -254,7 +255,7 @@ class _CompanionOrb extends StatefulWidget {
 }
 
 class _CompanionOrbState extends State<_CompanionOrb>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _breath = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 4200),
@@ -274,9 +275,33 @@ class _CompanionOrbState extends State<_CompanionOrb>
   )..repeat();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ReduceMotion.ensureStarted();
+    ReduceMotion.enabled.addListener(_applyMotionPreference);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    _applyMotionPreference();
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    super.didChangeAccessibilityFeatures();
+    _applyMotionPreference();
+  }
+
+  void _applyMotionPreference() {
+    // `disableAnimations` is the Android setting; macOS and iOS report the
+    // same intent through the separate `reduceMotion` feature.
+    final features = View.of(context).platformDispatcher.accessibilityFeatures;
+    final still =
+        (MediaQuery.maybeOf(context)?.disableAnimations ?? false) ||
+        features.reduceMotion ||
+        ReduceMotion.enabled.value;
     if (still) {
       _breath.stop();
       _sweep.stop();
@@ -291,6 +316,8 @@ class _CompanionOrbState extends State<_CompanionOrb>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ReduceMotion.enabled.removeListener(_applyMotionPreference);
     _breath.dispose();
     _sweep.dispose();
     _blink.dispose();
@@ -327,15 +354,10 @@ class _CompanionOrbState extends State<_CompanionOrb>
 
           return Stack(
             alignment: Alignment.center,
+            // The spoken ripple travels past the orb's box.
+            clipBehavior: Clip.none,
             children: [
-              if (widget.speaking)
-                Opacity(
-                  opacity: (1 - sweep) * 0.20,
-                  child: Transform.scale(
-                    scale: 0.82 + 0.18 * sweep,
-                    child: _ring(colors, 236, 1),
-                  ),
-                ),
+              if (widget.speaking) ..._ripples(colors, sweep),
               Transform.scale(
                 scale: 1 + 0.018 * breath,
                 child: _ring(
@@ -402,6 +424,25 @@ class _CompanionOrbState extends State<_CompanionOrb>
         },
       ),
     );
+  }
+
+  /// Two rings travelling outward from the orb, half a cycle apart, so a
+  /// spoken reply keeps sending one ripple while it talks.
+  List<Widget> _ripples(ColorScheme colors, double t) {
+    List<Widget> ripple(double phase) {
+      final progress = (t + phase) % 1.0;
+      return [
+        Opacity(
+          opacity: 0.42 * (1 - progress),
+          child: Transform.scale(
+            scale: 1.0 + 0.34 * progress,
+            child: _ring(colors, 236, 1),
+          ),
+        ),
+      ];
+    }
+
+    return [...ripple(0), ...ripple(0.5)];
   }
 
   Widget _ring(ColorScheme colors, double size, double alpha) {

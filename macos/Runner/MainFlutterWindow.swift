@@ -30,6 +30,28 @@ class MainFlutterWindow: NSWindow {
       }
     }
 
+    let accessibilityChannel = FlutterMethodChannel(
+      name: "installm/accessibility",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    )
+    accessibilityChannel.setMethodCallHandler { call, result in
+      if call.method == "shouldReduceMotion" {
+        result(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
+    NotificationCenter.default.addObserver(
+      forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+      object: nil,
+      queue: .main
+    ) { _ in
+      accessibilityChannel.invokeMethod(
+        "reduceMotionChanged",
+        arguments: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+      )
+    }
+
     let runtimePathsChannel = FlutterMethodChannel(
       name: "installm/runtime_paths",
       binaryMessenger: flutterViewController.engine.binaryMessenger

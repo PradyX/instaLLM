@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InstaLLM · Voice mode card directions</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; }
+  body { color: var(--foreground, #eee6ed); font: 14px/1.45 var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif); }
+  button { font: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--pink, #ffacd4); outline-offset: 3px; }
+  .toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0 0 22px; }
+  .toolbar span { color: var(--muted-foreground, #a89ca6); font-size: 12px; margin-right: 4px; }
+  .toolbar button { color: var(--foreground, #eee6ed); border: 1px solid var(--border, #453b43); background: transparent; padding: 6px 11px; border-radius: 8px; }
+  .toolbar button[aria-pressed="true"] { background: var(--accent-surface, #442737); border-color: var(--accent, #ffacd4); }
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 26px; }
+  .gallery.focused { grid-template-columns: minmax(0, 440px); justify-content: center; }
+  .concept[hidden] { display: none; }
+  .concept-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .number { color: var(--muted-foreground, #a89ca6); font-size: 12px; font-weight: 650; }
+  h2 { margin: 0; flex: 1; font-size: 16px; font-weight: 650; letter-spacing: -.3px; }
+  .inspect { padding: 4px 9px; font-size: 12px; }
+  .description { margin: 0 0 14px; min-height: 44px; color: var(--muted-foreground, #a89ca6); font-size: 12px; line-height: 1.6; }
+  .pair { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .state-label { margin: 8px 0 0; text-align: center; color: var(--muted-foreground, #a89ca6); font-size: 10px; letter-spacing: .7px; text-transform: uppercase; }
+
+  /* The rail, at its real 280 px width, in both appearances. */
+  .mock {
+    --ink: #eadfe7; --sub: #ac9da7; --pink: #ffacd4; --panel: #211b20; --soft: #30272e;
+    --line: #40343d; --selected: #432a3b; --deep: #2c232a; --chip: #362831;
+    width: 280px; height: 660px; padding: 14px 12px; display: flex; flex-direction: column;
+    color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px; overflow: hidden; box-shadow: 0 12px 30px #00000020;
+  }
+  .mock.light {
+    --ink: #2a2026; --sub: #7c6a74; --pink: #b74786; --panel: #fbf5f7; --soft: #f1e6ec;
+    --line: #e6d7de; --selected: #f7dfe9; --deep: #f4ebf0; --chip: #efdde6;
+  }
+  .mock button { color: inherit; border: 0; background: transparent; }
+  .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .brand { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 0 2px; }
+  .logo { width: 30px; height: 30px; border-radius: 9px; background: var(--pink); display: grid; place-items: center; color: #2e1825; flex: none; }
+  .logo .icon { width: 19px; height: 19px; stroke-width: 1.9; }
+  .brand-copy { flex: 1; min-width: 0; }
+  .brand-copy strong { display: block; font-size: 13px; letter-spacing: -.1px; }
+  .brand-copy small { color: var(--sub); font-size: 10px; }
+  .shortcuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .shortcut { background: var(--deep); border: 1px solid var(--line); border-radius: 10px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 9.5px; color: var(--sub); }
+  .shortcut .icon { width: 17px; height: 17px; color: var(--pink); }
+
+  /* ---- shared card parts ---- */
+  .voice-card { text-align: left; width: 100%; border-radius: 12px; display: flex; align-items: center; gap: 11px; padding: 11px 12px; border: 1px solid var(--line); background: var(--deep); margin-bottom: 12px; }
+  .voice-card:hover { border-color: var(--pink); }
+  .orb { width: 34px; height: 34px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--pink) 55%, white 10%), var(--pink) 58%, color-mix(in srgb, var(--pink) 55%, black 18%));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--pink) 14%, transparent); }
+  .orb i { width: 3px; height: 3px; border-radius: 50%; background: #2a1630; display: block; }
+  .orb b { width: 9px; height: 2px; border-radius: 2px; background: #2a1630cc; display: block; margin-top: 3px; }
+  .copy { flex: 1; min-width: 0; }
+  .copy strong { display: block; font-size: 12.5px; font-weight: 600; letter-spacing: -.1px; }
+  .copy small { display: block; margin-top: 2px; font-size: 10.5px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chev { color: var(--sub); font-size: 15px; line-height: 1; }
+
+  /* 01 solid */
+  .solid { background: color-mix(in srgb, var(--pink) 13%, var(--panel)); border-color: color-mix(in srgb, var(--pink) 34%, var(--line)); padding: 13px 12px; }
+  .solid.selected { background: color-mix(in srgb, var(--pink) 22%, var(--panel)); border-color: var(--pink); }
+  .solid .copy strong { font-size: 13px; }
+
+  /* 02 quiet chip */
+  .quiet { background: var(--deep); border-color: transparent; padding: 9px 10px; }
+  .quiet .orb { width: 26px; height: 26px; box-shadow: none; }
+  .quiet .live { width: 6px; height: 6px; border-radius: 50%; background: #7ecf9a; margin-right: 5px; display: inline-block; vertical-align: middle; }
+  .quiet.selected { background: var(--selected); box-shadow: inset 3px 0 var(--pink); border-radius: 10px; }
+
+  /* 03 split */
+  .split { padding: 0; overflow: hidden; gap: 0; background: var(--deep); }
+  .split .glyph { width: 52px; align-self: stretch; display: grid; place-items: center; background: color-mix(in srgb, var(--pink) 17%, var(--panel)); color: var(--pink); border-right: 1px solid var(--line); }
+  .split .glyph .icon { width: 22px; height: 22px; }
+  .split .inner { flex: 1; min-width: 0; padding: 10px 12px; }
+  .split .meta { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: var(--sub); font-size: 10px; }
+  .split .dot { width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+  .split .mic { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; margin-right: 10px; background: color-mix(in srgb, var(--pink) 15%, transparent); color: var(--pink); }
+  .split .mic .icon { width: 15px; height: 15px; }
+  .split.selected { border-color: var(--pink); }
+
+  /* 04 banner */
+  .banner { position: relative; overflow: hidden; padding: 14px 12px; background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pink) 30%, var(--panel)), color-mix(in srgb, var(--pink) 9%, var(--panel)) 62%, var(--panel));
+    border-color: color-mix(in srgb, var(--pink) 40%, var(--line)); }
+  .banner .copy strong { font-size: 13.5px; }
+  .banner .wave { display: flex; align-items: center; gap: 2px; margin-top: 7px; height: 12px; opacity: .8; }
+  .banner .wave span { width: 2px; border-radius: 2px; background: var(--pink); display: block; }
+  .banner .go { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--panel); color: var(--pink); border: 1px solid color-mix(in srgb, var(--pink) 45%, transparent); }
+  .banner .go .icon { width: 15px; height: 15px; }
+  .banner.selected { box-shadow: inset 0 0 0 1px var(--pink); }
+
+  .search { display: flex; align-items: center; gap: 8px; height: 38px; padding: 4px 5px 4px 11px; background: var(--soft); border-radius: 10px; color: var(--sub); margin-bottom: 16px; flex: none; }
+  .search .icon { width: 15px; height: 15px; }
+  .search span { flex: 1; font-size: 11.5px; }
+  .search .plus { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--pink); background: color-mix(in srgb, white 5%, transparent); }
+  .search .plus .icon { width: 14px; height: 14px; }
+  .section-title { display: flex; justify-content: space-between; align-items: center; margin: 0 0 6px; color: var(--sub); font-size: 9.5px; font-weight: 650; letter-spacing: .9px; text-transform: uppercase; }
+  .section-title em { font-style: normal; color: var(--pink); text-transform: none; letter-spacing: 0; font-size: 9.5px; }
+  .rows { display: grid; gap: 2px; }
+  .row { display: flex; align-items: center; gap: 9px; padding: 8px 8px; border-radius: 9px; font-size: 11.5px; color: color-mix(in srgb, var(--ink) 82%, transparent); }
+  .row .icon { width: 15px; height: 15px; color: var(--sub); }
+  .row.active { background: var(--selected); color: var(--pink); }
+  .row.active .icon { color: var(--pink); }
+  .row span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .footer { margin-top: auto; border-top: 1px solid var(--line); padding-top: 7px; }
+  .foot-row { display: flex; align-items: center; gap: 9px; padding: 7px 8px; font-size: 11px; color: var(--sub); }
+  .foot-row .icon { width: 15px; height: 15px; }
+  .foot-row b { margin-left: auto; font-weight: 500; font-size: 10px; }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <span>Focus</span>
+    <button data-focus="all" aria-pressed="true">All four</button>
+    <button data-focus="1">01 Solid card</button>
+    <button data-focus="2">02 Quiet chip</button>
+    <button data-focus="3">03 Split card</button>
+    <button data-focus="4">04 Banner</button>
+  </div>
+
+  <div class="gallery" id="gallery">
+    <section class="concept" data-concept="1">
+      <div class="concept-head"><span class="number">01</span><h2>Solid accent card</h2><button class="inspect" data-focus="1">Inspect</button></div>
+      <p class="description">A filled, accent-tinted card with the orb and a one-line promise. It reads as the start of the sidebar rather than a list row, and the selected state deepens the tint and the border.</p>
+      <div class="pair">
+        <div>
+          <div class="mock">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/></svg>Settings</button>
+            </div>
+            <button class="voice-card solid"><div class="orb"><div><i></i><b></b></div></div><div class="copy"><strong>Voice mode</strong><small>Talk, hands free</small></div><span class="chev">›</span></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row active"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Context limits</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Resting</p>
+        </div>
+        <div>
+          <div class="mock light">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card solid selected"><div class="orb"><div><i></i><b></b></div></div><div class="copy"><strong>Voice mode</strong><small>Talk, hands free</small></div><span class="chev">›</span></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Light · selected</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="concept" data-concept="2">
+      <div class="concept-head"><span class="number">02</span><h2>Quiet chip</h2><button class="inspect" data-focus="2">Inspect</button></div>
+      <p class="description">The smallest option: an orb avatar, name and a live status dot, with no card chrome at rest. It keeps the rail calm and only shows the accent stripe when Voice mode is open.</p>
+      <div class="pair">
+        <div>
+          <div class="mock">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card quiet"><div class="orb"><div><i></i><b></b></div></div><div class="copy"><strong>Voice mode</strong><small><span class="live"></span>Ready to listen</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub);width:15px;height:15px"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row active"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Context limits</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Resting</p>
+        </div>
+        <div>
+          <div class="mock light">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card quiet selected"><div class="orb"><div><i></i><b></b></div></div><div class="copy"><strong>Voice mode</strong><small><span class="live"></span>Listening…</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--pink);width:15px;height:15px"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Light · open, listening</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="concept" data-concept="3">
+      <div class="concept-head"><span class="number">03</span><h2>Split card</h2><button class="inspect" data-focus="3">Inspect</button></div>
+      <p class="description">An icon block set into the card's edge, then the name with a fact line and a microphone button. It carries more information than the row and keeps the accent inside one block instead of washing the whole card.</p>
+      <div class="pair">
+        <div>
+          <div class="mock">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card split"><div class="glyph"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="inner"><strong style="font-size:12.5px;font-weight:600">Voice mode</strong><div class="meta">Voice only<span class="dot"></span>Ephemeral</div></div><div class="mic"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row active"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Context limits</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Resting</p>
+        </div>
+        <div>
+          <div class="mock light">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card split selected"><div class="glyph"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="inner"><strong style="font-size:12.5px;font-weight:600">Voice mode</strong><div class="meta">Listening<span class="dot"></span>Hands free</div></div><div class="mic"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Light · open, listening</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="concept" data-concept="4">
+      <div class="concept-head"><span class="number">04</span><h2>Banner card</h2><button class="inspect" data-focus="4">Inspect</button></div>
+      <p class="description">A gradient banner with a small waveform under the name and a round go button. It is the loudest direction: a deliberate doorway above the search, not part of the chat list at all.</p>
+      <div class="pair">
+        <div>
+          <div class="mock">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card banner"><div class="copy"><strong>Voice mode</strong><small>Speak, and it answers out loud</small><div class="wave"><span style="height:4px"></span><span style="height:8px"></span><span style="height:12px"></span><span style="height:7px"></span><span style="height:10px"></span><span style="height:5px"></span><span style="height:9px"></span><span style="height:3px"></span><span style="height:6px"></span><span style="height:11px"></span><span style="height:4px"></span></div></div><div class="go"><svg class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row active"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Context limits</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Resting</p>
+        </div>
+        <div>
+          <div class="mock light">
+            <div class="brand"><div class="logo"><svg class="icon" viewBox="0 0 24 24"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></div><div class="brand-copy"><strong>InstaLLM</strong><small>My workspace</small></div><svg class="icon" viewBox="0 0 24 24" style="color:var(--sub)"><path d="m6 9 6 6 6-6"/></svg></div>
+            <div class="shortcuts">
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 9h6v6H9z"/></svg>Models</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><path d="M4 16a8 8 0 0 1 16 0"/><path d="m12 12 4-3"/></svg>Benchmark</button>
+              <button class="shortcut"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2"/></svg>Settings</button>
+            </div>
+            <button class="voice-card banner selected"><div class="copy"><strong>Voice mode</strong><small>Listening…</small><div class="wave"><span style="height:5px"></span><span style="height:11px"></span><span style="height:6px"></span><span style="height:12px"></span><span style="height:8px"></span><span style="height:4px"></span><span style="height:10px"></span><span style="height:6px"></span><span style="height:12px"></span><span style="height:5px"></span><span style="height:8px"></span></div></div><div class="go"><svg class="icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div></button>
+            <div class="search"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span>Search chats</span><span class="plus"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></div>
+            <div class="section-title">Chats <em>See all</em></div>
+            <div class="rows"><div class="row"><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Hey</span></div></div>
+            <div class="footer"><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="3"/></svg>Vault<b>1</b></div><div class="foot-row"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="7" height="14" rx="2"/><rect x="14" y="5" width="7" height="14" rx="2"/></svg>Board<b>0 open</b></div></div>
+          </div>
+          <p class="state-label">Light · open, listening</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const gallery = document.getElementById('gallery');
+    document.querySelectorAll('[data-focus]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.focus;
+        document.querySelectorAll('.toolbar [data-focus]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.focus === id)));
+        gallery.classList.toggle('focused', id !== 'all');
+        document.querySelectorAll('.concept').forEach((card) => { card.hidden = id !== 'all' && card.dataset.concept !== id; });
+      });
+    });
+  </script>
+</body>
+</html>

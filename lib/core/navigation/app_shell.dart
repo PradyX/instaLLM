@@ -393,11 +393,6 @@ class AppNavigationPanel extends ConsumerWidget {
                           },
                         ),
                       ),
-                      leading ??
-                          ShellChatLeading(
-                            isGenerating: isGenerating,
-                            onNavigate: onNavigate,
-                          ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
                         child: NavigationChatTile(
@@ -407,18 +402,15 @@ class AppNavigationPanel extends ConsumerWidget {
                             Icons.auto_awesome_outlined,
                             size: 18,
                           ),
-                          title: 'Companion',
-                          trailing: Text(
-                            'voice',
-                            style: textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant.withValues(
-                                alpha: 0.8,
-                              ),
-                            ),
-                          ),
+                          title: 'Voice mode',
                           onPressed: () => navigate(AppRoutes.companion),
                         ),
                       ),
+                      leading ??
+                          ShellChatLeading(
+                            isGenerating: isGenerating,
+                            onNavigate: onNavigate,
+                          ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                         child: Column(

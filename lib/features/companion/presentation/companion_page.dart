@@ -97,7 +97,7 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Companion'),
+              const Text('Voice mode'),
               if (settingsReady)
                 Text(
                   companionSettings.name,
@@ -222,7 +222,7 @@ class _CompanionStage extends StatelessWidget {
                     width: orbSize,
                     height: orbSize,
                     child: Semantics(
-                      label: 'Companion',
+                      label: 'Voice mode',
                       value: companionPhaseLabel(phase),
                       child: _CompanionOrb(
                         key: const Key('companion-orb'),

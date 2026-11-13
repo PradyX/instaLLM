@@ -622,4 +622,69 @@ void main() {
     await tester.pump();
     expect(find.text('tell me everything').hitTestable(), findsWidgets);
   });
+
+  testWidgets('the orb scales down below the window floor', (tester) async {
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(720, 480);
+
+    _useSettings();
+    final recorder = _FakeRecorder();
+    final longAnswer = List.generate(
+      40,
+      (index) => 'Sentence $index of an answer that fills the session.',
+    ).join(' ');
+    await _pumpPage(
+      tester,
+      recorder,
+      transcriber: _FakeTranscriber(heard: 'tell me everything'),
+      runner: _FakeRunner(reply: longAnswer),
+      speech: _FakeSpeechEngine(),
+    );
+
+    await tester.tap(find.text('Ready'));
+    await _settle(tester);
+    for (var turn = 0; turn < 3; turn++) {
+      for (
+        var frame = 0;
+        frame < 60 && find.text('Listening…').evaluate().isEmpty;
+        frame++
+      ) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      recorder.emit(0.05);
+      await tester.pump(const Duration(milliseconds: 60));
+      for (var reading = 0; reading < 3; reading++) {
+        recorder.emit(0.8);
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.tap(find.text('Listening…'));
+      await _settle(tester);
+    }
+
+    final orb = find.byKey(const Key('companion-orb'));
+
+    // Forced below the macOS floor, the orb scales instead of clipping: at
+    // 480 and 400 points the layout has no overflow and the orb is whole.
+    for (final height in [480.0, 400.0]) {
+      tester.view.physicalSize = Size(720, height);
+      await _settle(tester);
+
+      expect(tester.takeException(), isNull, reason: 'overflow at $height');
+      final rect = tester.getRect(orb);
+      expect(rect.top, greaterThanOrEqualTo(0), reason: 'top at $height');
+      expect(rect.bottom, lessThanOrEqualTo(height), reason: 'bottom $height');
+      expect(rect.left, greaterThanOrEqualTo(0), reason: 'left at $height');
+      expect(rect.right, lessThanOrEqualTo(720), reason: 'right at $height');
+      expect(rect.width, lessThan(236), reason: 'scaled at $height');
+      expect(rect.width, greaterThan(80), reason: 'still visible at $height');
+
+      final session = find.byKey(const Key('companion-session'));
+      final history = tester.state<ScrollableState>(
+        find.descendant(of: session, matching: find.byType(Scrollable)),
+      );
+      expect(history.position.maxScrollExtent, greaterThan(0));
+    }
+  });
 }

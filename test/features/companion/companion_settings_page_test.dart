@@ -36,17 +36,18 @@ void main() {
     if (_tempDir.existsSync()) await _tempDir.delete(recursive: true);
   });
 
-  testWidgets('previews the wake phrase while the name is typed', (
+  testWidgets('shows the stored name and keeps the typed one in the field', (
     tester,
   ) async {
     await _pumpPage(tester);
 
-    expect(find.text('Hey Ada'), findsOneWidget);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller?.text, 'Ada');
 
     await tester.enterText(find.byType(TextField), 'Kai');
     await tester.pump();
 
-    expect(find.text('Hey Kai'), findsOneWidget);
+    expect(find.text('Kai'), findsOneWidget);
   });
 
   testWidgets('saves a valid name and refuses a one-letter one', (
@@ -69,7 +70,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_store.load().name, 'Kai');
-    expect(find.text('Hey Kai'), findsOneWidget);
+    final saved = tester.widget<TextField>(find.byType(TextField));
+    expect(saved.controller?.text, 'Kai');
   });
 
   testWidgets('the switch is off by default and turns the Companion on', (
@@ -89,7 +91,7 @@ void main() {
     expect(after.value, isTrue);
   });
 
-  testWidgets('shows the stored pause and sensitivity', (tester) async {
+  testWidgets('shows the stored pause and no wake control', (tester) async {
     _store.save(
       const CompanionSettings(
         wakeSensitivity: 0.8,
@@ -98,7 +100,10 @@ void main() {
     );
     await _pumpPage(tester);
 
-    expect(find.text('80%'), findsOneWidget);
     expect(find.text('2.2 s'), findsOneWidget);
+    // The wake word was descoped, so its sensitivity must not be offered.
+    expect(find.text('80%'), findsNothing);
+    expect(find.text('Wake sensitivity'), findsNothing);
+    expect(find.byType(Slider), findsOneWidget);
   });
 }

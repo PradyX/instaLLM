@@ -5,10 +5,10 @@ import 'package:installm/features/companion/domain/companion_settings.dart';
 
 /// Settings › Companion (Road Map 4, Phase 4.0).
 ///
-/// The name is what the user will say, so it is previewed as `Hey {name}` while
-/// they type. The two tuning values are stored now and apply when the wake word
-/// and pause auto-stop land; the screen says so rather than pretending they
-/// already change behaviour.
+/// The name is what the Companion is called on its page, and the pause is how
+/// long a silence ends a spoken turn. The wake word was descoped after its
+/// spike could not be proven on this machine's microphone, so nothing here
+/// promises one.
 class CompanionSettingsPage extends ConsumerWidget {
   const CompanionSettingsPage({super.key});
 
@@ -154,7 +154,6 @@ class _NameCardState extends ConsumerState<_NameCard> {
     final textTheme = theme.textTheme;
     final canSave = CompanionSettings.validateName(_controller.text) == null;
     final warning = CompanionSettings.nameWarning(_controller.text);
-    final preview = _trimmed.isEmpty ? CompanionSettings.defaultName : _trimmed;
     final changed = _trimmed != widget.settings.name;
 
     return Card(
@@ -166,7 +165,7 @@ class _NameCardState extends ConsumerState<_NameCard> {
             Text('Name', style: textTheme.titleSmall),
             const SizedBox(height: 4),
             Text(
-              'What you say to wake it. Two to '
+              'What the Companion is called. Two to '
               '${CompanionSettings.maxNameLength} characters.',
               style: textTheme.bodySmall?.copyWith(
                 color: colors.onSurfaceVariant,
@@ -197,25 +196,6 @@ class _NameCardState extends ConsumerState<_NameCard> {
               },
               onSubmitted: (_) => _save(),
             ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Wake phrase',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Hey $preview',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
             if (!widget.readOnly)
               Align(
                 alignment: Alignment.centerRight,
@@ -231,7 +211,11 @@ class _NameCardState extends ConsumerState<_NameCard> {
   }
 }
 
-/// Wake sensitivity and pause length, stored for the phases that use them.
+/// How long a silence ends a spoken turn.
+///
+/// The wake-sensitivity value stays in the stored settings for compatibility
+/// with files written while the wake word was planned, but no screen shows it
+/// and nothing reads it.
 class _TuningCard extends ConsumerWidget {
   const _TuningCard({required this.settings, required this.readOnly});
 
@@ -244,7 +228,6 @@ class _TuningCard extends ConsumerWidget {
     final colors = theme.colorScheme;
     final textTheme = theme.textTheme;
     final notifier = ref.read(companionSettingsProvider.notifier);
-    final sensitivity = settings.wakeSensitivity.clamp(0.0, 1.0);
     final seconds = (settings.silenceTimeout.inMilliseconds / 1000).clamp(
       CompanionSettings.minSilenceTimeout.inMilliseconds / 1000,
       CompanionSettings.maxSilenceTimeout.inMilliseconds / 1000,
@@ -256,41 +239,17 @@ class _TuningCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Wake and pause', style: textTheme.titleSmall),
+            Text('Pause', style: textTheme.titleSmall),
             const SizedBox(height: 4),
             Text(
-              'Stored now and applied when the wake word and pause auto-stop '
-              'are available. They change nothing yet.',
+              'How long you can pause before the Companion decides you have '
+              'finished talking.',
               style: textTheme.bodySmall?.copyWith(
                 color: colors.onSurfaceVariant,
                 height: 1.45,
               ),
             ),
             const SizedBox(height: 14),
-            _ValueRow(
-              label: 'Wake sensitivity',
-              value: '${(sensitivity * 100).round()}%',
-            ),
-            Slider(
-              value: sensitivity,
-              divisions: 10,
-              label: '${(sensitivity * 100).round()}%',
-              onChanged: readOnly
-                  ? null
-                  : (value) {
-                      notifier.setWakeSensitivity(value);
-                    },
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Fewer false wakes', style: textTheme.bodySmall),
-                Text('Catches quieter speech', style: textTheme.bodySmall),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
             _ValueRow(
               label: 'Pause ends the turn',
               value: '${seconds.toStringAsFixed(1)} s',

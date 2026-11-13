@@ -1,9 +1,10 @@
 /// The user's Companion preferences: what it is called, whether it is on, and
-/// how the wake/pause behaviour will be tuned.
+/// how long a pause ends a spoken turn.
 ///
-/// The wake word and pause auto-stop are not wired yet, so these two numbers are
-/// stored and displayed but do not act on anything; keeping them here from the
-/// start means the phase that implements them does not need a storage migration.
+/// [wakeSensitivity] is kept in the stored document so files written while the
+/// wake word was planned still read cleanly; the wake word was descoped after
+/// its spike could not be proven on this machine's microphone, so nothing shows
+/// or reads that value any more.
 class CompanionSettings {
   const CompanionSettings({
     this.name = defaultName,
@@ -18,7 +19,9 @@ class CompanionSettings {
   static const int minNameLength = 2;
   static const int maxNameLength = 20;
 
-  /// 0..1, where higher means a detection needs less confidence.
+  /// 0..1, where higher meant a detection needed less confidence.
+  ///
+  /// Legacy: stored and normalized, never applied.
   static const double defaultWakeSensitivity = 0.6;
 
   static const Duration defaultSilenceTimeout = Duration(milliseconds: 1500);
@@ -33,12 +36,15 @@ class CompanionSettings {
   /// Off until the user turns it on, so nothing listens on a fresh install.
   final bool enabled;
 
+  /// Legacy wake-word tuning. Kept for stored files; no screen reads it.
   final double wakeSensitivity;
 
   /// How long a silence ends the spoken turn.
   final Duration silenceTimeout;
 
-  /// What the user says to wake it, e.g. `Hey Ada`.
+  /// The phrase the wake word would have listened for, e.g. `Hey Ada`.
+  ///
+  /// Legacy wording kept for stored files and tests; no wake listener exists.
   String get wakePhrase => 'Hey $name';
 
   CompanionSettings copyWith({

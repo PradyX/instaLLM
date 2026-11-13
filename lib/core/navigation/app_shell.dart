@@ -395,14 +395,9 @@ class AppNavigationPanel extends ConsumerWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                        child: NavigationChatTile(
+                        child: NavigationVoiceCard(
                           key: const ValueKey('navigation-companion'),
                           selected: section == AppSection.companion,
-                          leading: const Icon(
-                            Icons.auto_awesome_outlined,
-                            size: 18,
-                          ),
-                          title: 'Voice mode',
                           onPressed: () => navigate(AppRoutes.companion),
                         ),
                       ),

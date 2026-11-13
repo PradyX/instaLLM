@@ -175,7 +175,7 @@ class NavigationVoiceCard extends StatelessWidget {
     final shape = RoundedRectangleBorder(
       borderRadius: radius,
       side: BorderSide(
-        color: colors.primary.withValues(alpha: selected ? 0.8 : 0.3),
+        color: colors.primary.withValues(alpha: selected ? 1.0 : 0.38),
       ),
     );
     final muted = colors.onSurfaceVariant;
@@ -188,7 +188,7 @@ class NavigationVoiceCard extends StatelessWidget {
           color: appearanceSurfaceColor(
             context,
             Color.alphaBlend(
-              colors.primary.withValues(alpha: selected ? 0.2 : 0.1),
+              colors.primary.withValues(alpha: selected ? 0.3 : 0.14),
               colors.surfaceContainerLow,
             ),
           ),
@@ -231,7 +231,7 @@ class NavigationVoiceCard extends StatelessWidget {
                             style: theme.textTheme.bodySmall?.copyWith(
                               fontSize: 10.5,
                               letterSpacing: 0,
-                              color: muted,
+                              color: colors.onSurface.withValues(alpha: 0.62),
                             ),
                           ),
                         ],
@@ -239,8 +239,10 @@ class NavigationVoiceCard extends StatelessWidget {
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      size: 20,
-                      color: selected ? colors.primary : muted,
+                      size: 21,
+                      color: selected
+                          ? colors.primary
+                          : muted.withValues(alpha: 0.85),
                     ),
                   ],
                 ),
@@ -260,53 +262,96 @@ class _VoiceOrb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: RadialGradient(
-          center: const Alignment(-0.35, -0.4),
-          radius: 0.95,
-          colors: [
-            Color.alphaBlend(
-              Colors.white.withValues(alpha: 0.45),
-              colors.primary,
-            ),
-            colors.primary,
-            Color.alphaBlend(
-              Colors.black.withValues(alpha: 0.22),
-              colors.primary,
-            ),
-          ],
-        ),
-      ),
-      child: const CustomPaint(painter: _VoiceFacePainter()),
+    // Keep the orb in proportion with the two lines beside it, but stop it
+    // growing well before it would crowd the card at the largest text.
+    final scale = (MediaQuery.textScalerOf(context).scale(13) / 13).clamp(
+      1.0,
+      1.25,
+    );
+    final size = 34 * scale;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: CustomPaint(painter: _VoiceOrbPainter(colors.primary)),
     );
   }
 }
 
-class _VoiceFacePainter extends CustomPainter {
-  const _VoiceFacePainter();
+class _VoiceOrbPainter extends CustomPainter {
+  const _VoiceOrbPainter(this.primary);
+
+  final Color primary;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ink = Paint()..color = const Color(0xCC2A1630);
-    final centre = Offset(size.width / 2, size.height / 2);
-    canvas.drawCircle(centre.translate(-4.5, -2.5), 1.6, ink);
-    canvas.drawCircle(centre.translate(4.5, -2.5), 1.6, ink);
-    canvas.drawArc(
-      Rect.fromCenter(center: centre.translate(0, 2), width: 11, height: 8),
-      0.25,
-      2.64,
-      false,
-      ink
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.7
-        ..strokeCap = StrokeCap.round,
+    final centre = size.center(Offset.zero);
+    final radius = size.shortestSide / 2;
+    final bounds = Rect.fromCircle(center: centre, radius: radius);
+
+    canvas.drawCircle(
+      centre,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.38, -0.44),
+          radius: 1.0,
+          colors: [
+            Color.alphaBlend(Colors.white.withValues(alpha: 0.5), primary),
+            primary,
+            Color.alphaBlend(Colors.black.withValues(alpha: 0.3), primary),
+          ],
+          stops: const [0, 0.62, 1],
+        ).createShader(bounds),
+    );
+
+    // A soft rim keeps the sphere from looking like a flat circle on the card.
+    canvas.drawCircle(
+      centre,
+      radius,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [
+            Colors.transparent,
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.18),
+          ],
+          stops: const [0, 0.66, 1],
+        ).createShader(bounds),
+    );
+
+    // One small highlight, top left, the way the page's orb is lit.
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: centre.translate(-radius * 0.3, -radius * 0.46),
+        width: radius * 0.62,
+        height: radius * 0.34,
+      ),
+      Paint()..color = Colors.white.withValues(alpha: 0.22),
+    );
+
+    // Two dots and a short bar, not a smile: at this size a curve reads as
+    // an emoji sticker rather than the page's orb. The face flips to light
+    // ink on a dark accent, where a dark face would vanish.
+    final ink = Paint()
+      ..color = primary.computeLuminance() > 0.4
+          ? const Color(0xCC2A1630)
+          : Colors.white.withValues(alpha: 0.85);
+    canvas.drawCircle(centre.translate(-4.2, -2.8), 1.4, ink);
+    canvas.drawCircle(centre.translate(4.2, -2.8), 1.4, ink);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: centre.translate(0, 3.2),
+          width: 8,
+          height: 1.9,
+        ),
+        const Radius.circular(1),
+      ),
+      ink,
     );
   }
 
   @override
-  bool shouldRepaint(_VoiceFacePainter oldDelegate) => false;
+  bool shouldRepaint(_VoiceOrbPainter oldDelegate) =>
+      oldDelegate.primary != primary;
 }

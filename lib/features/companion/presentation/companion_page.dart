@@ -200,26 +200,49 @@ class _CompanionStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // The orb holds the top of the stage and never scrolls; only the session
-    // below it moves, so a long answer cannot push the Companion away.
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        Semantics(
-          label: 'Companion',
-          value: companionPhaseLabel(phase),
-          child: _CompanionOrb(
-            key: const Key('companion-orb'),
-            listening: listening,
-            speaking: phase == CompanionPhase.speaking,
-            phase: phase,
-            level: level,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: _SessionHistory(exchanges: exchanges, phase: phase),
-        ),
-      ],
+    // below it moves, so a long answer cannot push the Companion away. The
+    // window has a floor that fits the orb, and if the stage is still forced
+    // shorter the orb scales down instead of overflowing.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const orbSize = 236.0;
+        const historyFloor = 96.0;
+        const gaps = 22.0;
+        final room = constraints.maxHeight - gaps - historyFloor;
+        final slot = room.clamp(96.0, orbSize);
+        return Column(
+          children: [
+            const SizedBox(height: 8),
+            SizedBox(
+              height: slot,
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: SizedBox(
+                    width: orbSize,
+                    height: orbSize,
+                    child: Semantics(
+                      label: 'Companion',
+                      value: companionPhaseLabel(phase),
+                      child: _CompanionOrb(
+                        key: const Key('companion-orb'),
+                        listening: listening,
+                        speaking: phase == CompanionPhase.speaking,
+                        phase: phase,
+                        level: level,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Expanded(
+              child: _SessionHistory(exchanges: exchanges, phase: phase),
+            ),
+          ],
+        );
+      },
     );
   }
 }

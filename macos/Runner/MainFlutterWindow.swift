@@ -68,7 +68,12 @@ class MainFlutterWindow: NSWindow {
     configureWindowFrame()
   }
 
+  /// Small enough for a laptop screen, tall enough that the Companion's orb,
+  /// the pill and a usable session fit without clipping.
+  private static let minimumContentSize = NSSize(width: 700, height: 560)
+
   private func configureWindowFrame() {
+    contentMinSize = Self.minimumContentSize
     let autosaveName = NSWindow.FrameAutosaveName("InstaLLMMainWindow.v1")
     let restored = setFrameUsingName(autosaveName)
 
@@ -82,8 +87,14 @@ class MainFlutterWindow: NSWindow {
     // whole window visible while retaining user-selected sizes and positions.
     if let visibleFrame = (screen ?? NSScreen.main)?.visibleFrame {
       var fittedFrame = frame
-      fittedFrame.size.width = min(fittedFrame.width, visibleFrame.width)
-      fittedFrame.size.height = min(fittedFrame.height, visibleFrame.height)
+      fittedFrame.size.width = max(
+        min(fittedFrame.width, visibleFrame.width),
+        Self.minimumContentSize.width
+      )
+      fittedFrame.size.height = max(
+        min(fittedFrame.height, visibleFrame.height),
+        Self.minimumContentSize.height
+      )
       fittedFrame.origin.x = min(max(fittedFrame.minX, visibleFrame.minX),
                                 visibleFrame.maxX - fittedFrame.width)
       fittedFrame.origin.y = min(max(fittedFrame.minY, visibleFrame.minY),

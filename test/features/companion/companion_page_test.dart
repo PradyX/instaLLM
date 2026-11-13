@@ -565,4 +565,61 @@ void main() {
       findsWidgets,
     );
   });
+
+  testWidgets('the orb stays whole in a short window', (tester) async {
+    tester.view.physicalSize = const Size(720, 560);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    _useSettings();
+    final recorder = _FakeRecorder();
+    final longAnswer = List.generate(
+      40,
+      (index) => 'Sentence $index of an answer that fills the session.',
+    ).join(' ');
+    await _pumpPage(
+      tester,
+      recorder,
+      transcriber: _FakeTranscriber(heard: 'tell me everything'),
+      runner: _FakeRunner(reply: longAnswer),
+      speech: _FakeSpeechEngine(),
+    );
+
+    await tester.tap(find.text('Ready'));
+    await _settle(tester);
+    for (var turn = 0; turn < 3; turn++) {
+      for (
+        var frame = 0;
+        frame < 60 && find.text('Listening…').evaluate().isEmpty;
+        frame++
+      ) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      recorder.emit(0.05);
+      await tester.pump(const Duration(milliseconds: 60));
+      for (var reading = 0; reading < 3; reading++) {
+        recorder.emit(0.8);
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.tap(find.text('Listening…'));
+      await _settle(tester);
+    }
+
+    final orb = find.byKey(const Key('companion-orb'));
+    final shortWindow = tester.getRect(orb);
+    expect(shortWindow.top, greaterThanOrEqualTo(0));
+    expect(shortWindow.bottom, lessThanOrEqualTo(560));
+    expect(shortWindow.width, closeTo(236, 1));
+
+    final session = find.byKey(const Key('companion-session'));
+    final history = tester.state<ScrollableState>(
+      find.descendant(of: session, matching: find.byType(Scrollable)),
+    );
+    expect(history.position.maxScrollExtent, greaterThan(0));
+    expect(tester.getSize(session).height, greaterThanOrEqualTo(96));
+    history.position.jumpTo(0);
+    await tester.pump();
+    expect(find.text('tell me everything').hitTestable(), findsWidgets);
+  });
 }

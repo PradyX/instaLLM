@@ -491,4 +491,78 @@ void main() {
     expect(find.text('Ready'), findsOneWidget);
     expect(recorder.startCalls, 0);
   });
+
+  testWidgets('a long session scrolls while the orb stays put', (tester) async {
+    _useSettings();
+    final recorder = _FakeRecorder();
+    final longAnswer = List.generate(
+      48,
+      (index) => 'Sentence $index of an answer longer than the whole page.',
+    ).join(' ');
+    final transcriber = _FakeTranscriber(heard: 'tell me everything in detail');
+    final runner = _FakeRunner(reply: longAnswer);
+    await _pumpPage(
+      tester,
+      recorder,
+      transcriber: transcriber,
+      runner: runner,
+      speech: _FakeSpeechEngine(),
+    );
+
+    final orb = find.byKey(const Key('companion-orb'));
+    final before = tester.getRect(orb);
+
+    await tester.tap(find.text('Ready'));
+    await _settle(tester);
+
+    for (var turn = 0; turn < 3; turn++) {
+      // The answer's follow-up reopens the microphone, a moment after the
+      // speech ends; wait for that rather than assuming a frame count.
+      for (
+        var frame = 0;
+        frame < 60 && find.text('Listening…').evaluate().isEmpty;
+        frame++
+      ) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      recorder.emit(0.05);
+      await tester.pump(const Duration(milliseconds: 60));
+      for (var reading = 0; reading < 3; reading++) {
+        recorder.emit(0.8);
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      await tester.tap(find.text('Listening…'));
+      await _settle(tester);
+    }
+
+    expect(runner.transcripts, hasLength(3));
+
+    // The orb keeps its place and stays inside the window, however much the
+    // session below it has grown.
+    expect(tester.getRect(orb), before);
+    expect(before.top, greaterThanOrEqualTo(0));
+    expect(
+      before.bottom,
+      lessThanOrEqualTo(
+        tester.view.physicalSize.height / tester.view.devicePixelRatio,
+      ),
+    );
+
+    // The transcript itself still scrolls, all the way back to the oldest turn.
+    final session = find.byKey(const Key('companion-session'));
+    final history = tester.state<ScrollableState>(
+      find.descendant(of: session, matching: find.byType(Scrollable)),
+    );
+    expect(history.position.maxScrollExtent, greaterThan(0));
+    await tester.drag(session, const Offset(0, 300));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(history.position.pixels, lessThan(history.position.maxScrollExtent));
+    history.position.jumpTo(0);
+    await tester.pump();
+    expect(tester.getRect(orb), before);
+    expect(
+      find.text('tell me everything in detail').hitTestable(),
+      findsWidgets,
+    );
+  });
 }

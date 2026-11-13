@@ -199,32 +199,27 @@ class _CompanionStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // A short window scrolls rather than overflows: the orb keeps its size.
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Semantics(
-                  label: 'Companion',
-                  value: companionPhaseLabel(phase),
-                  child: _CompanionOrb(
-                    listening: listening,
-                    speaking: phase == CompanionPhase.speaking,
-                    phase: phase,
-                    level: level,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                _SessionHistory(exchanges: exchanges, phase: phase),
-              ],
-            ),
+    // The orb holds the top of the stage and never scrolls; only the session
+    // below it moves, so a long answer cannot push the Companion away.
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Semantics(
+          label: 'Companion',
+          value: companionPhaseLabel(phase),
+          child: _CompanionOrb(
+            key: const Key('companion-orb'),
+            listening: listening,
+            speaking: phase == CompanionPhase.speaking,
+            phase: phase,
+            level: level,
           ),
-        );
-      },
+        ),
+        const SizedBox(height: 14),
+        Expanded(
+          child: _SessionHistory(exchanges: exchanges, phase: phase),
+        ),
+      ],
     );
   }
 }
@@ -239,6 +234,7 @@ class _CompanionStage extends StatelessWidget {
 /// frame when the system asks for reduced motion.
 class _CompanionOrb extends StatefulWidget {
   const _CompanionOrb({
+    super.key,
     required this.listening,
     required this.speaking,
     required this.phase,
@@ -508,11 +504,38 @@ class _Eye extends StatelessWidget {
 /// Newest is brightest and older ones dim, so the page reads like something
 /// being said rather than a chat to scroll. The turns exist only in memory:
 /// leaving the page drops them.
-class _SessionHistory extends StatelessWidget {
+class _SessionHistory extends StatefulWidget {
   const _SessionHistory({required this.exchanges, required this.phase});
 
   final List<CompanionExchange> exchanges;
   final CompanionPhase phase;
+
+  @override
+  State<_SessionHistory> createState() => _SessionHistoryState();
+}
+
+class _SessionHistoryState extends State<_SessionHistory> {
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void didUpdateWidget(_SessionHistory oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new turn should be readable without hunting for it, while older ones
+    // stay available by scrolling up.
+    if (widget.exchanges.length != oldWidget.exchanges.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scroll.hasClients) {
+          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -520,42 +543,51 @@ class _SessionHistory extends StatelessWidget {
     final colors = theme.colorScheme;
     final muted = colors.onSurfaceVariant;
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 400),
-      child: Column(
-        children: [
-          Text(
-            'SESSION',
-            style: theme.textTheme.labelSmall?.copyWith(
-              letterSpacing: 1.4,
-              fontWeight: FontWeight.w700,
-              color: muted.withValues(alpha: 0.7),
-            ),
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: SingleChildScrollView(
+          key: const Key('companion-session'),
+          controller: _scroll,
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            children: [
+              Text(
+                'SESSION',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  letterSpacing: 1.4,
+                  fontWeight: FontWeight.w700,
+                  color: muted.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (widget.exchanges.isEmpty)
+                Text(
+                  _emptyText(),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: muted,
+                    height: 1.6,
+                  ),
+                )
+              else
+                for (var index = 0; index < widget.exchanges.length; index++)
+                  _ExchangeLines(
+                    exchange: widget.exchanges[index],
+                    // The newest turn is the most legible; older ones recede.
+                    opacity:
+                        0.34 + 0.5 * ((index + 1) / widget.exchanges.length),
+                  ),
+            ],
           ),
-          const SizedBox(height: 10),
-          if (exchanges.isEmpty)
-            Text(
-              _emptyText(),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: muted,
-                height: 1.6,
-              ),
-            )
-          else
-            for (var index = 0; index < exchanges.length; index++)
-              _ExchangeLines(
-                exchange: exchanges[index],
-                // The newest turn is the most legible; older ones recede.
-                opacity: 0.34 + 0.5 * ((index + 1) / exchanges.length),
-              ),
-        ],
+        ),
       ),
     );
   }
 
   String _emptyText() {
-    return switch (phase) {
+    return switch (widget.phase) {
       CompanionPhase.listening =>
         'Listening. Tap the pill when you are done, and I will answer.',
       CompanionPhase.transcribing => 'Reading back what you said.',

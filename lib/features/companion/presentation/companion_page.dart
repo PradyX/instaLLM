@@ -93,19 +93,26 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
       section: AppSection.companion,
       child: Scaffold(
         appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Voice mode'),
-              if (settingsReady)
-                Text(
-                  companionSettings.name,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+          // On a phone the actions leave the title about 100 dp; scaling it
+          // down when it does not fit keeps both lines readable instead of
+          // showing "Voice m…" next to the model pill.
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Voice mode'),
+                if (settingsReady)
+                  Text(
+                    companionSettings.name,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
           leading: isWide
               ? null

@@ -72,6 +72,15 @@ working tree with `scripts/build_android_bundle.sh`:
   (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
   and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
   4 settings, 5 new chat, 6 voice mode.
+- Tablet and desktop sets, captured on 17 November 2026 in light theme with the
+  solid surface style: `screens/tablet_7inch/` is 2048x1152 (16:9) from the
+  TrebleDroid Android 13 tablet at 2048x1200, cropped by 48 px of status bar and
+  64 px of gesture bar and scaled to exact 16:9 — two shots, home then settings,
+  because that tablet has no model installed and cannot show a conversation;
+  `screens/tablet_10inch/` is 1920x1080 and `screens/desktop/` is 2560x1440,
+  both from the macOS app window resized to 960x540 pt and 1280x720 pt, with the
+  title bar and the window's rounded corners cropped off. Order for both
+  macOS sets: 1 chat, 2 home, 3 models, 4 settings.
 - `description.txt` holds the short (66/80) and full (1540/4000) listing copy
   as plain blocks, and names the banner and logo files at the top.
 - Store artwork replaced on 17 November 2026: the feature graphic is the
@@ -150,6 +159,11 @@ Play.
      320 px, maximum 3840 px, long side at most twice the short side). Order:
      1 chat, 2 drawer with Chats | Bots, 3 models, 4 settings, 5 new chat,
      6 voice mode.
+   - 7-inch tablet screenshots: `screens/tablet_7inch/1.png`,
+     `2.png` (2048x1152).
+   - 10-inch tablet screenshots: `screens/tablet_10inch/1.png` to `4.png`
+     (1920x1080).
+   - Desktop screenshots: `screens/desktop/1.png` to `4.png` (2560x1440).
    - Category: Tools. Tags: local AI, offline, privacy.
 4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
    first and install from the Play link to confirm the bundle installs and the
@@ -161,10 +175,15 @@ uploading: Play rejects a repeated version code.
 ## 5. Remaining steps
 
 Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
-1080x2160 phone screenshots, the support email (`info@prady.website`) and the
-published privacy policy URL
+1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the support
+email (`info@prady.website`) and the published privacy policy URL
 (`https://prady.website/privacy/insta-llm/`).
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the first review.
 2. Upload the `.aab` (see section 4, step 4).
+
+Known copy issue: `lib/features/model_selection/presentation/model_selection_page.dart:1280`
+hardcodes the column heading "Fit on this Mac", so Android and Linux users see
+the same wording. The 7-inch tablet set leaves the models page out for that
+reason; the macOS desktop and 10-inch sets show it correctly.

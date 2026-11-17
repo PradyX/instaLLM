@@ -69,6 +69,8 @@ working tree with `scripts/build_android_bundle.sh`:
   (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
   and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
   4 settings, 5 new chat, 6 voice mode.
+- `description.txt` holds the short (66/80) and full (1540/4000) listing copy
+  as plain blocks, and names the banner and logo files at the top.
 - Store artwork replaced on 17 November 2026: the feature graphic is the
   deep-green banner (cream wordmark, launcher tile, the app's orb rings) and the
   icon is the launcher tile full bleed, so the listing matches what installed
@@ -135,7 +137,9 @@ Play.
      assistant message that opens a pre-filled `mailto:` to the support
      address) or have the reason it does not apply documented before review.
 3. **Store listing**:
-   - Short description, full description: `listing.md`.
+   - Short description, full description: `description.txt` (plain blocks with
+     character counts, ready to paste; `listing.md` is the same copy with the
+     contact block alongside).
    - App icon: `icon_512.png` (512x512).
    - Feature graphic: `feature_graphic_1024x500.png` (1024x500).
    - Phone screenshots: `screens/1.png` to `screens/6.png`, each measured at

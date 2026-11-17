@@ -85,6 +85,14 @@ working tree with `scripts/build_android_bundle.sh`:
   (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
   and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
   4 settings, 5 new chat, 6 voice mode.
+- Framed art: `screens/framed/<device>/` holds the same captures as store
+  artwork, rendered by `scripts/generate_store_art.py` at the store's exact
+  sizes. Each panel carries the launcher tile and wordmark top-left, a
+  two-line headline, a muted subtitle and the capture as a rounded card on an
+  alternating deep-green and cream panel; the text layer renders at 2x and is
+  downsampled so type and corners stay crisp, and the capture is composited at
+  native scale so it is never resampled twice. The script only needs Pillow and
+  the fonts already on macOS.
 - Tablet and desktop sets, captured on 17 November 2026 in light theme with the
   solid surface style: `screens/tablet_7inch/` is 2048x1152 (16:9) from the
   TrebleDroid Android 13 tablet at 2048x1200, cropped by 48 px of status bar and
@@ -167,16 +175,24 @@ Play review sheet cannot be observed until an install comes from Play.
      contact block alongside).
    - App icon: `icon_512.png` (512x512).
    - Feature graphic: `feature_graphic_1024x500.png` (1024x500).
-   - Phone screenshots: `screens/1.png` to `screens/6.png`, each measured at
-     1080x2160, which is exactly 2:1, the widest aspect Play accepts (minimum
-     320 px, maximum 3840 px, long side at most twice the short side). Order:
-     1 chat, 2 drawer with Chats | Bots, 3 models, 4 settings, 5 new chat,
-     6 voice mode.
-   - 7-inch tablet screenshots: `screens/tablet_7inch/1.png`,
+   - Phone screenshots: `screens/framed/phone/1.png` to `screens/framed/phone/6.png`,
+     each measured at 1080x2160, which is exactly 2:1, the widest aspect Play
+     accepts (minimum 320 px, maximum 3840 px, long side at most twice the
+     short side). Order: 1 chat, 2 drawer with Chats | Bots, 3 models,
+     4 settings, 5 new chat, 6 voice mode.
+   - 7-inch tablet screenshots: `screens/framed/tablet_7inch/1.png`,
      `2.png` (2048x1152).
-   - 10-inch tablet screenshots: `screens/tablet_10inch/1.png` to `4.png`
-     (1920x1080).
-   - Desktop screenshots: `screens/desktop/1.png` to `4.png` (2560x1440).
+   - 10-inch tablet screenshots: `screens/framed/tablet_10inch/1.png` to
+     `4.png` (1920x1080).
+   - Desktop screenshots: `screens/framed/desktop/1.png` to `4.png`
+     (2560x1440).
+
+   The `framed/` sets are the raw captures with a brand row, a headline and a
+   subtitle on an alternating deep-green and cream panel, rendered by
+   `scripts/generate_store_art.py`. That script reads the untouched captures in
+   `screens/`, `screens/tablet_7inch/`, `screens/tablet_10inch/` and
+   `screens/desktop/`, so the plain screens are still there for reference and
+   the artwork can be regenerated after a UI change.
    - Category: Tools. Tags: local AI, offline, privacy.
 4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
    first and install from the Play link to confirm the bundle installs and the
@@ -212,8 +228,9 @@ repeated version code, and a bundle built from a tree that still said
 
 ## 5. Remaining steps
 
-Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
-1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the release
+Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the
+framed screenshot art for all four device classes
+(`screens/framed/phone|tablet_7inch|tablet_10inch|desktop/`), the release
 notes (`release_notes.txt`), the support email (`info@prady.website`), the
 published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
 1.6.0 bundle on closed testing (Alpha) and the `1.6.1+2` bundle built from this

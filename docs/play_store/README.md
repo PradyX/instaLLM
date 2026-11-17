@@ -62,7 +62,10 @@ working tree with `scripts/build_android_bundle.sh`:
 - `in_app_review` is in the bundle (`base/root/review.properties` and
   `base/root/review-ktx.properties`), so the Play rating nudge resolves to the
   Play review sheet when InstaLLM was installed from Play.
-- Store graphics on disk: `icon_512.png` is 512x512 with no alpha channel,
+- Store graphics on disk: `icon_512.png` is 512x512 RGBA and transparent
+  outside the launcher tile, with an 18 px clear margin; keeping the alpha is
+  what stops the tile's antialiased edge from turning into a black band and
+  green specks, which an RGB flatten produced, and
   `feature_graphic_1024x500.png` is 1024x500 with no alpha channel. Phone
   screenshots `screens/1.png` to `screens/6.png` are each 1080x2160 — 2:1, the
   widest aspect Play accepts — retaken on 17 November 2026 on a OnePlus 7T

@@ -1,5 +1,8 @@
 # InstaLLM privacy policy
 
+Published at <https://prady.website/privacy/insta-llm/>, which is the URL given
+to Play Console. This file is the repository copy of the same policy.
+
 Last updated: 14 November 2026
 
 InstaLLM runs AI models on your device. It has no account, no analytics, no
@@ -54,4 +57,4 @@ This policy is updated in the repository at
 
 ## Contact
 
-[SUPPORT EMAIL]
+info@prady.website

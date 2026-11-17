@@ -50,6 +50,6 @@ Tools
 
 ## Contact details
 
-Support email: [SUPPORT EMAIL]
+Support email: info@prady.website
 Website: https://github.com/PradyX/instaLLM
-Privacy policy: [PRIVACY POLICY URL]
+Privacy policy: https://prady.website/privacy/insta-llm/

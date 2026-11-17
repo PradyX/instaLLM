@@ -64,11 +64,15 @@ working tree with `scripts/build_android_bundle.sh`:
   Play review sheet when InstaLLM was installed from Play.
 - Store graphics on disk: `icon_512.png` is 512x512 with no alpha channel,
   `feature_graphic_1024x500.png` is 1024x500 with no alpha channel. Phone
-  screenshots `screens/1.png` to `screens/5.png` are each 1080x2160 — 2:1, the
+  screenshots `screens/1.png` to `screens/6.png` are each 1080x2160 — 2:1, the
   widest aspect Play accepts — retaken on 17 November 2026 on a OnePlus 7T
   (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
   and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
-  4 settings, 5 new chat.
+  4 settings, 5 new chat, 6 voice mode.
+- Store artwork replaced on 17 November 2026: the feature graphic is the
+  deep-green banner (cream wordmark, launcher tile, the app's orb rings) and the
+  icon is the launcher tile full bleed, so the listing matches what installed
+  users see.
 - `flutter analyze` clean, 44/44 tests passing.
 
 Earlier checks, 14 November 2026, before the star and Play nudges were added:
@@ -102,18 +106,16 @@ Play.
 
 ## 4. Play Console checklist
 
-0. **Developer account** — a personal account created after 13 November 2023
-   must run a closed test with at least 12 testers opted in continuously for the
-   preceding 14 days before Play Console enables Production; internal testing
-   does not satisfy it, and production access is granted only after applying
-   from the Dashboard
+0. **Developer account** — this release goes through an organisation account,
+   which is exempt from the 12-testers-for-14-days closed-test rule that applies
+   to personal accounts created after 13 November 2023
    ([Play Console Help](https://support.google.com/googleplay/android-developer/answer/14151465)).
-   Recruit more than 12 so ordinary dropouts do not reset the streak. An
-   organisation account is exempt, and so is any account created before that
-   date.
+   Production is available immediately; the internal and closed tracks are still
+   the cheapest way to test a Play-signed install first.
 1. **Create app** — name `InstaLLM`, default language English (US), app, free.
 2. **App content**:
-   - Privacy policy URL (host `privacy_policy.md` publicly; see section 5).
+   - Privacy policy URL: `https://prady.website/privacy/insta-llm/` (already
+     published; `privacy_policy.md` is the repository copy).
    - Ads: **No ads**.
    - Data safety: **no data collected or shared**; all processing is on-device.
      The only network traffic is a model download the user starts, which is not
@@ -136,33 +138,26 @@ Play.
    - Short description, full description: `listing.md`.
    - App icon: `icon_512.png` (512x512).
    - Feature graphic: `feature_graphic_1024x500.png` (1024x500).
-   - Phone screenshots: `screens/1.png` to `screens/5.png`, each measured at
+   - Phone screenshots: `screens/1.png` to `screens/6.png`, each measured at
      1080x2160, which is exactly 2:1, the widest aspect Play accepts (minimum
      320 px, maximum 3840 px, long side at most twice the short side). Order:
-     1 chat, 2 drawer with Chats | Bots, 3 models, 4 settings, 5 Bots tab.
+     1 chat, 2 drawer with Chats | Bots, 3 models, 4 settings, 5 new chat,
+     6 voice mode.
    - Category: Tools. Tags: local AI, offline, privacy.
 4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
    first and install from the Play link to confirm the bundle installs and the
-   review prompt path resolves, then run the closed test from step 0 and
-   promote to production from the Dashboard.
+   review prompt path resolves, then promote to production.
 
 If `1.6.0+1` has already been uploaded, bump to `1.6.1+2` and rebuild before
 uploading: Play rejects a repeated version code.
 
-## 5. Remaining steps (user only)
+## 5. Remaining steps
 
-1. Add the support email to `docs/play_store/privacy_policy.md`, line 57
-   (`[SUPPORT EMAIL]`), and to `docs/play_store/listing.md`, line 53
-   (`Support email: [SUPPORT EMAIL]`).
-2. Host the whole of `docs/play_store/privacy_policy.md` (lines 1-57) at a
-   public URL (GitHub Pages, the project site, or any static host); hosting
-   changes no file in this repository.
-3. Put that URL on `docs/play_store/listing.md`, line 55
-   (`Privacy policy: [PRIVACY POLICY URL]`), and give it to Play Console in
-   App content → Privacy policy.
-4. Capture screenshots from a physical phone if the emulator frames are not
-   wanted: `screens/1.png` to `screens/5.png`, any size from 320 to 3840 px
-   with the long side at most twice the short side.
-5. Add an in-app way to report offensive AI output, or record why the
+Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
+1080x2160 phone screenshots, the support email (`info@prady.website`) and the
+published privacy policy URL
+(`https://prady.website/privacy/insta-llm/`).
+
+1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the first review.
-6. Run the closed test from step 0 and apply for production access.
+2. Upload the `.aab` (see section 4, step 4).

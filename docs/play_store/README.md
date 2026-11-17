@@ -118,10 +118,10 @@ Earlier checks, 14 November 2026, before the star and Play nudges were added:
 
 Not verified: the `.aab` itself was never installed; the emulator run used a
 separate release APK from the same source and signing config, so Play-split
-APK delivery (no `bundletool` run) is untested. Nothing has been uploaded to
-Play Console, and the store artwork has not been uploaded. The Play review
-sheet cannot be observed until the bundle is on a Play track and installed from
-Play.
+APK delivery (no `bundletool` run) is untested. The bundle was uploaded and
+rolled out to a closed testing track (Alpha) on 17 November 2026; nothing has
+been promoted to production and the store artwork has not been uploaded. The
+Play review sheet cannot be observed until an install comes from Play.
 
 ## 4. Play Console checklist
 
@@ -176,6 +176,26 @@ Play.
    - Release notes ("What's new in this release"): `release_notes.txt`, a
      479/500-character block for 1.6.0 (first release) with a 179-character
      variant below it.
+5. **Promote Alpha to production** — a closed-testing release moves to
+   production without rebuilding. Open **Test and release → Testing → Closed
+   testing → Alpha → Releases**, open the 1.6.0 release and use **Promote
+   release → Production**; creating a production release and adding the same
+   bundle from the library does the same thing. The version code stays `1` —
+   only a *new* upload needs a higher one. Before it can be rolled out:
+   - **App content** complete and accepted (section 4, step 2), including the
+     AI-generated content answer below,
+   - **Store listing** complete (section 4, step 3),
+   - **Countries/regions** chosen on the production track,
+   - no other release left at a partial staged rollout, and no unpublished
+     change held on the Publishing overview page.
+
+   A first production release has no staged-rollout percentage: it goes to
+   100% of the chosen countries at once, and it is reviewed again after the
+   closed-test review (Google quotes a few days, longer for a first app). The
+   12-testers-for-14-days rule does not block promotion here: it covers
+   personal accounts created after 13 November 2023, and this developer account
+   is an organisation account. Organisation accounts need website verification
+   instead of the personal accounts' Android device verification.
 
 If `1.6.0+1` has already been uploaded, bump to `1.6.1+2` and rebuild before
 uploading: Play rejects a repeated version code.
@@ -184,12 +204,13 @@ uploading: Play rejects a repeated version code.
 
 Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
 1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the release
-notes (`release_notes.txt`), the support email (`info@prady.website`) and the
-published privacy policy URL (`https://prady.website/privacy/insta-llm/`).
+notes (`release_notes.txt`), the support email (`info@prady.website`), the
+published privacy policy URL (`https://prady.website/privacy/insta-llm/`) and
+the 1.6.0 bundle on closed testing (Alpha).
 
 1. Add an in-app way to report offensive AI output, or record why the
-   AI-generated content policy does not apply, before the first review.
-2. Upload the `.aab` (see section 4, step 4).
+   AI-generated content policy does not apply, before the production review.
+2. Promote the 1.6.0 release from Alpha to production (section 4, step 5).
 
 Known copy issue: `lib/features/model_selection/presentation/model_selection_page.dart:1280`
 hardcodes the column heading "Fit on this Mac", so Android and Linux users see

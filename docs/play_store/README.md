@@ -59,6 +59,11 @@ working tree with `scripts/build_android_bundle.sh`:
   signature-level `com.prady.installm.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`
   that AndroidX and the Play libraries add. All are normal permissions with no
   runtime prompt and none changes the data safety answers.
+- Signing material is local only. `pocketllm.jks` at the repository root and
+  `android/key.properties` are ignored by `.gitignore`, and a scan of every
+  commit, branch and tag on 17 November 2026 found neither file (nor any
+  `*.keystore`, `*.p12` or PEM key) in the history, so there is nothing to
+  purge. `android/app/build.gradle.kts` only *reads* `key.properties`.
 - `in_app_review` is in the bundle (`base/root/review.properties` and
   `base/root/review-ktx.properties`), so the Play rating nudge resolves to the
   Play review sheet when InstaLLM was installed from Play.

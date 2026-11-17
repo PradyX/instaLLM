@@ -11,7 +11,14 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+
+# Signing material is local only: the upload keystore and the passwords that
+# point at it must never be committed from anywhere in the tree.
 *.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
 
 # IntelliJ related
 *.iml

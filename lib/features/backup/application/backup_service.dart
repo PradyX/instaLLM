@@ -211,12 +211,14 @@ class BackupService {
     }
 
     if (selection.vaults) {
-      await captureSection(BackupSection.vaults, 'Vault registry', () async {
+      await captureSection(BackupSection.vaults, 'Notes registry', () async {
         final store = vaults;
-        if (store == null) throw StateError('Vault registry is unavailable.');
+        if (store == null) {
+          throw StateError('The notes registry is unavailable.');
+        }
         final snapshot = store.load();
         if (store.isReadOnly) {
-          throw StateError('Vault registry format is unsupported.');
+          throw StateError('The notes registry format is unsupported.');
         }
         sections[BackupSection.vaults] = {
           'version': VaultStore.currentVersion,
@@ -231,7 +233,7 @@ class BackupService {
         };
         if (snapshot.vaults.any((vault) => !vault.isManaged)) {
           notes.add(
-            'Vault registry includes external folder paths and workspace links; Markdown files are not included.',
+            'The notes registry includes external folder paths and workspace links; Markdown files are not included.',
           );
         }
         return snapshot.vaults.length;
@@ -538,28 +540,28 @@ class BackupService {
     if (vaultsSection is Map) {
       try {
         final store = vaults;
-        if (store == null) throw StateError('Vault registry is unavailable.');
+        if (store == null) {
+          throw StateError('The notes registry is unavailable.');
+        }
         final version = vaultsSection['version'];
         if (version is! int ||
             version < 1 ||
             version > VaultStore.currentVersion) {
-          throw StateError('Vault registry backup format is unsupported.');
+          throw StateError('The notes backup format is unsupported.');
         }
         final current = store.load();
         if (store.isReadOnly) {
-          throw StateError('The local Vault registry is read-only.');
+          throw StateError('The local notes registry is read-only.');
         }
         final payload = Map<String, dynamic>.from(vaultsSection);
         final raw = payload['vaults'];
         if (raw is! List || payload['bindings'] is! List) {
-          throw StateError('Vault registry backup is incomplete.');
+          throw StateError('The notes backup is incomplete.');
         }
         final prepared = <Map<String, dynamic>>[];
         for (final entry in raw) {
           if (entry is! Map) {
-            throw StateError(
-              'Vault registry backup contains an invalid entry.',
-            );
+            throw StateError('The notes backup contains an invalid entry.');
           }
           final record = Map<String, dynamic>.from(entry);
           if (record['isManaged'] == true) {
@@ -578,7 +580,7 @@ class BackupService {
             incoming.bindings.map((b) => b.workspaceId).toSet().length !=
                 incoming.bindings.length ||
             incoming.vaults.where((v) => v.isManaged).length > 1) {
-          throw StateError('Vault registry backup contains invalid records.');
+          throw StateError('The notes backup contains invalid records.');
         }
         var merged = current;
         final usable = <String>{};

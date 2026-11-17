@@ -102,41 +102,23 @@ class AppearanceSettingsSection extends ConsumerWidget {
               const SizedBox(height: 32),
               _AppearanceGroup(
                 title: t.appearance.accentColor,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    const gap = 12.0;
-                    final textScale =
-                        (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
-                          1.0,
-                          1.5,
-                        );
-                    final columns =
-                        ((constraints.maxWidth + gap) / (220 * textScale + gap))
-                            .floor()
-                            .clamp(1, 3);
-                    final width =
-                        (constraints.maxWidth - gap * (columns - 1)) / columns;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: [
-                        for (final accent in AccentColor.values)
-                          SizedBox(
-                            width: width,
-                            child: AccentThemeTile(
-                              key: ValueKey('accent-${accent.name}'),
-                              accent: accent,
-                              label: _accentLabel(accent),
-                              contrast: preferences.contrast,
-                              selected: preferences.accent == accent,
-                              onSelected: !editable
-                                  ? null
-                                  : () => notifier.setAccent(accent),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+                // One dot strip, wrapping to the next line on a narrow window
+                // instead of squeezing the names.
+                child: Wrap(
+                  spacing: 18,
+                  runSpacing: 12,
+                  children: [
+                    for (final accent in AccentColor.values)
+                      AccentThemeTile(
+                        key: ValueKey('accent-${accent.name}'),
+                        accent: accent,
+                        label: _accentLabel(accent),
+                        selected: preferences.accent == accent,
+                        onSelected: !editable
+                            ? null
+                            : () => notifier.setAccent(accent),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 32),

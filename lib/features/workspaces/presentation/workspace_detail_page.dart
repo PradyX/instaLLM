@@ -3,16 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/git/application/git_service.dart';
-import 'package:installm/features/vault/application/vault_notes_service.dart';
-import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 import 'package:go_router/go_router.dart';
 
 /// One project screen for everything in the workspace (Road Map 2 §13).
 ///
-/// Chat, board, documents, bots, skills and MCP stay separate screens; this
-/// is the map that links them, plus the vault sync conflicts and the
-/// repository state that need a home.
+/// Chat, documents, bots, skills and MCP stay separate screens; this is the
+/// map that links them, plus the repository state that needs a home.
 class WorkspaceDetailPage extends ConsumerStatefulWidget {
   const WorkspaceDetailPage({super.key, required this.workspaceId});
 
@@ -53,7 +50,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
     }
     final textTheme = Theme.of(context).textTheme;
     final active = workspaces.active?.id == workspace.id;
-    final binding = ref.watch(vaultsProvider).snapshot.bindingFor(workspace.id);
 
     return Scaffold(
       appBar: AppBar(
@@ -83,11 +79,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
                 route: AppRoutes.home,
               ),
               _GoChip(
-                icon: Icons.view_kanban_outlined,
-                label: 'Board',
-                route: AppRoutes.kanban,
-              ),
-              _GoChip(
                 icon: Icons.extension_outlined,
                 label: 'Skills',
                 route: AppRoutes.skills,
@@ -100,27 +91,6 @@ class _WorkspaceDetailPageState extends ConsumerState<WorkspaceDetailPage> {
             ],
           ),
           const SizedBox(height: 16),
-          _Section(
-            title: 'Knowledge',
-            child: binding == null
-                ? ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.folder_open),
-                    title: const Text('No vault linked'),
-                    subtitle: const Text(
-                      'Link a folder to keep research, plans and tasks as notes.',
-                    ),
-                    trailing: TextButton(
-                      onPressed: () => context.push(AppRoutes.vaultManage),
-                      child: const Text('Link'),
-                    ),
-                  )
-                : _VaultDocs(workspaceId: workspace.id),
-          ),
-          _Section(
-            title: 'Sync conflicts',
-            child: _Conflicts(workspaceId: workspace.id),
-          ),
           _Section(
             title: 'Repository',
             child: _Repo(
@@ -172,159 +142,6 @@ class _Section extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _VaultDocs extends ConsumerWidget {
-  const _VaultDocs({required this.workspaceId});
-
-  final String workspaceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vaults = ref.watch(vaultsProvider);
-    final paths = ref.read(vaultsProvider.notifier).pathsFor(workspaceId);
-    final binding = vaults.snapshot.bindingFor(workspaceId);
-    if (paths == null || binding == null) {
-      return const Text('Vault unavailable.');
-    }
-    return FutureBuilder<List<String>>(
-      future: const VaultNotesService().listNotes(
-        paths: paths,
-        permissions: binding.permissions,
-      ),
-      builder: (context, snapshot) {
-        final notes = snapshot.data ?? const [];
-        if (notes.isEmpty) {
-          return Text(
-            binding.projectPath.isEmpty
-                ? 'No notes yet.'
-                : 'No notes yet under ${binding.projectPath}.',
-            style: Theme.of(context).textTheme.bodySmall,
-          );
-        }
-        return Column(
-          children: [
-            for (final note in notes.take(8))
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: const Icon(Icons.description_outlined, size: 20),
-                title: Text(note, overflow: TextOverflow.ellipsis),
-                onTap: () => _showNote(context, ref, note),
-              ),
-            if (notes.length > 8)
-              Text(
-                '… and ${notes.length - 8} more',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _showNote(
-    BuildContext context,
-    WidgetRef ref,
-    String relativePath,
-  ) async {
-    final vaults = ref.read(vaultsProvider);
-    final paths = ref.read(vaultsProvider.notifier).pathsFor(workspaceId);
-    final binding = vaults.snapshot.bindingFor(workspaceId);
-    if (paths == null || binding == null) return;
-    final (note, error) = await const VaultNotesService().readNote(
-      paths: paths,
-      permissions: binding.permissions,
-      relativePath: relativePath,
-    );
-    if (!context.mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          relativePath,
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: SelectableText(error?.message ?? note?.content ?? ''),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Conflicts extends ConsumerWidget {
-  const _Conflicts({required this.workspaceId});
-
-  final String workspaceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vaults = ref.watch(vaultsProvider);
-    final paths = ref.read(vaultsProvider.notifier).pathsFor(workspaceId);
-    final binding = vaults.snapshot.bindingFor(workspaceId);
-    if (paths == null || binding == null) {
-      return Text(
-        'Link a vault to see sync conflicts here.',
-        style: Theme.of(context).textTheme.bodySmall,
-      );
-    }
-    return FutureBuilder<List<VaultSyncConflict>>(
-      future: const VaultNotesService().scanConflicts(
-        paths: paths,
-        permissions: binding.permissions,
-      ),
-      builder: (context, snapshot) {
-        final conflicts = snapshot.data ?? const [];
-        if (conflicts.isEmpty) {
-          return Text(
-            'No conflicts. InstaLLM never syncs itself — it watches the '
-            'folder your own sync keeps up to date.',
-            style: Theme.of(context).textTheme.bodySmall,
-          );
-        }
-        return Column(
-          children: [
-            for (final conflict in conflicts)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.warning_amber_outlined),
-                title: Text(conflict.originalPath),
-                subtitle: Text(conflict.conflictPath),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    await const VaultNotesService().resolveConflict(
-                      paths: paths,
-                      permissions: binding.permissions,
-                      conflict: conflict,
-                      keepConflictSide: value == 'remote',
-                    );
-                    // ignore: unused_result
-                    ref.invalidate(vaultsProvider);
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'local', child: Text('Keep local')),
-                    PopupMenuItem(
-                      value: 'remote',
-                      child: Text('Keep synced copy'),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }

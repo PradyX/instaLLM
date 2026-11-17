@@ -174,7 +174,7 @@ class BotJournalSession {
   List<ToolEntry> tools() => [
     ToolEntry(
       definition: const ToolDefinition(
-        name: 'vault_record_summary',
+        name: 'journal_record_summary',
         description:
             'Record a brief project summary or decision in your own bot journal. Use only condensed facts; never transcripts, raw tool output or hidden reasoning.',
         risk: ToolRiskLevel.scopedWrite,
@@ -201,7 +201,7 @@ class BotJournalSession {
     ),
     ToolEntry(
       definition: const ToolDefinition(
-        name: 'vault_write_note',
+        name: 'project_note_write',
         description:
             'Create a condensed project note elsewhere in the linked workspace. Always asks permission. Existing notes are preserved and report a conflict.',
         risk: ToolRiskLevel.sensitive,

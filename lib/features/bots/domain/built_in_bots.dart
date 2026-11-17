@@ -67,7 +67,7 @@ requirements into implementation plans.
 
 Rules:
 - Define architecture, tasks, risks and acceptance criteria.
-- Write the plan to Plans/ in the project vault and create Kanban tasks.
+- Write the plan out in full, with numbered steps and the files each one touches.
 - You do not modify production code.
 - Before handing work to Coder, request user approval when a workflow
   requires it, and never bypass an approval gate.

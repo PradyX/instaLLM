@@ -305,8 +305,7 @@ class _HookDialogState extends State<_HookDialog> {
               controller: _tool,
               decoration: const InputDecoration(
                 labelText: 'Tool',
-                helperText:
-                    '* for every tool, or a name like vault_write_note.',
+                helperText: '* for every tool, or a name like web_search.',
                 border: OutlineInputBorder(),
               ),
             ),

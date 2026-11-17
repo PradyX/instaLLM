@@ -7,6 +7,7 @@ import 'package:installm/features/context/application/context_budget_controller.
 import 'package:installm/features/context/domain/compaction_policy.dart';
 import 'package:installm/features/context/domain/context_budget.dart';
 import 'package:installm/features/context/domain/context_compaction.dart';
+import 'package:installm/core/widgets/llm_chip_icon.dart';
 
 import 'package:installm/features/home/presentation/home_controller.dart';
 
@@ -158,7 +159,7 @@ class ContextBudgetPage extends ConsumerWidget {
           if (outcome == null)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.memory),
+                leading: const LlmChipIcon(),
                 title: const Text('No model selected'),
                 subtitle: const Text(
                   'Select an installed model to see the window this budget '

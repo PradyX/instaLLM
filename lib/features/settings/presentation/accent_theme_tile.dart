@@ -1,33 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:installm/core/theme/appearance_preferences.dart';
-import 'package:installm/core/theme/theme.dart';
 
-/// One accent choice with decorative previews of its actual light/dark palette.
+/// One accent choice as a dot with its name underneath.
+///
+/// It deliberately has no card, border or gradient orb: the strip is the whole
+/// control, and the only weight change is the ring and label on the selected
+/// accent.
 class AccentThemeTile extends StatelessWidget {
   const AccentThemeTile({
     super.key,
     required this.accent,
     required this.label,
     required this.selected,
-    required this.contrast,
     this.onSelected,
   });
 
   final AccentColor accent;
   final String label;
   final bool selected;
-  final double contrast;
   final VoidCallback? onSelected;
+
+  static const double dotSize = 30;
+  static const double ringSize = 38;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final palette = MaterialTheme(
-      const TextTheme(),
-      accent: accent,
-      contrast: contrast,
-    );
-    final radius = BorderRadius.circular(16);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Semantics(
       label: label,
       button: true,
@@ -35,154 +34,67 @@ class AccentThemeTile extends StatelessWidget {
       enabled: onSelected != null,
       onTap: onSelected,
       child: ExcludeSemantics(
-        child: Material(
-          color: selected
-              ? colors.primary.withValues(alpha: 0.06)
-              : Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: radius,
-            side: BorderSide(
-              color: selected ? colors.primary : colors.outlineVariant,
-              width: 1.5,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onSelected,
-            borderRadius: radius,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+        child: InkWell(
+          onTap: onSelected,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox.square(
+                  dimension: ringSize,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      _PaletteOrb(
-                        scheme: palette.scheme(Brightness.light),
-                        selected: selected,
-                      ),
-                      const SizedBox(width: 12),
-                      _PaletteOrb(
-                        scheme: palette.scheme(Brightness.dark),
-                        selected: selected,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          label,
-                          style: Theme.of(context).textTheme.titleSmall,
+                      Container(
+                        width: dotSize,
+                        height: dotSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _dotColor(theme.brightness),
                         ),
                       ),
-                      if (selected) ...[
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.check_circle_rounded,
-                          color: colors.primary,
-                          size: 18,
+                      if (selected)
+                        Container(
+                          width: ringSize,
+                          height: ringSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colors.primary,
+                              width: 1.75,
+                            ),
+                          ),
                         ),
-                      ],
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    letterSpacing: 0,
+                    color: selected
+                        ? colors.onSurface
+                        : colors.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
   }
-}
 
-class _PaletteOrb extends StatelessWidget {
-  const _PaletteOrb({required this.scheme, required this.selected});
-  final ColorScheme scheme;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final light = scheme.brightness == Brightness.light;
-    return SizedBox.square(
-      dimension: 72,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: selected ? colors.primary : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      center: const Alignment(0.5, -0.4),
-                      radius: 1.1,
-                      colors: [
-                        Color.lerp(
-                          scheme.primaryContainer,
-                          scheme.primary,
-                          0.5,
-                        )!,
-                        scheme.surfaceContainerLow,
-                        scheme.surfaceContainerHighest,
-                      ],
-                      stops: const [0, 0.75, 1],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.16),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        center: const Alignment(-0.7, -0.6),
-                        radius: 1.1,
-                        colors: [
-                          Colors.white.withValues(alpha: light ? 0.85 : 0.12),
-                          Colors.white.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainer,
-                shape: BoxShape.circle,
-                border: Border.all(color: colors.outlineVariant),
-              ),
-              child: Icon(
-                light ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                size: 14,
-                color: colors.onSurface,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  /// The accent's own colour, lifted a little in dark theme so it stays legible
+  /// against the dark surface without turning into a gradient.
+  Color _dotColor(Brightness brightness) => brightness == Brightness.dark
+      ? Color.lerp(accent.seed, Colors.white, 0.18)!
+      : accent.seed;
 }

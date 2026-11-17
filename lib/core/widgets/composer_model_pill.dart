@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:installm/core/widgets/llm_chip_icon.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// The composer's model pill: which model the next answer runs on, tapped to
@@ -107,7 +108,7 @@ class _PillBody extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.memory_outlined, size: 16, color: colorScheme.primary),
+          LlmChipIcon(size: 16, color: colorScheme.primary),
           const SizedBox(width: 6),
           Flexible(
             child: Text(

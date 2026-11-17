@@ -154,7 +154,7 @@ class SyncHealth {
 
   String summary() {
     if (!vaultReachable) {
-      return 'Vault folder is not reachable on this device. $detail';
+      return 'The project notes folder is not reachable on this device. $detail';
     }
     if (conflictCount > 0) {
       return '$conflictCount sync conflict${conflictCount == 1 ? '' : 's'} need${conflictCount == 1 ? 's' : ''} a decision in the workspace.';

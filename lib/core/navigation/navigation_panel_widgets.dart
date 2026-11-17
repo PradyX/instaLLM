@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
 
@@ -29,6 +31,9 @@ class NavigationShortcutTile extends StatelessWidget {
       child: InkWell(
         onTap: onPressed,
         borderRadius: radius,
+        // No hover block: a filled rounded rectangle around an icon and its
+        // label would read as the tile the reference removes.
+        hoverColor: Colors.transparent,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 76),
           child: Padding(
@@ -65,9 +70,10 @@ class NavigationShortcutTile extends StatelessWidget {
   }
 }
 
-/// The Models shortcut's mark: a rounded square holding a smaller one.
-class NavigationModelsIcon extends StatelessWidget {
-  const NavigationModelsIcon({super.key});
+/// The Settings shortcut's mark: a cog, so it cannot be read as a brightness
+/// slider the way a sun with detached rays was.
+class NavigationSettingsIcon extends StatelessWidget {
+  const NavigationSettingsIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -75,40 +81,46 @@ class NavigationModelsIcon extends StatelessWidget {
         IconTheme.of(context).color ?? Theme.of(context).colorScheme.primary;
     return CustomPaint(
       size: const Size.square(26),
-      painter: _ModelsIconPainter(color),
+      painter: _SettingsIconPainter(color),
     );
   }
 }
 
-class _ModelsIconPainter extends CustomPainter {
-  const _ModelsIconPainter(this.color);
+class _SettingsIconPainter extends CustomPainter {
+  const _SettingsIconPainter(this.color);
 
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
+    final centre = size.center(Offset.zero);
+    final paint = Paint()
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
-      ..strokeJoin = StrokeJoin.round
-      ..color = color;
-    final fill = Paint()..color = color;
-    final outer = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: size.center(Offset.zero), width: 19, height: 19),
-      const Radius.circular(5),
-    );
-    canvas.drawRRect(outer, stroke);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: size.center(Offset.zero), width: 7, height: 7),
-        const Radius.circular(2),
-      ),
-      fill,
-    );
+      ..strokeJoin = StrokeJoin.round;
+    // Eight square teeth joined to the body: the teeth are part of the
+    // silhouette, which is what separates a cog from rays floating around a
+    // circle.
+    final teeth = Path();
+    for (var i = 0; i < 32; i++) {
+      final angle = i * math.pi / 16;
+      final radius = i % 4 < 2 ? 10.4 : 8.0;
+      final point =
+          centre + Offset(math.cos(angle) * radius, math.sin(angle) * radius);
+      if (i == 0) {
+        teeth.moveTo(point.dx, point.dy);
+      } else {
+        teeth.lineTo(point.dx, point.dy);
+      }
+    }
+    teeth.close();
+    canvas.drawPath(teeth, paint);
+    canvas.drawCircle(centre, 3.4, paint);
   }
 
   @override
-  bool shouldRepaint(_ModelsIconPainter oldDelegate) =>
+  bool shouldRepaint(_SettingsIconPainter oldDelegate) =>
       oldDelegate.color != color;
 }
 
@@ -217,14 +229,15 @@ class NavigationVoiceEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final radius = BorderRadius.circular(14);
+    final radius = BorderRadius.circular(12);
     final muted = colors.onSurfaceVariant;
-    final scale = (MediaQuery.textScalerOf(context).scale(13) / 13).clamp(
+    // Capped so large text grows the row without the orb ballooning with it.
+    final scale = (MediaQuery.textScalerOf(context).scale(12) / 12).clamp(
       1.0,
       1.2,
     );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Semantics(
         selected: selected,
         button: true,
@@ -243,14 +256,16 @@ class NavigationVoiceEntry extends StatelessWidget {
           child: InkWell(
             onTap: onPressed,
             borderRadius: radius,
+            // Faint enough that a hovered row does not turn back into a card.
+            hoverColor: colors.primary.withValues(alpha: 0.05),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 78),
+              constraints: const BoxConstraints(minHeight: 58),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
                 child: Row(
                   children: [
                     _VoiceOrb(scale: scale),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,21 +276,21 @@ class NavigationVoiceEntry extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.titleMedium?.copyWith(
-                              fontSize: 19,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: -0.2,
+                              letterSpacing: -0.1,
                               color: onPressed == null
                                   ? colors.onSurface.withValues(alpha: 0.38)
                                   : colors.onSurface,
                             ),
                           ),
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 1),
                           Text(
                             'Talk, hands free',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 13,
+                              fontSize: 11.5,
                               letterSpacing: 0,
                               color: colors.onSurface.withValues(alpha: 0.66),
                             ),
@@ -285,7 +300,7 @@ class NavigationVoiceEntry extends StatelessWidget {
                     ),
                     Icon(
                       Icons.chevron_right_rounded,
-                      size: 24 * scale,
+                      size: 18 * scale,
                       color: selected
                           ? colors.primary
                           : muted.withValues(alpha: 0.9),
@@ -310,7 +325,7 @@ class _VoiceOrb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final size = 56 * scale;
+    final size = 38 * scale;
     return SizedBox(
       width: size,
       height: size,
@@ -338,11 +353,11 @@ class _VoiceOrbPainter extends CustomPainter {
           center: const Alignment(-0.38, -0.44),
           radius: 1.0,
           colors: [
-            Color.alphaBlend(Colors.white.withValues(alpha: 0.5), primary),
+            Color.alphaBlend(Colors.white.withValues(alpha: 0.34), primary),
             primary,
-            Color.alphaBlend(Colors.black.withValues(alpha: 0.3), primary),
+            Color.alphaBlend(Colors.black.withValues(alpha: 0.36), primary),
           ],
-          stops: const [0, 0.62, 1],
+          stops: const [0, 0.58, 1],
         ).createShader(bounds),
     );
 
@@ -380,7 +395,7 @@ class _VoiceOrbPainter extends CustomPainter {
         width: radius * 0.62,
         height: radius * 0.34,
       ),
-      Paint()..color = Colors.white.withValues(alpha: 0.2),
+      Paint()..color = Colors.white.withValues(alpha: 0.16),
     );
 
     // Two dots and a short bar, not a smile: at this size a curve reads as

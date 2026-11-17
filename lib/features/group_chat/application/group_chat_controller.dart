@@ -28,7 +28,6 @@ import 'package:installm/features/group_chat/domain/group_router.dart';
 import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/kanban/domain/task.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart';
-import 'package:installm/features/kanban/application/kanban_tools.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/memory/application/memory_controller.dart';
 import 'package:installm/features/memory/application/memory_commands.dart';
@@ -317,7 +316,7 @@ class GroupChatsNotifier extends Notifier<GroupChatsState> {
         .where((candidate) => candidate.id == requested.id)
         .firstOrNull;
     if (task == null) {
-      throw StateError('This task no longer exists. Reload the board.');
+      throw StateError('This task no longer exists.');
     }
     final candidates = state.chatsFor(task.workspaceId);
     for (final id in task.relatedRoomIds) {
@@ -547,7 +546,7 @@ class GroupChatsNotifier extends Notifier<GroupChatsState> {
       if (paths == null || binding == null) {
         await _sayRewind(
           chat.id,
-          'This workspace is not linked to a vault folder, so there is nowhere '
+          'This workspace has no project folder linked, so there is nowhere '
           'to put the files back.',
         );
         return;
@@ -1270,21 +1269,6 @@ class GroupChatsNotifier extends Notifier<GroupChatsState> {
         if (id != bot.id) ?_botById(id),
     ];
     final registry = ref.read(toolRegistryProvider).extendedWith([
-      ...buildKanbanTools(
-        KanbanToolContext(
-          workspaceId: chat.workspaceId,
-          roomId: chat.id,
-          repositoryFor: (workspaceId) =>
-              resolveTaskRepository(ref.read, workspaceId),
-          actorName: bot.name,
-          onBoardChanged: () async {
-            if (ref.read(activeWorkspaceIdProvider) == chat.workspaceId) {
-              await ref.read(kanbanProvider.notifier).reload();
-            }
-            ref.invalidate(workspaceTasksProvider(chat.workspaceId));
-          },
-        ),
-      ),
       ...?journal?.tools(),
       ...prompt.skills.tools(),
       ...scripts.tools(prompt.skills.skills),
@@ -1563,10 +1547,6 @@ class GroupChatsNotifier extends Notifier<GroupChatsState> {
           'Mention another bot as @name to hand them the floor.',
       if (taskLine.isNotEmpty) taskLine,
       if (linkedLine.isNotEmpty) 'Tasks linked to this room: $linkedLine',
-      'Board tools for this workspace: kanban_list_tasks, '
-          'kanban_create_task, kanban_move_task. When the room agrees on '
-          'work, create the task; when you finish a step, move it. '
-          'Moves appear on the Board.',
       if (memory.isNotEmpty) 'Relevant project notes:\n$memory',
       'Recent room:\n${room.toString().trim()}',
       ?turnTask,

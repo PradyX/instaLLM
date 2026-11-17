@@ -104,11 +104,11 @@ class AgentHook {
   final HookTrigger trigger;
 
   /// Tool name the rule applies to: `*` for every tool, or a pattern where
-  /// `*` stands for any run of characters (`vault_*`).
+  /// `*` stands for any run of characters (`project_*`).
   final String toolPattern;
 
   /// Path pattern the rule applies to, matched against the resource a tool
-  /// declares (for example the note path `vault_write_note` is given). Empty
+  /// declares (for example the note path `project_note_write` is given). Empty
   /// means the rule matches whatever the tool acts on. `*` stays inside one
   /// path segment and `**` crosses segments, so `Projects/**` protects a whole
   /// folder and `**/*.env` does not depend on how deep the file sits.

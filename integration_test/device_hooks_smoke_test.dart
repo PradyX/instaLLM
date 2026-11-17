@@ -84,7 +84,7 @@ void main() {
 
     final refused = await registry.execute(
       const ToolCall(
-        toolName: 'vault_write_note',
+        toolName: 'project_note_write',
         arguments: {
           'relativePath': 'secrets/keys.md',
           'summary': 'Should never be written.',
@@ -106,7 +106,7 @@ void main() {
     // the answer to that question is what decides it — exactly as in the chat.
     final pending = registry.execute(
       const ToolCall(
-        toolName: 'vault_write_note',
+        toolName: 'project_note_write',
         arguments: {
           'relativePath': 'notes/ok.md',
           'summary': 'Written after the rule was removed.',

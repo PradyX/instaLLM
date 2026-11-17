@@ -173,7 +173,7 @@ class ToolDefinition {
   /// that is present wins.
   ///
   /// Declared rather than guessed so a rule can protect a path without the
-  /// app reading the tool's own code: `vault_write_note` names its
+  /// app reading the tool's own code: `project_note_write` names its
   /// `relativePath`, and a tool that acts on no named file leaves this empty
   /// and can only be matched by tool name.
   final List<String> resourceArguments;

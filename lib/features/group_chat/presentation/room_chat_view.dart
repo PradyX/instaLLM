@@ -16,10 +16,8 @@ import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/bot_editor_page.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
-import 'package:installm/features/group_chat/application/room_board_service.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
 import 'package:installm/features/group_chat/presentation/room_mention_composer.dart';
-import 'package:installm/features/group_chat/presentation/room_tasks_panel.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
@@ -64,7 +62,7 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
     return null;
   }
 
-  /// Asks the room's permission question: a bot's board move waits for the
+  /// Asks the room's permission question: a tool a bot requests waits for the
   /// user, and silence refuses — a prompt that disappears is never consent.
   Future<void> _askForToolApproval(ToolApprovalRequest request) async {
     if (!mounted) return;
@@ -102,30 +100,6 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
     await ref
         .read(groupChatsProvider.notifier)
         .sendUserMessage(widget.chatId, text);
-  }
-
-  /// Turns one room line into a board task, linked back to the message — the
-  /// chat-to-board half of the Hermes loop, one tap.
-  Future<void> _createTaskFromMessage(
-    GroupMessage message,
-    GroupChat room,
-  ) async {
-    final text = message.text.trim();
-    if (text.isEmpty) return;
-    try {
-      final task = await ref
-          .read(roomBoardServiceProvider)
-          .createFromMessage(room, message);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Created ${task.id} on the board.')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not create the task: $error')),
-      );
-    }
   }
 
   @override
@@ -181,7 +155,6 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
 
     return Column(
       children: [
-        if (!chat.isDirect) RoomTasksPanel(room: chat),
         Expanded(
           child: messages.isEmpty
               ? Center(
@@ -208,33 +181,6 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                         key: ValueKey(message.id),
                         message: roomLineAsMessage(message),
                         authorLabel: message.authorName,
-                        extraActions: [
-                          if (message.text.trim().isNotEmpty)
-                            OutlinedButton.icon(
-                              onPressed: () =>
-                                  _createTaskFromMessage(message, chat),
-                              icon: const Icon(
-                                Icons.playlist_add_check_rounded,
-                                size: 16,
-                              ),
-                              label: const Text('Create task'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                // Same pairing the bubble uses for its own
-                                // action row: a user bubble is filled with
-                                // primary, so primary text on it is invisible.
-                                foregroundColor: message.isUser
-                                    ? Theme.of(context).colorScheme.onPrimary
-                                    : Theme.of(context).colorScheme.primary,
-                                side: BorderSide(
-                                  color: message.isUser
-                                      ? Theme.of(context).colorScheme.onPrimary
-                                            .withValues(alpha: 0.45)
-                                      : Theme.of(context).colorScheme.outline,
-                                ),
-                              ),
-                            ),
-                        ],
                         below:
                             message.isPending &&
                                 bots.botById(message.authorBotId) != null
@@ -744,12 +690,6 @@ class RoomSettingsSheet extends ConsumerWidget {
                     Text(t.botManagement.unavailable, style: text.bodySmall),
                   ],
                   const SizedBox(height: 28),
-                  RoomTasksPanel(
-                    room: room,
-                    compact: true,
-                    onOpenBoard: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(height: 22),
                   Text(
                     t.common.manage,
                     style: text.labelSmall?.copyWith(

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/navigation/navigation_panel_widgets.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
+import 'package:installm/core/widgets/llm_chip_icon.dart';
 import 'package:installm/core/widgets/name_prompt_dialog.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/create_bot_dialog.dart';
@@ -14,18 +15,19 @@ import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/application/group_chat_controller.dart';
 import 'package:installm/features/group_chat/data/group_chat_store.dart';
 import 'package:installm/features/group_chat/domain/group_chat.dart';
-import 'package:installm/features/kanban/application/kanban_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/personas/application/personas_controller.dart';
 import 'package:installm/features/profile_images/domain/petdex_pet.dart';
 import 'package:installm/features/profile_images/application/profile_images_controller.dart';
 import 'package:installm/features/profile_images/presentation/profile_avatar.dart';
 import 'package:installm/features/workspaces/application/workspaces_controller.dart';
-import 'package:installm/features/vault/application/vaults_controller.dart';
 import 'package:installm/i18n/strings.g.dart';
 
 /// Which top-level surface the sidebar highlights.
-enum AppSection { companion, chats, bots, rooms, vault, board, more }
+enum AppSection { companion, chats, bots, rooms, more }
+
+/// Which list the navigation panel shows under its Chats and Bots tabs.
+enum _NavigationTab { chats, bots }
 
 /// Lets an owning page protect unsaved work before shell actions replace it.
 class ShellNavigationGuard extends InheritedWidget {
@@ -124,7 +126,9 @@ class ShellChatLeading extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      // The same 8 px side margin the tabs and chat rows use, so the search
+      // card, the tab strip and the list share one left and right edge.
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       child: Material(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
@@ -240,14 +244,42 @@ class _ChatSearchFieldState extends ConsumerState<_ChatSearchField> {
   }
 }
 
+/// Fixture data for the panel's lists, used by widget tests only.
+///
+/// Nothing in the app supplies it, so real chats, bots and rooms are never
+/// replaced by test data at runtime.
+@visibleForTesting
+class NavigationPanelFixture {
+  const NavigationPanelFixture({
+    this.chats,
+    this.bots,
+    this.rooms,
+    this.onCreateBot,
+    this.onCreateRoom,
+    this.onOpenChat,
+    this.onOpenBot,
+    this.onOpenRoom,
+  });
+
+  final List<ConversationSummary>? chats;
+  final List<Bot>? bots;
+  final List<GroupChat>? rooms;
+  final VoidCallback? onCreateBot;
+  final VoidCallback? onCreateRoom;
+  final void Function(ConversationSummary)? onOpenChat;
+  final void Function(Bot)? onOpenBot;
+  final void Function(GroupChat)? onOpenRoom;
+}
+
 /// One layout and one set of actions for the docked rail and modal drawer.
-class AppNavigationPanel extends ConsumerWidget {
+class AppNavigationPanel extends ConsumerStatefulWidget {
   const AppNavigationPanel({
     super.key,
     required this.section,
     this.leading,
     this.isGenerating = false,
     this.onNavigate,
+    this.fixture,
   });
 
   final AppSection section;
@@ -255,11 +287,35 @@ class AppNavigationPanel extends ConsumerWidget {
   final bool isGenerating;
   final VoidCallback? onNavigate;
 
+  /// Test-only data and callbacks, so widget tests can drive the real panel
+  /// with empty and long lists without touching stored chats, bots or rooms.
+  @visibleForTesting
+  final NavigationPanelFixture? fixture;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppNavigationPanel> createState() => _AppNavigationPanelState();
+}
+
+class _AppNavigationPanelState extends ConsumerState<AppNavigationPanel> {
+  _NavigationTab? _pickedTab;
+
+  @override
+  Widget build(BuildContext context) {
+    final section = widget.section;
+    final leading = widget.leading;
+    final isGenerating = widget.isGenerating;
+    final onNavigate = widget.onNavigate;
+    final fixture = widget.fixture;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final workspace = ref.watch(workspacesProvider).active;
+    // Opening a bot or room switches to the tab that owns it, until the user
+    // picks a tab themselves.
+    final tab =
+        _pickedTab ??
+        (section == AppSection.bots || section == AppSection.rooms
+            ? _NavigationTab.bots
+            : _NavigationTab.chats);
     // Drawer content is disposed after closing. Dialogs/routes use the owning
     // Scaffold's context so their work can finish after the drawer is gone.
     final actionContext = onNavigate == null
@@ -365,7 +421,7 @@ class AppNavigationPanel extends ConsumerWidget {
                               children: [
                                 for (final (icon, label, route) in [
                                   (
-                                    const NavigationModelsIcon(),
+                                    const LlmChipIcon(),
                                     t.navigation.models,
                                     AppRoutes.modelSelection,
                                   ),
@@ -375,7 +431,7 @@ class AppNavigationPanel extends ConsumerWidget {
                                     AppRoutes.benchmark,
                                   ),
                                   (
-                                    const Icon(Icons.settings_outlined),
+                                    const NavigationSettingsIcon(),
                                     t.navigation.settings,
                                     AppRoutes.settings,
                                   ),
@@ -406,91 +462,86 @@ class AppNavigationPanel extends ConsumerWidget {
                             isGenerating: isGenerating,
                             onNavigate: onNavigate,
                           ),
+                    ],
+                  ),
+                  // The tabs stay pinned: a long chat or bot list scrolls
+                  // under them instead of carrying them off screen.
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _NavigationTabsHeader(
+                      background: appearanceSurfaceColor(
+                        context,
+                        colorScheme.surfaceContainerLow,
+                      ),
+                      child: _NavigationTabs(
+                        tab: tab,
+                        onChanged: (next) => setState(() => _pickedTab = next),
+                      ),
+                    ),
+                  ),
+                  SliverList.list(
+                    children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            _sectionHeader(
-                              context,
-                              label: t.navigation.chats,
-                              onSeeMore: () =>
-                                  navigate(AppRoutes.conversations),
-                            ),
-                            _ChatRows(
-                              current: section == AppSection.chats,
-                              isGenerating: isGenerating,
-                              onOpened: onNavigate,
-                            ),
-                            _sectionHeader(
-                              context,
-                              label: t.navigation.bots,
-                              onCreate: () => _createBot(
-                                actionContext,
-                                ref,
-                                onCreated: onNavigate,
+                            if (tab == _NavigationTab.chats) ...[
+                              _ChatRows(
+                                current: section == AppSection.chats,
+                                isGenerating: isGenerating,
+                                onOpened: onNavigate,
+                                summaries: fixture?.chats,
+                                onSelect: fixture?.onOpenChat,
+                                onSeeAll: () =>
+                                    navigate(AppRoutes.conversations),
                               ),
-                              createTooltip: 'New bot',
-                            ),
-                            BotChatRows(
-                              workspaceId: workspace?.id,
-                              onOpened: onNavigate,
-                            ),
-                            _sectionHeader(
-                              context,
-                              label: t.navigation.rooms,
-                              onCreate: workspace == null
-                                  ? null
-                                  : () => _createRoom(
+                            ] else ...[
+                              _sectionHeader(
+                                context,
+                                label: t.navigation.bots,
+                                onCreate:
+                                    fixture?.onCreateBot ??
+                                    () => _createBot(
                                       actionContext,
                                       ref,
-                                      workspace.id,
                                       onCreated: onNavigate,
                                     ),
-                              createTooltip: 'New room',
-                            ),
-                            RoomChatRows(
-                              workspaceId: workspace?.id,
-                              onOpened: onNavigate,
-                            ),
+                                createTooltip: 'New bot',
+                              ),
+                              BotChatRows(
+                                workspaceId: workspace?.id,
+                                onOpened: onNavigate,
+                                bots: fixture?.bots,
+                                onOpenBot: fixture?.onOpenBot,
+                              ),
+                              _sectionHeader(
+                                context,
+                                label: t.navigation.rooms,
+                                onCreate:
+                                    fixture?.onCreateRoom ??
+                                    (workspace == null
+                                        ? null
+                                        : () => _createRoom(
+                                            actionContext,
+                                            ref,
+                                            workspace.id,
+                                            onCreated: onNavigate,
+                                          )),
+                                createTooltip: 'New room',
+                              ),
+                              RoomChatRows(
+                                workspaceId: workspace?.id,
+                                onOpened: onNavigate,
+                                rooms: fixture?.rooms,
+                                bots: fixture?.bots,
+                                onOpenRoom: fixture?.onOpenRoom,
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ],
-                  ),
-                  SliverLayoutBuilder(
-                    builder: (context, constraints) {
-                      final remaining =
-                          constraints.viewportMainAxisExtent -
-                          constraints.precedingScrollExtent;
-                      return SliverToBoxAdapter(
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: remaining > 0 ? remaining : 0,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
-                            child: Align(
-                              alignment: Alignment.bottomCenter,
-                              heightFactor: 1,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  _VaultTile(
-                                    current: section == AppSection.vault,
-                                    onOpened: onNavigate,
-                                  ),
-                                  _BoardTile(
-                                    current: section == AppSection.board,
-                                    onOpened: onNavigate,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
@@ -570,13 +621,13 @@ class _WorkspacePicker extends ConsumerWidget {
   }
 }
 
-/// How many recent chats the sidebar lists before "See more".
+/// How many recent chats the sidebar lists before "See all".
 ///
 /// Pinned chats are not counted against it: they are listed because the user
 /// pinned them, and this caps only the chats underneath. The sidebar is for the
-/// chats in play, not the whole archive — "See more" opens the Conversations
+/// chats in play, not the whole archive — "See all" opens the Conversations
 /// page, which owns the full list and its management.
-const int sidebarRecentChatCount = 5;
+const int sidebarRecentChatCount = 30;
 
 /// The chats the sidebar lists: every pinned chat, then the most recent
 /// [sidebarRecentChatCount] of the rest, keeping the order [ordered] already
@@ -598,28 +649,39 @@ List<ConversationSummary> sidebarChatSummaries(
   return shown;
 }
 
-/// Pinned chats and the five most recent 1:1 chats; the rest stay behind "See
-/// more", which opens the Conversations page.
+/// Pinned chats and the thirty most recent 1:1 chats; the rest stay behind
+/// "See all", which opens the Conversations page.
 class _ChatRows extends ConsumerWidget {
   const _ChatRows({
     required this.current,
     required this.isGenerating,
     this.onOpened,
+    this.summaries,
+    this.onSelect,
+    this.onSeeAll,
   });
 
   final bool current;
   final bool isGenerating;
   final VoidCallback? onOpened;
 
+  /// Test fixture: replaces the stored conversations when present.
+  final List<ConversationSummary>? summaries;
+  final void Function(ConversationSummary)? onSelect;
+  final VoidCallback? onSeeAll;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(conversationControllerProvider);
-    final summaries = sidebarChatSummaries(state.visibleSummaries);
-    final activeId = state.activeConversationId;
+    // A fixture keeps the test off the stored conversations entirely.
+    final state = summaries == null
+        ? ref.watch(conversationControllerProvider)
+        : null;
+    final shown = sidebarChatSummaries(summaries ?? state!.visibleSummaries);
+    final activeId = state?.activeConversationId;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (summaries.isEmpty)
+        if (shown.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Align(
@@ -633,7 +695,7 @@ class _ChatRows extends ConsumerWidget {
             ),
           )
         else
-          for (final summary in summaries)
+          for (final summary in shown)
             NavigationChatTile(
               key: ValueKey('conversation-${summary.conversation.id}'),
               selected: current && activeId == summary.conversation.id,
@@ -647,6 +709,10 @@ class _ChatRows extends ConsumerWidget {
               onPressed: isGenerating
                   ? null
                   : () async {
+                      if (onSelect != null) {
+                        onSelect!(summary);
+                        return;
+                      }
                       final leave = ShellNavigationGuard.check(context);
                       if (leave != null && !await leave || !context.mounted) {
                         return;
@@ -661,6 +727,21 @@ class _ChatRows extends ConsumerWidget {
                       onOpened?.call();
                     },
             ),
+        if (shown.isNotEmpty && onSeeAll != null)
+          Align(
+            alignment: Alignment.center,
+            child: TextButton(
+              onPressed: onSeeAll,
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary,
+                textStyle: Theme.of(context).textTheme.labelMedium,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(t.navigation.seeAll),
+            ),
+          ),
       ],
     );
   }
@@ -755,20 +836,31 @@ Future<void> _createRoom(
 /// Every bot with its 1:1 room selection; tapping lands in that same room, on
 /// the app's chat page.
 class BotChatRows extends ConsumerWidget {
-  const BotChatRows({super.key, required this.workspaceId, this.onOpened});
+  const BotChatRows({
+    super.key,
+    required this.workspaceId,
+    this.onOpened,
+    this.bots,
+    this.onOpenBot,
+  });
 
   final String? workspaceId;
 
   /// Called after a bot's chat opens; the drawer closes itself with it.
   final VoidCallback? onOpened;
 
+  /// Test fixture: replaces the stored bots when present.
+  final List<Bot>? bots;
+  final void Function(Bot)? onOpenBot;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bots = ref.watch(botsProvider);
+    final state = ref.watch(botsProvider);
     final rooms = ref.watch(groupChatsProvider);
     final colorScheme = Theme.of(context).colorScheme;
-    if (!bots.isReady) return const SizedBox();
-    if (bots.bots.isEmpty) {
+    final listed = bots ?? state.bots;
+    if (bots == null && !state.isReady) return const SizedBox();
+    if (listed.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Text(t.botCreation.empty),
@@ -777,7 +869,7 @@ class BotChatRows extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final bot in bots.bots)
+        for (final bot in listed)
           _botTile(context, ref, rooms.snapshot, bot, colorScheme),
       ],
     );
@@ -819,7 +911,9 @@ class BotChatRows extends ConsumerWidget {
         ],
       ),
       title: bot.name,
-      onPressed: workspaceId == null
+      onPressed: onOpenBot != null
+          ? () => onOpenBot!(bot)
+          : workspaceId == null
           ? null
           : () async {
               final leave = ShellNavigationGuard.check(context);
@@ -841,30 +935,45 @@ class BotChatRows extends ConsumerWidget {
 
 /// Group rooms of the active workspace with selection and needs-you badges.
 class RoomChatRows extends ConsumerWidget {
-  const RoomChatRows({super.key, required this.workspaceId, this.onOpened});
+  const RoomChatRows({
+    super.key,
+    required this.workspaceId,
+    this.onOpened,
+    this.rooms,
+    this.bots,
+    this.onOpenRoom,
+  });
 
   final String? workspaceId;
 
   /// Called after a room opens; the drawer closes itself with it.
   final VoidCallback? onOpened;
 
+  /// Test fixture: replaces the stored rooms and bots when present.
+  final List<GroupChat>? rooms;
+  final List<Bot>? bots;
+  final void Function(GroupChat)? onOpenRoom;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(groupChatsProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final activeId = ref.watch(activeRoomIdProvider);
-    final bots = ref.watch(botsProvider);
-    final rooms = [
-      for (final chat in state.snapshot.chats)
+    final botState = ref.watch(botsProvider);
+    final listed = [
+      for (final chat in rooms ?? state.snapshot.chats)
         if (chat.workspaceId == workspaceId &&
             (!chat.isDirect ||
-                (bots.isReady && bots.botById(chat.directBotId) == null)))
+                (bots != null
+                    ? !bots!.any((bot) => bot.id == chat.directBotId)
+                    : botState.isReady &&
+                          botState.botById(chat.directBotId) == null)))
           chat,
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (rooms.isEmpty)
+        if (listed.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Align(
@@ -878,7 +987,7 @@ class RoomChatRows extends ConsumerWidget {
             ),
           )
         else
-          for (final chat in rooms)
+          for (final chat in listed)
             NavigationChatTile(
               key: ValueKey('room-${chat.id}'),
               selected: activeId == chat.id,
@@ -910,15 +1019,17 @@ class RoomChatRows extends ConsumerWidget {
                       '${chat.memberBotIds.length}',
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
-              onPressed: () async {
-                final leave = ShellNavigationGuard.check(context);
-                if (leave != null && !await leave || !context.mounted) {
-                  return;
-                }
-                showRoom(ref, chat.id);
-                onOpened?.call();
-                context.go(AppRoutes.home);
-              },
+              onPressed: onOpenRoom != null
+                  ? () => onOpenRoom!(chat)
+                  : () async {
+                      final leave = ShellNavigationGuard.check(context);
+                      if (leave != null && !await leave || !context.mounted) {
+                        return;
+                      }
+                      showRoom(ref, chat.id);
+                      onOpened?.call();
+                      context.go(AppRoutes.home);
+                    },
             ),
       ],
     );
@@ -957,68 +1068,90 @@ class RoomChatRows extends ConsumerWidget {
   }
 }
 
-/// The Vault with its registered-folder count.
-class _VaultTile extends ConsumerWidget {
-  const _VaultTile({required this.current, this.onOpened});
-  final bool current;
-  final VoidCallback? onOpened;
+/// Keeps [child] (the Chats/Bots tabs) at the top while the lists scroll.
+class _NavigationTabsHeader extends SliverPersistentHeaderDelegate {
+  _NavigationTabsHeader({required this.child, required this.background});
+
+  final Widget child;
+  final Color background;
+
+  static const double _extent = 48;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final vaults = ref.watch(vaultsProvider);
-    return ListTile(
-      key: const ValueKey('navigation-vault'),
-      dense: true,
-      selected: current,
-      selectedTileColor: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      leading: const Icon(Icons.folder_open_outlined, size: 18),
-      title: Text(t.vault.title),
-      trailing: vaults.isReady
-          ? Tooltip(
-              message: t.vault.registeredCount(count: vaults.vaults.length),
-              child: Text(
-                '${vaults.vaults.length}',
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            )
-          : null,
-      onTap: () {
-        onOpened?.call();
-        context.push(AppRoutes.vaults);
-      },
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return ColoredBox(
+      color: background,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+        child: child,
+      ),
     );
   }
-}
-
-/// The board with its open-task count.
-class _BoardTile extends ConsumerWidget {
-  const _BoardTile({required this.current, this.onOpened});
-
-  final bool current;
-  final VoidCallback? onOpened;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final board = ref.watch(kanbanProvider);
-    final open = board.tasks.where((task) => !task.isDone).length;
-    return ListTile(
-      dense: true,
-      selected: current,
-      selectedTileColor: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      leading: const Icon(Icons.view_kanban_outlined, size: 18),
-      title: const Text('Board'),
-      trailing: !board.isReady
-          ? null
-          : Text('$open open', style: Theme.of(context).textTheme.labelSmall),
-      onTap: () {
-        onOpened?.call();
-        context.push(AppRoutes.kanban);
-      },
+  bool shouldRebuild(_NavigationTabsHeader oldDelegate) =>
+      oldDelegate.child != child || oldDelegate.background != background;
+}
+
+/// Chats and Bots, the two lists the panel shows, one at a time.
+class _NavigationTabs extends StatelessWidget {
+  const _NavigationTabs({required this.tab, required this.onChanged});
+
+  final _NavigationTab tab;
+  final ValueChanged<_NavigationTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Container(
+      height: 36,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (final (value, label) in [
+            (_NavigationTab.chats, t.navigation.chats),
+            (_NavigationTab.bots, t.navigation.bots),
+          ])
+            Expanded(
+              child: Material(
+                color: tab == value
+                    ? appearanceSurfaceColor(context, colors.surface)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => onChanged(value),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: tab == value
+                            ? colors.onSurface
+                            : colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

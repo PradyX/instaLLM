@@ -13,7 +13,6 @@ import 'package:installm/features/backup/domain/backup_archive.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/vault/application/vaults_controller.dart';
-import 'package:installm/i18n/strings.g.dart';
 
 /// Saves and restores everything that is not a model file.
 ///
@@ -105,12 +104,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             value: _selection.knowledge,
             onChanged: (value) =>
                 _update(_selection.copyWith(knowledge: value)),
-          ),
-          _buildSectionTile(
-            title: t.vault.backupTitle,
-            subtitle: t.vault.backupDescription,
-            value: _selection.vaults,
-            onChanged: (value) => _update(_selection.copyWith(vaults: value)),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
@@ -289,8 +282,6 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             '${report.benchmarkRunsSkipped > 0 ? ', ${report.benchmarkRunsSkipped} already recorded' : ''}',
       if (report.knowledgeDocumentsImported > 0)
         '${report.knowledgeDocumentsImported} indexed document(s) restored',
-      if (report.vaultsImported > 0)
-        t.vault.restored(count: report.vaultsImported),
       if (report.knowledgeDocumentsSkipped > 0)
         '${report.knowledgeDocumentsSkipped} indexed document(s) already here',
       if (report.isEmpty) 'Nothing was imported from this file.',

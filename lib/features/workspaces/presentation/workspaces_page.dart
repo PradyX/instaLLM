@@ -80,9 +80,8 @@ class _WorkspacesPageState extends ConsumerState<WorkspacesPage> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
               children: [
                 Text(
-                  'One workspace links a project\u2019s bots, chats, skills, '
-                  'vault folder and boards. Bots only see the workspaces '
-                  'they are assigned to.',
+                  'One workspace links a project\u2019s bots, chats, skills and '
+                  'notes. Bots only see the workspaces they are assigned to.',
                   style: textTheme.bodySmall,
                 ),
                 const SizedBox(height: 12),

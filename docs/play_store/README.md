@@ -173,6 +173,9 @@ Play.
 4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
    first and install from the Play link to confirm the bundle installs and the
    review prompt path resolves, then promote to production.
+   - Release notes ("What's new in this release"): `release_notes.txt`, a
+     479/500-character block for 1.6.0 (first release) with a 179-character
+     variant below it.
 
 If `1.6.0+1` has already been uploaded, bump to `1.6.1+2` and rebuild before
 uploading: Play rejects a repeated version code.
@@ -180,9 +183,9 @@ uploading: Play rejects a repeated version code.
 ## 5. Remaining steps
 
 Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
-1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the support
-email (`info@prady.website`) and the published privacy policy URL
-(`https://prady.website/privacy/insta-llm/`).
+1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the release
+notes (`release_notes.txt`), the support email (`info@prady.website`) and the
+published privacy policy URL (`https://prady.website/privacy/insta-llm/`).
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the first review.

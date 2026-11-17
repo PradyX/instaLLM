@@ -1,0 +1,24 @@
+InstaLLM · Google Play release notes
+====================================
+Paste the block below into Play Console → Testing → Internal testing (or
+Production) → "What's new in this release". Play's limit is 500 characters per
+language; the count in the heading is checked against it.
+
+RELEASE NOTES (versionName 1.6.0 · versionCode 1 · 479/500 characters)
+--------------------------------------------------
+First release.
+
+• Runs GGUF models fully on your phone; offline once a model is installed
+• Import from storage or download from Hugging Face
+• Memory fit ratings and benchmarks on your own device
+• Many chats, personas and memory; switch models without losing history
+• On-device dictation, replies read aloud, photos for vision models
+• Ask across your own local documents, PDFs included
+• Workspaces, bots, bot rooms and backup/restore
+• No account, no analytics, no telemetry
+
+SHORTER VARIANT (179/500 characters as one line)
+--------------------------------------------------
+First release: private on-device AI. Import or download a model and chat
+offline, with voice, vision, local documents, bots and workspaces. No account,
+no analytics, no telemetry.

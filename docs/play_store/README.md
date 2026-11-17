@@ -65,7 +65,10 @@ working tree with `scripts/build_android_bundle.sh`:
 - Store graphics on disk: `icon_512.png` is 512x512 with no alpha channel,
   `feature_graphic_1024x500.png` is 1024x500 with no alpha channel. Phone
   screenshots `screens/1.png` to `screens/5.png` are each 1080x2160 — 2:1, the
-  widest aspect Play accepts.
+  widest aspect Play accepts — retaken on 17 November 2026 on a OnePlus 7T
+  (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
+  and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
+  4 settings, 5 new chat.
 - `flutter analyze` clean, 44/44 tests passing.
 
 Earlier checks, 14 November 2026, before the star and Play nudges were added:
@@ -93,9 +96,9 @@ Earlier checks, 14 November 2026, before the star and Play nudges were added:
 Not verified: the `.aab` itself was never installed; the emulator run used a
 separate release APK from the same source and signing config, so Play-split
 APK delivery (no `bundletool` run) is untested. Nothing has been uploaded to
-Play Console, and the screenshots in `screens/` come from the emulator rather
-than a phone. The Play review sheet cannot be observed until the bundle is on a
-Play track and installed from Play.
+Play Console, and the store artwork has not been uploaded. The Play review
+sheet cannot be observed until the bundle is on a Play track and installed from
+Play.
 
 ## 4. Play Console checklist
 

@@ -23,11 +23,11 @@ still signs every release, and a lost upload key needs a Play Console reset.
 
 ## 2. Version
 
-`pubspec.yaml` holds `version: 1.6.0+1`. Play rejects a repeated version code,
+`pubspec.yaml` holds `version: 1.6.1+2`. Play rejects a repeated version code,
 so every upload bumps the number after `+`:
 
 ```yaml
-version: 1.6.1+2
+version: 1.6.2+3
 ```
 
 The name before `+` is what users see; the number after `+` is `versionCode`.
@@ -39,14 +39,22 @@ release from the next, so bump both.
 Checked on 17 November 2026 against `main` at `85e063a`, rebuilt from the
 working tree with `scripts/build_android_bundle.sh`:
 
-- Bundle: `build/app/outputs/bundle/release/app-release.aab`, 147.2 MB as
-  Gradle reports it (145 MB on disk), SHA-256
-  `202f76b6944a9e34cc1d9c20149919dbb6d85dd795db250977f276539a5d8c17`.
+- Bundles built from this tree, both signed with the same upload key:
+  - `1.6.0+1` (versionCode 1), SHA-256
+    `202f76b6944a9e34cc1d9c20149919dbb6d85dd795db250977f276539a5d8c17` —
+    the build rolled out to closed testing (Alpha).
+  - `1.6.1+2` (versionCode 2), built on 17 November 2026, 147.2 MB as Gradle
+    reports it (140 MB on disk), SHA-256
+    `08bc953132702efc97446749c6c4726265e061d6facb639d3c13618371b1afce`,
+    `flutter build appbundle` exited 0. This is the only bundle on disk now:
+    the build script deletes the previous file first, so the 1.6.0 copy exists
+    only as the Play upload.
 - Signature: `jarsigner -verify` prints `jar verified.`; the signer certificate
   is `CN=pocketllm, OU=pocket llm, O=pocket llm, L=LKO, ST=UP, C=IN`
   (SHA384withRSA, valid until 23 July 2053).
-- Version: `versionCode 1`, `versionName 1.6.0`; `minSdkVersion 24`,
-  `targetSdkVersion 36`. Play requires API 36 for new apps submitted from
+- Version: `versionCode 2`, `versionName 1.6.1` in the merged release
+  manifest, and `1.6.1` inside the bundle's own `base/manifest`; `minSdkVersion
+  24`, `targetSdkVersion 36`. Play requires API 36 for new apps submitted from
   31 August 2026, so this target is the current minimum.
 - ABIs in the bundle: `arm64-v8a`, `armeabi-v7a`, `x86_64`. Every 64-bit
   library is 16 KB page aligned (`libapp.so` and `libflutter.so` `LOAD`
@@ -174,14 +182,15 @@ Play review sheet cannot be observed until an install comes from Play.
    first and install from the Play link to confirm the bundle installs and the
    review prompt path resolves, then promote to production.
    - Release notes ("What's new in this release"): `release_notes.txt`, a
-     479/500-character block for 1.6.0 (first release) with a 179-character
+     479/500-character block for 1.6.1 (first release) with a 179-character
      variant below it.
 5. **Promote Alpha to production** — a closed-testing release moves to
    production without rebuilding. Open **Test and release → Testing → Closed
-   testing → Alpha → Releases**, open the 1.6.0 release and use **Promote
+   testing → Alpha → Releases**, open the release to publish and use **Promote
    release → Production**; creating a production release and adding the same
-   bundle from the library does the same thing. The version code stays `1` —
-   only a *new* upload needs a higher one. Before it can be rolled out:
+   bundle from the library does the same thing. Promoting keeps that release's
+   version code — `2` for the 1.6.1 bundle — so only a *new* upload needs a
+   higher one. Before it can be rolled out:
    - **App content** complete and accepted (section 4, step 2), including the
      AI-generated content answer below,
    - **Store listing** complete (section 4, step 3),
@@ -197,20 +206,23 @@ Play review sheet cannot be observed until an install comes from Play.
    is an organisation account. Organisation accounts need website verification
    instead of the personal accounts' Android device verification.
 
-If `1.6.0+1` has already been uploaded, bump to `1.6.1+2` and rebuild before
-uploading: Play rejects a repeated version code.
+`1.6.0+1` is on closed testing, so this tree carries `1.6.1+2`: Play rejects a
+repeated version code, and a bundle built from a tree that still said
+`1.6.0+1` could not be uploaded again.
 
 ## 5. Remaining steps
 
 Done: store graphics (`icon_512.png`, `feature_graphic_1024x500.png`), the six
 1080x2160 phone screenshots, the 7-inch, 10-inch and desktop sets, the release
 notes (`release_notes.txt`), the support email (`info@prady.website`), the
-published privacy policy URL (`https://prady.website/privacy/insta-llm/`) and
-the 1.6.0 bundle on closed testing (Alpha).
+published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
+1.6.0 bundle on closed testing (Alpha) and the `1.6.1+2` bundle built from this
+tree.
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the production review.
-2. Promote the 1.6.0 release from Alpha to production (section 4, step 5).
+2. Upload the `1.6.1+2` bundle, then promote it to production (section 4,
+   steps 4 and 5).
 
 Known copy issue: `lib/features/model_selection/presentation/model_selection_page.dart:1280`
 hardcodes the column heading "Fit on this Mac", so Android and Linux users see

@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Optional network use only: a model download the user starts from
+         Hugging Face, or an API provider they configure themselves. Nothing is
+         uploaded by default; the app is fully usable offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Recording voice notes: the clip is transcribed on this device and is
          never uploaded. -->

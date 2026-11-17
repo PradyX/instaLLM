@@ -77,6 +77,9 @@ lib/firebase_options.dart
 /ios/llama-runtime.version
 *.md
 
+# Play Store documents are part of the release, not working notes
+!/docs/play_store/*.md
+
 # Design mockups (working files, not part of the app)
 mockups/
 

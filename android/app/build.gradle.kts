@@ -14,6 +14,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// key.properties is gitignored, so a fresh checkout has no signing keys. A
+// release build then fails here with the file to create instead of failing
+// later inside the signer with a missing storeFile.
+val hasReleaseSigning = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+    .all { (keystoreProperties[it] as String?)?.isNotBlank() == true }
+
 android {
     namespace = "com.prady.installm"
     compileSdk = flutter.compileSdkVersion
@@ -38,20 +44,21 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            // safe casts so debug still builds even if key.properties is absent
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
-            storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+        if (hasReleaseSigning) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String?
+                keyPassword = keystoreProperties["keyPassword"] as String?
+                storeFile = (keystoreProperties["storeFile"] as String?)?.let { file(it) }
+                storePassword = keystoreProperties["storePassword"] as String?
+            }
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -59,6 +66,20 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+    }
+}
+
+// Only a release build needs the keys, so debug builds still work on a
+// checkout without key.properties.
+gradle.taskGraph.whenReady {
+    val buildsRelease = allTasks.any {
+        it.name == "assembleRelease" || it.name == "bundleRelease"
+    }
+    if (buildsRelease && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing is not configured: add storeFile, storePassword, " +
+                "keyAlias and keyPassword to android/key.properties."
+        )
     }
 }
 

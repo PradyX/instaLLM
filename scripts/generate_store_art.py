@@ -197,14 +197,29 @@ def build(canvas_size, dark, headline, subtitle, shot_path, layout):
     hf = font(layout["headline_size"], "Bold")
     max_w = layout["text_width"] * SS
     lines = balanced_wrap(d, headline, hf, max_w)
-    y = layout["headline_y"] * SS
+    sf = font(layout["sub_size"], "Regular")
+    sub_lines = balanced_wrap(d, subtitle, sf, max_w)
+
+    top = layout["headline_y"] * SS
+    if layout.get("center_text"):
+        # Landscape panels: the caption reads as part of the card, so centre the
+        # whole text block on the card rather than pinning it under the brand.
+        block = (
+            len(lines) * layout["headline_size"] * SS * 1.12
+            + layout["sub_gap"] * SS
+            + len(sub_lines) * layout["sub_size"] * SS * 1.34
+        )
+        card_mid = (layout["card"][1] + layout["card"][3]) / 2 * SS
+        floor = (layout["brand"][1] + layout["tile"] + 40) * SS
+        top = max(floor, card_mid - block / 2)
+
+    y = top
     for line in lines:
         d.text((layout["text_x"] * SS, y), line, font=hf, fill=head_colour, anchor="la")
         y += layout["headline_size"] * SS * 1.12
 
-    sf = font(layout["sub_size"], "Regular")
     y += layout["sub_gap"] * SS
-    for line in balanced_wrap(d, subtitle, sf, max_w):
+    for line in sub_lines:
         d.text((layout["text_x"] * SS, y), line, font=sf, fill=body_colour, anchor="la")
         y += layout["sub_size"] * SS * 1.34
 
@@ -263,7 +278,7 @@ def landscape(w, h):
         card=(card_x, card_y, card_x + card_w, card_y + card_h),
         radius=int(round(0.012 * w)), shadow_blur=int(round(0.02 * w)),
         shadow_alpha=80,
-        glow=(0.74, 0.14, 0.78, 0.42),
+        glow=(0.74, 0.14, 0.78, 0.42), center_text=True,
     )
 
 

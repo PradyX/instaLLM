@@ -123,7 +123,7 @@ roomManagement:
   clearSummary: Remove messages. Keep this bot.
   clearSavedSummary: Remove messages. Keep this chat.
   clearTitle: Clear this chat?
-  clearHint: This permanently clears its messages. The bot, chat settings and Board tasks are kept.
+  clearHint: This permanently clears its messages. The bot and chat settings are kept.
   clearError: Could not clear the chat. Finish any running reply, check available storage and try again.
 
 modelRepository:
@@ -288,3 +288,13 @@ skills:
   botHint: "Message ${name}..."
   roomHint: "Message the room (@name for a bot)..."
   scriptFiles: "Scripts: ${names}"
+
+star:
+  title: "Enjoying InstaLLM?"
+  body: "A star on GitHub helps other people find it."
+  notNow: "Not now"
+  action: "Star on GitHub"
+  settingsTitle: "Star InstaLLM on GitHub"
+  settingsSubtitle: "Free, open source, no cloud"
+  rateTitle: "Rate InstaLLM on Google Play"
+  rateSubtitle: "Opens the Play Store listing"

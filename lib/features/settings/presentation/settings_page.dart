@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:installm/i18n/strings.g.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:installm/core/github_star/star_prompt.dart';
 import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/core/play_review/review_prompt.dart';
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/services/attachment_image_service.dart';
-import 'package:installm/features/companion/application/companion_settings_controller.dart';
 import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart'
@@ -25,10 +26,6 @@ class SettingsPage extends ConsumerWidget {
         .watch(inferenceProfilesProvider)
         .activeProfile
         .name;
-    final companion = ref.watch(companionSettingsProvider);
-    final companionSummary = !companion.isReady
-        ? 'Loading…'
-        : '${companion.settings.name} · ${companion.settings.enabled ? 'on' : 'off'}';
     final contextBudget = ref.watch(contextBudgetProvider).budget;
     final contextCap = contextBudget.windowCap;
     final contextBudgetSummary = contextCap == null
@@ -58,116 +55,87 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.face_retouching_natural),
-                  title: const Text('Personas'),
-                  subtitle: Text('Default: $defaultPersonaName'),
-                  onTap: () => context.push(AppRoutes.personas),
+          _NavigationGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.face_retouching_natural),
+                title: const Text('Personas'),
+                subtitle: Text('Default: $defaultPersonaName'),
+                onTap: () => context.push(AppRoutes.personas),
+              ),
+              ListTile(
+                leading: const Icon(Icons.tune_rounded),
+                title: const Text('Inference Profiles'),
+                subtitle: Text('Active: $activeProfileName'),
+                onTap: () => context.push(AppRoutes.inferenceProfiles),
+              ),
+              ListTile(
+                leading: const Icon(Icons.pie_chart_outline),
+                title: const Text('Context'),
+                subtitle: Text('Budget: $contextBudgetSummary'),
+                onTap: () => context.push(AppRoutes.contextBudget),
+              ),
+              ListTile(
+                leading: const Icon(Icons.psychology_outlined),
+                title: Text(t.memory.title),
+                subtitle: Text(t.memory.subtitle),
+                onTap: () => context.push(AppRoutes.memory),
+              ),
+              ListTile(
+                leading: const Icon(Icons.folder_copy_outlined),
+                title: const Text('Workspaces'),
+                subtitle: const Text('Projects linking bots, chats and skills'),
+                onTap: () => context.push(AppRoutes.workspaces),
+              ),
+              ListTile(
+                leading: const Icon(Icons.extension_outlined),
+                title: const Text('Skills'),
+                subtitle: const Text('Reusable procedures bots can follow'),
+                onTap: () => context.push(AppRoutes.skills),
+              ),
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: const Text('Hooks'),
+                subtitle: const Text(
+                  'Rules that refuse or question what agents may touch',
                 ),
-                ListTile(
-                  leading: const Icon(Icons.tune_rounded),
-                  title: const Text('Inference Profiles'),
-                  subtitle: Text('Active: $activeProfileName'),
-                  onTap: () => context.push(AppRoutes.inferenceProfiles),
+                onTap: () => context.push(AppRoutes.hooks),
+              ),
+              ListTile(
+                leading: const Icon(Icons.hub_outlined),
+                title: const Text('MCP servers'),
+                subtitle: const Text('External tools bots can use'),
+                onTap: () => context.push(AppRoutes.mcp),
+              ),
+              ListTile(
+                leading: const Icon(Icons.library_books_outlined),
+                title: const Text('Knowledge'),
+                subtitle: const Text(
+                  'Collections, tuning and retrieval preview',
                 ),
-                ListTile(
-                  leading: const Icon(Icons.pie_chart_outline),
-                  title: const Text('Context'),
-                  subtitle: Text('Budget: $contextBudgetSummary'),
-                  onTap: () => context.push(AppRoutes.contextBudget),
+                onTap: () => context.push(AppRoutes.knowledge),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Reminders'),
+                subtitle: const Text('Scheduled tasks that fire offline'),
+                onTap: () => context.push(AppRoutes.reminders),
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month_outlined),
+                title: const Text('Connections'),
+                subtitle: const Text('Calendars and inbox, read locally'),
+                onTap: () => context.push(AppRoutes.connections),
+              ),
+              ListTile(
+                leading: const Icon(Icons.language_outlined),
+                title: const Text('Network'),
+                subtitle: const Text(
+                  'Explicit web use, off until enabled per workspace',
                 ),
-                ListTile(
-                  leading: const Icon(Icons.psychology_outlined),
-                  title: Text(t.memory.title),
-                  subtitle: Text(t.memory.subtitle),
-                  onTap: () => context.push(AppRoutes.memory),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.folder_copy_outlined),
-                  title: const Text('Workspaces'),
-                  subtitle: const Text(
-                    'Projects linking bots, chats, skills and boards',
-                  ),
-                  onTap: () => context.push(AppRoutes.workspaces),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.extension_outlined),
-                  title: const Text('Skills'),
-                  subtitle: const Text('Reusable procedures bots can follow'),
-                  onTap: () => context.push(AppRoutes.skills),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: const Text('Hooks'),
-                  subtitle: const Text(
-                    'Rules that refuse or question what agents may touch',
-                  ),
-                  onTap: () => context.push(AppRoutes.hooks),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.hub_outlined),
-                  title: const Text('MCP servers'),
-                  subtitle: const Text('External tools bots can use'),
-                  onTap: () => context.push(AppRoutes.mcp),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.library_books_outlined),
-                  title: const Text('Knowledge'),
-                  subtitle: const Text(
-                    'Collections, tuning and retrieval preview',
-                  ),
-                  onTap: () => context.push(AppRoutes.knowledge),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.notifications_outlined),
-                  title: const Text('Reminders'),
-                  subtitle: const Text('Scheduled tasks that fire offline'),
-                  onTap: () => context.push(AppRoutes.reminders),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.calendar_month_outlined),
-                  title: const Text('Connections'),
-                  subtitle: const Text('Calendars and inbox, read locally'),
-                  onTap: () => context.push(AppRoutes.connections),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.language_outlined),
-                  title: const Text('Network'),
-                  subtitle: const Text(
-                    'Explicit web use, off until enabled per workspace',
-                  ),
-                  onTap: () => context.push(AppRoutes.networkPolicy),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.folder_open),
-                  title: Text(t.vault.title),
-                  subtitle: Text(t.vault.description),
-                  onTap: () => context.push(AppRoutes.vaults),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Companion',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: ListTile(
-              leading: const Icon(Icons.auto_awesome_outlined),
-              title: const Text('Companion'),
-              subtitle: Text(companionSummary),
-              onTap: () => context.push(AppRoutes.companionSettings),
-            ),
+                onTap: () => context.push(AppRoutes.networkPolicy),
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           Text(
@@ -188,21 +156,18 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.inventory_2_outlined),
-                  title: const Text('Backup and restore'),
-                  subtitle: const Text(
-                    'Save chats, personas, profiles, settings and benchmarks '
-                    'to one file',
-                  ),
-                  onTap: () => context.push(AppRoutes.backup),
+          _NavigationGroup(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('Backup and restore'),
+                subtitle: const Text(
+                  'Save chats, personas, profiles, settings and benchmarks to '
+                  'one file',
                 ),
-              ],
-            ),
+                onTap: () => context.push(AppRoutes.backup),
+              ),
+            ],
           ),
           // The prebuilt global "LLM Inference" controls (adaptive mode, sampling
           // preset, max output tokens, advanced sampling override) are hidden for
@@ -288,17 +253,18 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.info_outline_rounded),
-                  title: Text(t.navigation.about),
-                  onTap: () => context.push(AppRoutes.about),
-                ),
-              ],
-            ),
+          _NavigationGroup(
+            children: [
+              StarRepositoryTile(
+                showDot: ref.watch(starPromptSeenProvider).value ?? false,
+              ),
+              const RatePlayStoreTile(),
+              ListTile(
+                leading: const Icon(Icons.info_outline_rounded),
+                title: Text(t.navigation.about),
+                onTap: () => context.push(AppRoutes.about),
+              ),
+            ],
           ),
         ],
       ),
@@ -310,5 +276,36 @@ class SettingsPage extends ConsumerWidget {
     const options = [768, 1280, 1600, AttachmentImageOptions.maxMaxEdge];
     if (options.contains(current)) return options;
     return [...options, current]..sort();
+  }
+}
+
+/// Navigation rows on the Settings page, separated by a single hairline.
+///
+/// These rows open other screens, so they follow the rail's borderless rows
+/// rather than sitting in a card; cards stay for controls that belong to the
+/// page itself.
+class _NavigationGroup extends StatelessWidget {
+  const _NavigationGroup({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    // A faint accent wash on hover, not the default grey bar: these rows have
+    // no surface of their own, and a blocked-out rectangle reads as a card.
+    return Theme(
+      data: theme.copyWith(
+        hoverColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const Divider(height: 1, indent: 16, endIndent: 16),
+            children[i],
+          ],
+        ],
+      ),
+    );
   }
 }

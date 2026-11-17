@@ -56,6 +56,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$appearance$en appearance = Translations$appearance$en._(_root);
 	late final Translations$vault$en vault = Translations$vault$en._(_root);
 	late final Translations$skills$en skills = Translations$skills$en._(_root);
+	late final Translations$star$en star = Translations$star$en._(_root);
 }
 
 // Path: login
@@ -444,8 +445,8 @@ class Translations$roomManagement$en {
 	/// en: 'Clear this chat?'
 	String get clearTitle => 'Clear this chat?';
 
-	/// en: 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.'
-	String get clearHint => 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.';
+	/// en: 'This permanently clears its messages. The bot and chat settings are kept.'
+	String get clearHint => 'This permanently clears its messages. The bot and chat settings are kept.';
 
 	/// en: 'Could not clear the chat. Finish any running reply, check available storage and try again.'
 	String get clearError => 'Could not clear the chat. Finish any running reply, check available storage and try again.';
@@ -961,6 +962,39 @@ class Translations$skills$en {
 	String scriptFiles({required Object names}) => 'Scripts: ${names}';
 }
 
+// Path: star
+class Translations$star$en {
+	Translations$star$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Enjoying InstaLLM?'
+	String get title => 'Enjoying InstaLLM?';
+
+	/// en: 'A star on GitHub helps other people find it.'
+	String get body => 'A star on GitHub helps other people find it.';
+
+	/// en: 'Not now'
+	String get notNow => 'Not now';
+
+	/// en: 'Star on GitHub'
+	String get action => 'Star on GitHub';
+
+	/// en: 'Star InstaLLM on GitHub'
+	String get settingsTitle => 'Star InstaLLM on GitHub';
+
+	/// en: 'Free, open source, no cloud'
+	String get settingsSubtitle => 'Free, open source, no cloud';
+
+	/// en: 'Rate InstaLLM on Google Play'
+	String get rateTitle => 'Rate InstaLLM on Google Play';
+
+	/// en: 'Opens the Play Store listing'
+	String get rateSubtitle => 'Opens the Play Store listing';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -1074,7 +1108,7 @@ extension on Translations {
 			'roomManagement.clearSummary' => 'Remove messages. Keep this bot.',
 			'roomManagement.clearSavedSummary' => 'Remove messages. Keep this chat.',
 			'roomManagement.clearTitle' => 'Clear this chat?',
-			'roomManagement.clearHint' => 'This permanently clears its messages. The bot, chat settings and Board tasks are kept.',
+			'roomManagement.clearHint' => 'This permanently clears its messages. The bot and chat settings are kept.',
 			'roomManagement.clearError' => 'Could not clear the chat. Finish any running reply, check available storage and try again.',
 			'modelRepository.addError' => 'Could not add this model. Please try again.',
 			'roomBoard.linkedTasks' => 'Linked tasks',
@@ -1225,6 +1259,14 @@ extension on Translations {
 			'skills.botHint' => ({required Object name}) => 'Message ${name}...',
 			'skills.roomHint' => 'Message the room (@name for a bot)...',
 			'skills.scriptFiles' => ({required Object names}) => 'Scripts: ${names}',
+			'star.title' => 'Enjoying InstaLLM?',
+			'star.body' => 'A star on GitHub helps other people find it.',
+			'star.notNow' => 'Not now',
+			'star.action' => 'Star on GitHub',
+			'star.settingsTitle' => 'Star InstaLLM on GitHub',
+			'star.settingsSubtitle' => 'Free, open source, no cloud',
+			'star.rateTitle' => 'Rate InstaLLM on Google Play',
+			'star.rateSubtitle' => 'Opens the Play Store listing',
 			_ => null,
 		};
 	}

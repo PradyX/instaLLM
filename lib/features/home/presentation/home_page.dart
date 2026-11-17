@@ -30,6 +30,7 @@ import 'package:installm/core/widgets/composer_reasoning_pill.dart';
 import 'package:installm/features/home/presentation/composer_attach_button.dart';
 import 'package:installm/features/voice/application/composer_dictation_controller.dart';
 import 'package:installm/features/home/presentation/composer_shortcuts.dart';
+import 'package:installm/core/nudges/post_reply_nudge.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/core/navigation/app_shell.dart';
 import 'package:installm/features/voice/application/tts_controller.dart';
@@ -75,6 +76,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   ProviderSubscription<ModelSelectionState>? _modelSelectionSubscription;
   ProviderSubscription<String?>? _composerDraftSubscription;
   ProviderSubscription<HomeGenerationStatus>? _generationSubscription;
+  ProviderSubscription<HomeGenerationStatus>? _starPromptSubscription;
   ProviderSubscription<String?>? _conversationSubscription;
 
   /// Reply currently being read aloud, so its own button can offer a stop.
@@ -104,6 +106,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _modelSelectionSubscription?.close();
     _composerDraftSubscription?.close();
     _generationSubscription?.close();
+    _starPromptSubscription?.close();
     _conversationSubscription?.close();
     _messageController.dispose();
     _scrollController.dispose();
@@ -153,6 +156,17 @@ class _HomePageState extends ConsumerState<HomePage> {
       final reply = lastReadableReply(ref.read(homeControllerProvider));
       if (reply == null) return;
       unawaited(_readReplyAloud(reply));
+    });
+
+    // The GitHub star reminder only looks at a reply that actually finished;
+    // it is rate limited and never appears while text is still streaming.
+    _starPromptSubscription = ref.listenManual(homeGenerationStatusProvider, (
+      previous,
+      next,
+    ) {
+      if (previous == null || !previous.isGenerating) return;
+      if (next.isGenerating || next.generatedTokens <= 0) return;
+      unawaited(maybeNudgeAfterReply(context, ref));
     });
 
     // A sentence about what a chat's attach added is only true for that chat.

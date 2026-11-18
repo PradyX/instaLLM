@@ -160,7 +160,7 @@ def drop_shadow(canvas_size, box, radius, blur, alpha):
     return layer
 
 
-# ---------------------------------------------------------- system chrome
+# ---------------------------------------------------------- reserved chrome
 def modal_top_colour(shot):
     """The dominant colour at the very top edge of the capture."""
     w = shot.size[0]
@@ -183,121 +183,25 @@ def top_edge_columns(shot):
         .crop((0, 4, w, 5))
 
 
-def luminance(rgb):
-    r, g, b = rgb
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def chrome_font(px, weight="Semibold"):
-    """Absolute pixel size, for the 2x chrome layers below."""
-    try:
-        f = ImageFont.truetype(FONT_SF, px)
-        f.set_variation_by_name(weight)
-        return f
-    except Exception:
-        return ImageFont.truetype(FONT_ARIAL_BOLD, px)
-
-
-def android_status_bar(w, h, fg):
-    """Time on the left, signal / wifi / battery on the right, as Android draws
-    them over an edge-to-edge app."""
-    S = 2
-    W, H = w * S, h * S
-    lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(lay)
-
-    d.text(
-        (H * 0.72, H * 0.52), "9:41", font=chrome_font(round(H * 0.52)), fill=fg,
-        anchor="lm",
-    )
-
-    x = W - H * 0.60
-    # battery: outlined body, filled charge, nub
-    bw, bh = H * 0.84, H * 0.42
-    nub_w, nub_h = H * 0.045, H * 0.15
-    top = H * 0.5 - bh / 2
-    body = (x - nub_w * 2.6 - bw, top, x - nub_w * 2.6, top + bh)
-    d.rounded_rectangle(
-        body, radius=bh * 0.3, outline=fg, width=max(2, round(H * 0.055))
-    )
-    inset = bh * 0.24
-    d.rounded_rectangle(
-        (body[0] + inset, body[1] + inset, body[2] - inset, body[3] - inset),
-        radius=bh * 0.14, fill=fg,
-    )
-    d.rounded_rectangle(
-        (body[2] + nub_w * 0.6, H * 0.5 - nub_h, x, H * 0.5 + nub_h),
-        radius=nub_w, fill=fg,
-    )
-
-    # wifi: three arcs plus the dot, opening upward
-    x = body[0] - H * 0.42
-    wr = H * 0.38
-    cx, cy = x - wr, H * 0.70
-    lw = max(2, round(H * 0.06))
-    for frac in (0.40, 0.71, 1.0):
-        r = wr * frac
-        d.arc((cx - r, cy - r, cx + r, cy + r), 225, 315, fill=fg, width=lw)
-    d.ellipse((cx - lw, cy - lw, cx + lw, cy + lw), fill=fg)
-
-    # signal: four bars of rising height
-    x = cx - wr - H * 0.42
-    bar_w, gap, base = H * 0.115, H * 0.05, H * 0.72
-    for i in range(4):
-        bh_i = H * (0.20 + 0.12 * i)
-        bx = x - 4 * bar_w - 3 * gap + i * (bar_w + gap)
-        d.rounded_rectangle(
-            (bx, base - bh_i, bx + bar_w, base), radius=bar_w * 0.35, fill=fg
-        )
-    return lay.resize((w, h), Image.LANCZOS)
-
-
-def macos_title_bar(w, h, fg):
-    """Traffic lights and the window title, so the capture reads as a window."""
-    S = 2
-    W, H = w * S, h * S
-    lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(lay)
-
-    r, cy, x = H * 0.135, H * 0.47, H * 0.62
-    for colour in ((236, 106, 94), (224, 187, 82), (106, 191, 105)):
-        d.ellipse((x, cy - r, x + 2 * r, cy + r), fill=colour)
-        x += 2 * r + H * 0.115
-
-    d.text(
-        (W / 2, cy), "InstaLLM", font=chrome_font(round(H * 0.30)),
-        fill=(*fg, 190), anchor="mm",
-    )
-    # hairline so the bar separates from the app body
-    d.rectangle((0, H - S, W, H), fill=(0, 0, 0, 34))
-    return lay.resize((w, h), Image.LANCZOS)
-
-
-CHROME = {"android": android_status_bar, "macos": macos_title_bar}
-
-
 def add_system_chrome(shot, chrome):
-    """Stack the platform bar above the capture.
+    """Reserve the platform bar's real height above the capture.
 
-    The bar takes its fill from the capture's own top edge, so it reads as the
-    app running under the system bar (which is how the app is configured:
-    SystemUiMode.edgeToEdge), not as a strip bolted onto the screenshot.
+    The captures are cropped to app content, so a card with no bar reads as a
+    floating screenshot. Drawn icons looked wrong at card scale, so the card
+    keeps the bar's height as empty space instead, filled from the capture's
+    own top edge: the app appears to continue under the bar, and a drawer scrim
+    or sidebar seam runs on upward rather than stopping at the card edge.
     """
     w = shot.size[0]
     h = chrome["h"]
-    bg = modal_top_colour(shot)
-    fg = CREAM if luminance(bg) < 140 else INK_TEXT
-    # The status bar sits over the app, so it follows the app's own edge;
-    # a window title bar is chrome, so it keeps one flat colour.
     if chrome["kind"] == "android":
-        base = top_edge_columns(shot).resize((w, h), Image.NEAREST)
+        # The status bar sits over the app, so it follows the app's own edge.
+        bar = top_edge_columns(shot).resize((w, h), Image.NEAREST)
     else:
-        base = Image.new("RGB", (w, h), bg)
-    bar = Image.alpha_composite(
-        base.convert("RGBA"), CHROME[chrome["kind"]](w, h, fg)
-    )
+        # A window's title bar is chrome, not app content: one flat colour.
+        bar = Image.new("RGB", (w, h), modal_top_colour(shot))
     app = Image.new("RGB", (w, shot.size[1] + h))
-    app.paste(bar.convert("RGB"), (0, 0))
+    app.paste(bar, (0, 0))
     app.paste(shot, (0, h))
     return app
 

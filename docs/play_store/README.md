@@ -91,8 +91,13 @@ working tree with `scripts/build_android_bundle.sh`:
   two-line headline, a muted subtitle and the capture as a rounded card on an
   alternating deep-green and cream panel; the text layer renders at 2x and is
   downsampled so type and corners stay crisp, and the capture is composited at
-  native scale so it is never resampled twice. The script only needs Pillow and
-  the fonts already on macOS.
+  native scale so it is never resampled twice. Each card also restores the
+  system chrome the captures were cropped to remove: an Android status bar
+  (time, signal, wifi, battery) above the phone and tablet cards, and a macOS
+  title bar with traffic lights above the desktop cards. The bar is filled from
+  the capture's own top edge, so it continues a drawer scrim or a sidebar seam
+  instead of sitting on top of the app as a flat strip. The script only needs
+  Pillow and the fonts already on macOS.
 - Tablet and desktop sets, captured on 17 November 2026 in light theme with the
   solid surface style: `screens/tablet_7inch/` is 2048x1152 (16:9) from the
   TrebleDroid Android 13 tablet at 2048x1200, cropped by 48 px of status bar and

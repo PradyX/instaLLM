@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -14,6 +15,15 @@ class LocalNotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  /// Payloads of notices the user tapped (Road Map 5 Phase 5.4).
+  ///
+  /// A scheduled job's notice carries `job:<taskId>`, which is how tapping it
+  /// opens the run's result instead of just the app.
+  static final StreamController<String> _tapController =
+      StreamController<String>.broadcast();
+
+  static Stream<String> get taps => _tapController.stream;
   bool _isInitialized = false;
   bool _notificationsAvailable = true;
 
@@ -58,7 +68,24 @@ class LocalNotificationService {
       // defers that question (the request*Permission flags above are false), so
       // the value is false until the user is asked — reading it as "not
       // available" used to skip the request and every notice after it.
-      await _plugin.initialize(settings: settings);
+      await _plugin.initialize(
+        settings: settings,
+        onDidReceiveNotificationResponse: (response) {
+          final payload = response.payload;
+          if (payload != null && payload.isNotEmpty) {
+            _tapController.add(payload);
+          }
+        },
+      );
+      // A tap that launched the app is delivered here, not to the callback
+      // above, so it is read once at setup.
+      final launch = await _plugin.getNotificationAppLaunchDetails();
+      final launchPayload = launch?.notificationResponse?.payload;
+      if (launch?.didNotificationLaunchApp == true &&
+          launchPayload != null &&
+          launchPayload.isNotEmpty) {
+        _tapController.add(launchPayload);
+      }
     } catch (error, stackTrace) {
       AppLogger.warning(
         'LocalNotificationService initialization disabled notifications: '
@@ -174,6 +201,61 @@ class LocalNotificationService {
         title: 'Model downloaded',
         body: '$modelName is ready to use.',
         notificationDetails: details,
+      );
+    } catch (error, stackTrace) {
+      AppLogger.warning(
+        'LocalNotificationService failed to show notification: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  /// Tells the user a scheduled job finished, was skipped or failed.
+  ///
+  /// The payload is what makes the notice a link into the result.
+  Future<void> showScheduledJob({
+    required String title,
+    required String body,
+    required String payload,
+  }) async {
+    await initialize();
+    if (!_notificationsAvailable) return;
+
+    const androidDetails = AndroidNotificationDetails(
+      'scheduled_jobs',
+      'Scheduled jobs',
+      channelDescription:
+          'Notifies when a scheduled AI job finishes or is '
+          'skipped',
+      icon: _androidStatusIcon,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: true,
+    );
+    const linuxDetails = LinuxNotificationDetails(
+      category: LinuxNotificationCategory.transferComplete,
+      urgency: LinuxNotificationUrgency.normal,
+      defaultActionName: 'Open InstaLLM',
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+      linux: linuxDetails,
+    );
+
+    try {
+      await _plugin.show(
+        id: payload.hashCode & 0x7fffffff,
+        title: title,
+        body: body,
+        notificationDetails: details,
+        payload: payload,
       );
     } catch (error, stackTrace) {
       AppLogger.warning(

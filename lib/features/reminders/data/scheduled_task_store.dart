@@ -14,8 +14,12 @@ class ScheduledTaskStore {
   ScheduledTaskStore(this.file);
 
   final File file;
-  static const int currentVersion = 1;
-  static const List<int> readableVersions = [currentVersion];
+  // Version 2 adds an optional prompt, a model name and recorded runs to each
+  // task (Road Map 5 Phase 5.4). Version 1 files still read: a task without
+  // those keys is a plain reminder, and the next save upgrades the file after
+  // backing it up, so an interrupted migration loses nothing.
+  static const int currentVersion = 2;
+  static const List<int> readableVersions = [currentVersion, 1];
 
   bool _readOnly = false;
   bool _preserve = false;

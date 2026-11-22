@@ -162,7 +162,8 @@ GoRouter appRouter(Ref ref) {
       ),
       GoRoute(
         path: AppRoutes.reminders,
-        builder: (context, state) => const RemindersPage(),
+        builder: (context, state) =>
+            RemindersPage(focusTaskId: state.uri.queryParameters['task']),
       ),
       GoRoute(
         path: AppRoutes.connections,

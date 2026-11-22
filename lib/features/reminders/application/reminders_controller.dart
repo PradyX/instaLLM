@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:installm/core/utils/logger.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/features/reminders/data/scheduled_task_store.dart';
 import 'package:installm/features/reminders/domain/scheduled_task.dart';
@@ -59,7 +60,10 @@ class RemindersNotifier extends Notifier<RemindersState> {
         isOpen: true,
         isReadOnly: store.isReadOnly,
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      AppLogger.warning(
+        'Reminders could not open the task store: $error\n$stackTrace',
+      );
       state = state.copyWith(isOpen: true);
     }
   }
@@ -72,7 +76,10 @@ class RemindersNotifier extends Notifier<RemindersState> {
       if (!store.save(tasks)) return false;
       state = state.copyWith(tasks: tasks, isReadOnly: store.isReadOnly);
       return true;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      AppLogger.warning(
+        'Reminders could not save the task list: $error\n$stackTrace',
+      );
       return false;
     }
   }
@@ -82,12 +89,16 @@ class RemindersNotifier extends Notifier<RemindersState> {
     String body = '',
     required DateTime nextRunAt,
     TaskRecurrence recurrence = TaskRecurrence.once,
+    String prompt = '',
+    String? modelName,
   }) async {
     final task = ScheduledTask.create(
       title: title,
       body: body,
       nextRunAt: nextRunAt,
       recurrence: recurrence,
+      prompt: prompt,
+      modelName: modelName,
     );
     if (task.title.isEmpty) return null;
     final next = [...state.tasks, task];
@@ -105,6 +116,30 @@ class RemindersNotifier extends Notifier<RemindersState> {
       return false;
     }
     return _persist(next);
+  }
+
+  /// Adds a run to a task without touching the task's own schedule.
+  Future<bool> recordRun(String taskId, TaskRun run) async {
+    ScheduledTask? task;
+    for (final entry in state.tasks) {
+      if (entry.id == taskId) task = entry;
+    }
+    if (task == null) return false;
+    return updateTask(task.withRun(run));
+  }
+
+  /// Replaces an already recorded run (a `running` one becoming `completed`),
+  /// so one attempt is never recorded twice.
+  Future<bool> updateRun(String taskId, TaskRun run) async {
+    ScheduledTask? task;
+    for (final entry in state.tasks) {
+      if (entry.id == taskId) task = entry;
+    }
+    if (task == null) return false;
+    if (!task.runs.any((entry) => entry.id == run.id)) {
+      return updateTask(task.withRun(run));
+    }
+    return updateTask(task.replaceRun(run));
   }
 
   Future<bool> removeTask(String id) async {

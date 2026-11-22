@@ -54,6 +54,8 @@ import 'package:installm/features/tools/application/tool_activity_mapping.dart';
 import 'package:installm/features/tools/application/tool_follow_up_prompt.dart';
 import 'package:installm/features/tools/application/tool_registry.dart';
 import 'package:installm/features/tools/application/tools_providers.dart';
+import 'package:installm/features/web_research/application/web_research_service.dart';
+import 'package:installm/features/web_research/domain/web_research.dart';
 import 'package:installm/features/bots/domain/bot.dart';
 import 'package:installm/features/memory/application/memory_controller.dart';
 import 'package:installm/features/memory/application/memory_commands.dart';
@@ -1085,9 +1087,46 @@ class HomeController extends _$HomeController {
       }
       final promptFormatId = promptFormat.promptFormatId;
 
+      // Web research (Road Map 5 Phase 5.5): a question that needs current or
+      // external information searches first and answers from the pages it read.
+      // The pages are attached to this message, so every citation in the
+      // transcript names a URL that was really fetched.
+      final question = _lastUserQuestion();
+      WebResearch? webResearch;
+      if (question != null && WebSearchIntent.needsLiveInformation(question)) {
+        _setStatus(text: 'Searching the web...', isGenerating: true);
+        final research = await ref
+            .read(webResearchServiceProvider)
+            .research(question);
+        final failure = research.failure;
+        if (failure != null) {
+          // Honest failure: no model call, no pages, no citations.
+          _replaceAiMessage(aiMessageId, failure.text);
+          _setStatus(
+            text: failure.kind == WebResearchFailureKind.unreachable
+                ? 'Web search failed'
+                : 'No web results',
+            isGenerating: false,
+          );
+          return;
+        }
+        webResearch = research.research;
+        if (webResearch != null) {
+          _setWebSources(aiMessageId, webResearch.sources);
+          _setStatus(
+            text:
+                'Read ${webResearch.sources.length} page'
+                '${webResearch.sources.length == 1 ? '' : 's'}',
+            isGenerating: true,
+          );
+        }
+      }
+
       final promptBundle = buildModelChatPrompt(
         _promptMessagesFor(assembly.messages),
-        systemPrompt: assembly.systemPrompt,
+        systemPrompt: webResearch == null
+            ? assembly.systemPrompt
+            : '${assembly.systemPrompt}\n\n${webResearch.promptBlock()}',
         promptFormatId: promptFormatId,
         assistantPrefill: await _reasoningPrefillFor(selectedModel),
       );
@@ -1769,6 +1808,27 @@ class HomeController extends _$HomeController {
           heading: context.hits[index].chunk.heading,
           matchedTerms: context.hits[index].matchedTerms.toList()..sort(),
         ),
+    ];
+  }
+
+  /// The newest user question in this conversation, or null.
+  String? _lastUserQuestion() {
+    for (final message in state.reversed) {
+      if (!message.isUser) continue;
+      final text = message.content.trim();
+      if (text.isNotEmpty) return text;
+    }
+    return null;
+  }
+
+  /// Puts the pages this turn read on its assistant message.
+  void _setWebSources(String id, List<WebSource> sources) {
+    state = [
+      for (final msg in state)
+        if (msg.id == id)
+          msg.copyWith(webSources: WebResearch.sort(sources))
+        else
+          msg,
     ];
   }
 

@@ -5,6 +5,7 @@ import 'package:installm/features/agents/application/hooks_controller.dart';
 import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
 import 'package:installm/features/documents/application/network_policy_controller.dart';
+import 'package:installm/features/documents/data/duckduckgo_search.dart';
 import 'package:installm/features/documents/data/web_fetch_service.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart'
@@ -116,6 +117,71 @@ Future<List<WebSnippet>> searchWebWithProvider({
 /// installed models — and never change it. Sensitive tools (web fetching and
 /// the Android actions) run only after the user answers the approval prompt.
 ///
+/// What one search attempt produced, and why when it produced nothing.
+///
+/// `error` is only set when the request itself failed; an empty list with no
+/// error means the engine answered and had no results. The research loop turns
+/// those two into different, honest sentences.
+class WebSearchOutcome {
+  const WebSearchOutcome({this.snippets = const [], this.error});
+
+  final List<WebSnippet> snippets;
+  final String? error;
+}
+
+typedef WebSearchRunner = Future<WebSearchOutcome> Function(String query);
+
+/// One search, through the workspace policy and the configured provider.
+///
+/// This is the single seam both the `web_search` tool and the chat's research
+/// step call (Road Map 5 Phase 5.5): the tool cannot reach a provider the
+/// policy refuses, and the research step cannot either. `duckduckgo` needs no
+/// key; `tavily` and `brave` read theirs from secure storage.
+Future<WebSearchOutcome> runWebSearch(Ref ref, String query) async {
+  final workspaceId = ref.read(activeWorkspaceIdProvider);
+  if (workspaceId == null) return const WebSearchOutcome();
+  final NetworkPolicy policy;
+  try {
+    policy = ref
+        .read(networkPolicyControllerProvider)
+        .snapshot
+        .forWorkspace(workspaceId);
+  } catch (_) {
+    return const WebSearchOutcome();
+  }
+  if (!policy.allowsWebSearch) return const WebSearchOutcome();
+  final provider = policy.webSearchProvider.trim().toLowerCase();
+  if (provider == 'duckduckgo') {
+    final result = await KeylessWebSearch().search(query);
+    return WebSearchOutcome(snippets: result.snippets, error: result.error);
+  }
+  final key = await ref
+      .read(networkPolicyControllerProvider.notifier)
+      .readSearchKey(
+        workspaceId: workspaceId,
+        provider: policy.webSearchProvider,
+      );
+  if (key == null || key.trim().isEmpty) {
+    return WebSearchOutcome(
+      error: 'no API key is stored for "$provider" in this workspace',
+    );
+  }
+  final service = WebFetchService(
+    searchBackend: (q) => searchWebWithProvider(
+      provider: policy.webSearchProvider,
+      apiKey: key,
+      query: q,
+    ),
+  );
+  return WebSearchOutcome(snippets: await service.search(query, policy));
+}
+
+/// The seam the chat turn reads, so both surfaces share one policy check.
+final webSearchRunnerProvider = Provider<WebSearchRunner>(
+  (ref) =>
+      (query) => runWebSearch(ref, query),
+);
+
 /// The user's hooks and the workspace network policy are read here too, so
 /// every surface that runs a tool — chat, rooms and agent runs — obeys the
 /// same rules.
@@ -198,26 +264,8 @@ final toolRegistryProvider = Provider<ToolRegistry>((ref) {
     ),
     buildWebSearchTool(
       policyForActiveWorkspace: policyForActiveWorkspace,
-      search: (query) async {
-        final workspaceId = ref.read(activeWorkspaceIdProvider);
-        final policy = policyForActiveWorkspace();
-        if (workspaceId == null || !policy.allowsWebSearch) return const [];
-        final key = await ref
-            .read(networkPolicyControllerProvider.notifier)
-            .readSearchKey(
-              workspaceId: workspaceId,
-              provider: policy.webSearchProvider,
-            );
-        if (key == null || key.trim().isEmpty) return const [];
-        final service = WebFetchService(
-          searchBackend: (q) => searchWebWithProvider(
-            provider: policy.webSearchProvider,
-            apiKey: key,
-            query: q,
-          ),
-        );
-        return service.search(query, policy);
-      },
+      search: (query) async =>
+          (await ref.read(webSearchRunnerProvider)(query)).snippets,
     ),
   ]);
 });

@@ -8,6 +8,8 @@ import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/conversations/domain/message_source.dart';
 import 'package:installm/features/conversations/domain/message_tool_activity.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
+import 'package:installm/features/web_research/domain/web_research.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// One message in a chat, as the app draws it everywhere.
 ///
@@ -231,6 +233,14 @@ class _ChatBubbleState extends State<ChatBubble> {
               padding: const EdgeInsets.only(top: 8),
               child: _MessageToolActivityList(
                 activities: widget.message.toolActivity,
+              ),
+            ),
+          if (!isUser && widget.message.webSources.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _MessageWebSources(
+                sources: widget.message.webSources,
+                cited: citedMarkers(widget.message.content),
               ),
             ),
           if (!isUser && widget.message.sources.isNotEmpty)
@@ -786,4 +796,119 @@ class _MarkdownSegment {
     this.isCode = false,
     this.language,
   });
+}
+
+/// The pages an answer read on the web, as the transcript shows them.
+///
+/// A source is only listed when the turn really fetched it: the marker, host
+/// and title come from the message, and tapping one offers the exact URL and
+/// the time it was read, so a citation opens the page it names instead of
+/// decorating the text. Markers the answer used are marked as cited; the rest
+/// are still listed, labelled as read but not cited, rather than dropped.
+class _MessageWebSources extends StatelessWidget {
+  const _MessageWebSources({required this.sources, required this.cited});
+
+  final List<WebSource> sources;
+  final List<int> cited;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final citedSet = cited.toSet();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.public, size: 14, color: colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              citedSet.isEmpty
+                  ? (sources.length == 1
+                        ? 'Web source read'
+                        : 'Web sources read')
+                  : (sources.length == 1 ? 'Web source' : 'Web sources'),
+              style: textTheme.labelSmall?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final source in sources)
+              ActionChip(
+                visualDensity: VisualDensity.compact,
+                avatar: Text(
+                  '[${source.marker}]',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.primary,
+                  ),
+                ),
+                label: Text(
+                  source.host.isEmpty ? source.url : source.host,
+                  style: textTheme.labelSmall,
+                ),
+                tooltip: source.label,
+                onPressed: () => _showSource(context, source),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showSource(BuildContext context, WebSource source) {
+    final textTheme = Theme.of(context).textTheme;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '[${source.marker}] ${source.title.trim().isEmpty ? source.host : source.title}',
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SelectableText(source.url, style: textTheme.bodySmall),
+            const SizedBox(height: 8),
+            Text(
+              'Read ${source.fetchedAt.toIso8601String()}',
+              style: textTheme.bodySmall,
+            ),
+            if (source.excerpt.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Text(source.excerpt, style: textTheme.bodySmall),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              final uri = Uri.tryParse(source.url);
+              if (uri != null && await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
+            child: const Text('Open page'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
 }

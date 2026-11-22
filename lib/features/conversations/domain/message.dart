@@ -1,4 +1,5 @@
 import 'package:installm/core/utils/id_generator.dart';
+import 'package:installm/features/web_research/domain/web_research.dart';
 import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/conversations/domain/message_source.dart';
 import 'package:installm/features/conversations/domain/message_tool_activity.dart';
@@ -98,6 +99,14 @@ class Message {
   /// every message saved before documents existed.
   final List<MessageSource> sources;
 
+  /// Pages the answer read on the web (Road Map 5 Phase 5.5).
+  ///
+  /// Each entry carries the URL the model was given and the time it was
+  /// fetched, so a citation in the transcript opens the page it names. Empty
+  /// for every answer that did not search, including messages saved before
+  /// web research existed.
+  final List<WebSource> webSources;
+
   /// Local tool calls this answer used, in the order they ran.
   ///
   /// Empty for every message that did not call a tool, including messages
@@ -125,6 +134,7 @@ class Message {
     this.generationStats,
     this.sources = const [],
     this.toolActivity = const [],
+    this.webSources = const [],
     this.tokenCount,
     this.isPinned = false,
   });
@@ -141,6 +151,7 @@ class Message {
     MessageGenerationStats? generationStats,
     List<MessageSource> sources = const [],
     List<MessageToolActivity> toolActivity = const [],
+    List<WebSource> webSources = const [],
     int? tokenCount,
     bool isPinned = false,
   }) {
@@ -156,6 +167,7 @@ class Message {
       generationStats: generationStats,
       sources: sources,
       toolActivity: toolActivity,
+      webSources: webSources,
       tokenCount: tokenCount,
       isPinned: isPinned,
     );
@@ -205,6 +217,7 @@ class Message {
     Object? generationStats = _unset,
     List<MessageSource>? sources,
     List<MessageToolActivity>? toolActivity,
+    List<WebSource>? webSources,
     Object? tokenCount = _unset,
     bool? isPinned,
   }) {
@@ -222,6 +235,7 @@ class Message {
           : generationStats as MessageGenerationStats?,
       sources: sources ?? this.sources,
       toolActivity: toolActivity ?? this.toolActivity,
+      webSources: webSources ?? this.webSources,
       tokenCount: tokenCount == _unset ? this.tokenCount : tokenCount as int?,
       isPinned: isPinned ?? this.isPinned,
     );
@@ -242,6 +256,7 @@ class Message {
       'toolActivity': toolActivity
           .map((activity) => activity.toJson())
           .toList(),
+      'webSources': webSources.map((source) => source.toJson()).toList(),
       'tokenCount': tokenCount,
       'isPinned': isPinned,
     };
@@ -310,6 +325,8 @@ class Message {
       // Absent on every message saved before tool calling existed, and on
       // messages that did not call a tool.
       toolActivity: MessageToolActivity.listFromJson(json['toolActivity']),
+      // Absent on every message saved before web research existed.
+      webSources: decodeWebSources(json['webSources']),
       tokenCount: (json['tokenCount'] as num?)?.toInt(),
       isPinned: json['isPinned'] as bool? ?? false,
     );

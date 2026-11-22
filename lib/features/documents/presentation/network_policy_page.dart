@@ -164,7 +164,9 @@ class _WorkspacePolicyCard extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Web search'),
-              subtitle: const Text('Needs a provider plus key below'),
+              subtitle: const Text(
+                'DuckDuckGo needs no key; tavily and brave need one below',
+              ),
               value: policy.webSearchEnabled,
               onChanged: isReadOnly
                   ? null

@@ -23,8 +23,9 @@ class NetworkPolicy {
   /// storage, never in this file).
   final bool webSearchEnabled;
 
-  /// Which search provider the workspace uses (`tavily`, `brave`, ...).
-  /// Empty means unconfigured, which refuses `web_search` like disabled.
+  /// Which search provider the workspace uses (`duckduckgo`, `tavily`,
+  /// `brave`). Empty means unconfigured, which refuses `web_search` like
+  /// disabled.
   final String webSearchProvider;
 
   /// Whether YouTube transcript ingest may fetch captions for an explicit URL.
@@ -161,5 +162,16 @@ abstract final class WebFetchLimits {
 
   /// Search providers this build knows how to call. A stored provider outside
   /// this set refuses like unconfigured rather than guessing an endpoint.
-  static const List<String> knownProviders = ['tavily', 'brave'];
+  ///
+  /// `duckduckgo` reads the public DuckDuckGo HTML endpoint and needs no
+  /// account or key (Road Map 5 Phase 5.5), so web search works on a fresh
+  /// install. `tavily` and `brave` are keyed alternatives behind the same seam.
+  static const List<String> knownProviders = ['duckduckgo', 'tavily', 'brave'];
+
+  /// Providers that work with no stored secret.
+  static const List<String> keylessProviders = ['duckduckgo'];
+
+  /// Whether [provider] needs a key before it can answer.
+  static bool needsKey(String provider) =>
+      !keylessProviders.contains(provider.trim().toLowerCase());
 }

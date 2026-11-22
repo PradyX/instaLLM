@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/share/application/assist_launch_provider.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/share_inbox.dart';
 import 'package:installm/features/share/application/share_providers.dart';
@@ -85,6 +86,11 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
     final readOnly = payload.processTextReadOnly;
     if (readOnly != null) {
       ref.read(processTextRequestProvider.notifier).begin(readOnly: readOnly);
+    }
+    // The assistant launch brings nothing with it: it only asks for the
+    // composer, which is empty until the user types.
+    if (payload.assist) {
+      ref.read(assistLaunchProvider.notifier).signal();
     }
     ref.read(appRouterProvider).go(AppRoutes.home);
   }

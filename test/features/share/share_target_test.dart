@@ -21,6 +21,12 @@ class _FakeReceiver implements SharedContentReceiver {
 
   @override
   Future<bool> returnProcessedText(String text) async => false;
+
+  @override
+  Future<bool> isAssistantRoleHeld() async => false;
+
+  @override
+  Future<bool> requestAssistantRole() async => false;
 }
 
 /// A container whose stored choice is [stored], recording what is written.

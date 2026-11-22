@@ -40,6 +40,7 @@ import 'package:installm/core/navigation/app_shell.dart';
 import 'package:installm/features/voice/application/tts_controller.dart';
 import 'package:installm/features/voice/application/voice_conversation_controller.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/share/application/assist_launch_provider.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/process_text_provider.dart';
 import 'package:installm/features/share/application/share_providers.dart';
@@ -78,6 +79,10 @@ class HomePage extends ConsumerStatefulWidget {
 class _HomePageState extends ConsumerState<HomePage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+
+  /// The composer's field, so an assistant launch can put the caret in it
+  /// (Road Map 5 Phase 5.3).
+  final FocusNode _composerFocusNode = FocusNode();
   final _imagePicker = ImagePicker();
   bool _scrollScheduled = false;
   ProviderSubscription<List<Message>>? _messagesSubscription;
@@ -87,9 +92,15 @@ class _HomePageState extends ConsumerState<HomePage> {
   ProviderSubscription<HomeGenerationStatus>? _starPromptSubscription;
   ProviderSubscription<String?>? _conversationSubscription;
   ProviderSubscription<List<SharedAttachment>>? _draftAttachmentsSubscription;
+  ProviderSubscription<int>? _assistLaunchSubscription;
 
   /// Reply currently being read aloud, so its own button can offer a stop.
   String? _readingMessageId;
+
+  /// An assistant launch wanted the composer while it was locked (a reply was
+  /// still streaming, or no model was ready). The request waits for the field
+  /// to be usable instead of being dropped.
+  bool _pendingComposerFocus = false;
   final List<XFile> _draftImages = [];
 
   /// Documents (a PDF another app shared) waiting to travel with the next
@@ -131,6 +142,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     _starPromptSubscription?.close();
     _conversationSubscription?.close();
     _draftAttachmentsSubscription?.close();
+    _assistLaunchSubscription?.close();
+    _composerFocusNode.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -161,11 +174,21 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (next.isEmpty) return;
       _consumeStagedAttachments();
     });
+    // Summoning the assistant brings no content: it asks for the composer,
+    // which is where the user can type. A cold start already has the count set
+    // before this page builds, so the same subscription covers both cases.
+    _assistLaunchSubscription = ref.listenManual(assistLaunchProvider, (
+      _,
+      next,
+    ) {
+      if (next > 0) _focusComposer();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingDraft = ref.read(composerDraftProvider);
       if (pendingDraft != null) _applyComposerDraft(pendingDraft);
       _consumeStagedAttachments();
+      if (ref.read(assistLaunchProvider) > 0) _focusComposer();
     });
 
     // Reading a reply aloud follows the generation that produced it: the
@@ -174,6 +197,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       previous,
       next,
     ) {
+      if (_pendingComposerFocus && !next.isGenerating) _focusComposer();
       if (previous == null) return;
       // The hands-free voice loop reads its own replies through the same
       // engine; reading them here as well would talk over it and cut the
@@ -405,6 +429,25 @@ class _HomePageState extends ConsumerState<HomePage> {
     setState(() {
       _draftImages.addAll(images);
       _draftDocuments.addAll(documents);
+    });
+  }
+
+  /// Puts the caret in the composer once it has been laid out.
+  ///
+  /// The assistant launch can arrive before this page has ever been shown, so
+  /// the request waits for a frame and is skipped if the field is disabled (no
+  /// model yet), where focusing it would only raise an empty keyboard.
+  void _focusComposer() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_composerFocusNode.canRequestFocus) {
+        // Still generating, or no model is ready: the field is disabled, so the
+        // request is kept until the generation listener sees it unlock.
+        _pendingComposerFocus = true;
+        return;
+      }
+      _pendingComposerFocus = false;
+      _composerFocusNode.requestFocus();
     });
   }
 
@@ -1308,6 +1351,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         .toList(),
                   ),
             controller: _messageController,
+            focusNode: _composerFocusNode,
             enabled: canCompose,
             hintText: !hasDownloadedModel
                 ? t.memory.noModelHint

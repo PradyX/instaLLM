@@ -1,9 +1,11 @@
 package com.prady.installm
 
+import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.StatFs
 import android.provider.OpenableColumns
 import java.io.File
@@ -39,6 +41,9 @@ class MainActivity : FlutterActivity() {
     // and in link handling. It ships disabled: the user turns it on in Settings
     // › Sharing, and until then this activity ignores anything shared.
     private val shareTargetComponent = "com.prady.installm.ShareTarget"
+
+    // Request code for the system's assistant-role prompt (API 29+).
+    private val ASSISTANT_ROLE_REQUEST = 4703
 
     // Ask with InstaLLM (Road Map 5 Phase 5.2): a PROCESS_TEXT launch may hand
     // the answer back to the app the text was selected in, but only when that
@@ -120,7 +125,7 @@ class MainActivity : FlutterActivity() {
                     // the next time the app is opened from the launcher.
                     val content = pendingSharedContent ?: sharedContentFrom(intent)
                     pendingSharedContent = null
-                    result.success(if (isShareTargetEnabled()) content else null)
+                    result.success(if (isAllowed(content)) content else null)
                 }
 
                 "setShareTargetEnabled" -> {
@@ -137,9 +142,33 @@ class MainActivity : FlutterActivity() {
                     result.success(returnProcessedText(text))
                 }
 
+                "isAssistantRoleHeld" -> result.success(isAssistantRoleHeld())
+
+                "requestAssistantRole" -> {
+                    try {
+                        result.success(requestAssistantRole())
+                    } catch (e: Exception) {
+                        result.error("assistant_role_error", e.message, null)
+                    }
+                }
+
                 else -> result.notImplemented()
             }
         }
+    }
+
+    /**
+     * Whether this payload may reach the composer.
+     *
+     * A share or a selection is gated by the Sharing switch, so an explicit
+     * intent aimed straight at the activity cannot bypass it. An assistant
+     * launch is not: it comes from the assistant slot the user granted in
+     * system settings, which is its own decision and carries no content.
+     */
+    private fun isAllowed(content: Map<String, Any?>?): Boolean {
+        if (content == null) return false
+        if (content["assist"] == true) return true
+        return isShareTargetEnabled()
     }
 
     /** True only once the user has switched sharing on. */
@@ -164,10 +193,16 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        if (!isShareTargetEnabled()) return
-        val content = sharedContentFrom(intent) ?: return
+        // Flutter hands a VIEW intent's data URI to the router as an in-app
+        // route, and the app has no http(s) routes: a link that arrived while
+        // the app was open landed on the not-found page instead of the
+        // composer. The URI belongs to the share payload below, so the engine
+        // gets a copy without it.
+        val forward = Intent(intent).setData(null)
+        super.onNewIntent(forward)
+        setIntent(forward)
+        val content = sharedContentFrom(intent)
+        if (!isAllowed(content)) return
         val channel = shareChannel
         if (channel == null) {
             pendingSharedContent = content
@@ -184,6 +219,17 @@ class MainActivity : FlutterActivity() {
     private fun sharedContentFrom(intent: Intent?): Map<String, Any?>? {
         processTextReadOnly = null
         if (intent == null) return null
+
+        // The assistant launch carries no content: it only asks for the
+        // composer, so the payload says so and stages nothing.
+        if (intent.action == Intent.ACTION_ASSIST) {
+            return mapOf(
+                "text" to null,
+                "attachments" to emptyList<Map<String, String>>(),
+                "unreadable" to 0,
+                "assist" to true,
+            )
+        }
 
         if (intent.action == Intent.ACTION_PROCESS_TEXT) {
             val selection = processTextFrom(intent)
@@ -243,6 +289,42 @@ class MainActivity : FlutterActivity() {
      * for one: the request is refused here rather than trusted to the UI. Only
      * an editable request gets a result, and only once the app is finished.
      */
+    /**
+     * Whether InstaLLM already holds the assistant role.
+     *
+     * The role only exists from Android 10 (API 29), which is above this app's
+     * minSdk 24, so anything older reports false and the settings row explains
+     * that the platform has no role to grant.
+     */
+    private fun isAssistantRoleHeld(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        return try {
+            val manager = getSystemService(RoleManager::class.java)
+            manager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) ?: false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Shows the system's "use as default assistant" prompt.
+     *
+     * Returns false when the platform has no assistant role (below Android 10)
+     * or refuses it, so the caller can say something the user can act on
+     * instead of a dialog that never appears.
+     */
+    private fun requestAssistantRole(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val manager = getSystemService(RoleManager::class.java) ?: return false
+        if (!manager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) return false
+        if (manager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) return true
+        startActivityForResult(
+            manager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT),
+            ASSISTANT_ROLE_REQUEST,
+        )
+        return true
+    }
+
     private fun returnProcessedText(text: String?): Boolean {
         val readOnly = processTextReadOnly ?: return false
         if (readOnly) return false

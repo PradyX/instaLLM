@@ -44,10 +44,15 @@ class SharedPayload {
     this.text,
     this.attachments = const [],
     this.processTextReadOnly,
+    this.assist = false,
   });
 
   final String? text;
   final List<SharedAttachment> attachments;
+
+  /// True when the device's assistant slot launched the app (Road Map 5 Phase
+  /// 5.3). Such a launch carries nothing: it only asks for the composer.
+  final bool assist;
 
   /// True for a read-only selection, false when it can be replaced, null when
   /// this payload is not a text selection at all.
@@ -60,7 +65,7 @@ class SharedPayload {
   bool get canReturnText => processTextReadOnly == false;
 
   bool get isEmpty =>
-      (text == null || text!.trim().isEmpty) && attachments.isEmpty;
+      (text == null || text!.trim().isEmpty) && attachments.isEmpty && !assist;
 
   List<SharedAttachment> get images => [
     for (final attachment in attachments)
@@ -114,6 +119,7 @@ SharedPayload? sharedPayloadFromMap(Object? raw) {
     text: text,
     attachments: attachments,
     processTextReadOnly: rawReadOnly is bool ? rawReadOnly : null,
+    assist: raw['assist'] == true,
   );
   return payload.isEmpty ? null : payload;
 }

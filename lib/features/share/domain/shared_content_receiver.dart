@@ -23,6 +23,17 @@ abstract class SharedContentReceiver {
   /// appears in other apps' share sheets outlives this process.
   Future<void> setShareTargetEnabled(bool enabled);
 
+  /// Whether InstaLLM holds the device's assistant role.
+  ///
+  /// Always false on a platform with no assistant slot.
+  Future<bool> isAssistantRoleHeld();
+
+  /// Shows the platform's prompt to make InstaLLM the default assistant.
+  ///
+  /// Returns false when there is no role to grant, so the caller can explain
+  /// that instead of waiting for a prompt that never comes.
+  Future<bool> requestAssistantRole();
+
   /// Hands [text] back to the app a selection came from, replacing it.
   ///
   /// Returns false when no editable selection is waiting: a read-only one is
@@ -71,6 +82,28 @@ class PlatformSharedContentReceiver implements SharedContentReceiver {
       // A platform with no share sheet has nothing to switch on.
     } on PlatformException {
       // The switch keeps its stored value; the next launch applies it again.
+    }
+  }
+
+  @override
+  Future<bool> isAssistantRoleHeld() async {
+    try {
+      return await _channel.invokeMethod<bool>('isAssistantRoleHeld') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> requestAssistantRole() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestAssistantRole') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
     }
   }
 

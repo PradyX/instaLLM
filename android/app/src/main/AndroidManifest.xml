@@ -47,11 +47,33 @@
              on the activity so the whole surface is a single component the
              user can switch on: it ships disabled, and Settings › Sharing
              enables it. Images and documents are a later unit. -->
+        <!-- Default assistant (Road Map 5 Phase 5.3): the assistant slot is
+             chosen by the user in system settings, so it is its own surface and
+             not part of the opt-in share alias. No voice-interaction service is
+             declared, so the platform never starts a voice session here: an
+             ASSIST launch opens the activity and the composer. -->
+        <activity-alias
+            android:name=".AssistantTarget"
+            android:targetActivity=".MainActivity"
+            android:exported="true"
+            android:enabled="true">
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false"/>
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity-alias>
+
         <activity-alias
             android:name=".ShareTarget"
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="false">
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="false"/>
             <intent-filter>
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>

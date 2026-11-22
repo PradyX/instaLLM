@@ -9,6 +9,7 @@ import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/play_review/review_prompt.dart';
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/services/attachment_image_service.dart';
+import 'package:installm/features/share/application/assistant_role_provider.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
@@ -167,6 +168,8 @@ class SettingsPage extends ConsumerWidget {
                     .setEnabled(value),
               ),
             ),
+            const SizedBox(height: 8),
+            const _DefaultAssistantTile(),
           ],
           const SizedBox(height: 24),
           Text(
@@ -336,6 +339,68 @@ class _NavigationGroup extends StatelessWidget {
             children[i],
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Makes InstaLLM offerable as the device's assistant
+/// (Road Map 5 Phase 5.3).
+///
+/// The role belongs to the user: this only opens the platform's own prompt and
+/// reports what it read back. The assistant launch itself carries no content,
+/// so summoning InstaLLM lands in an empty composer.
+class _DefaultAssistantTile extends ConsumerWidget {
+  const _DefaultAssistantTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final held = ref.watch(assistantRoleProvider);
+    final busy = held.isLoading || held.isRefreshing;
+    final active = held.asData?.value == true;
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: const Icon(Icons.assistant_rounded),
+        title: const Text('Default assistant'),
+        subtitle: Text(
+          active
+              ? 'InstaLLM opens when you summon the assistant. It starts in '
+                    'the composer, and nothing runs until you send.'
+              : 'Choose InstaLLM in the system prompt to answer the assistant '
+                    'button or gesture with an empty composer.',
+        ),
+        trailing: active
+            ? Text(
+                'Active',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              )
+            : FilledButton.tonal(
+                onPressed: busy
+                    ? null
+                    : () async {
+                        final shown = await ref
+                            .read(assistantRoleProvider.notifier)
+                            .request();
+                        await ref
+                            .read(assistantRoleProvider.notifier)
+                            .refresh();
+                        if (shown || !context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'This Android version has no assistant role to '
+                              'grant. InstaLLM still opens from its own icon.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                child: const Text('Set'),
+              ),
       ),
     );
   }

@@ -279,6 +279,11 @@ class ModelFamily {
 
   bool get hasInstalled => installedCount > 0;
 
+  /// True when a variant's record says installed but its file is gone: the row
+  /// shows that instead of a check nobody can use.
+  bool get hasMissingFile =>
+      variants.any((variant) => variant.model.fileMissing);
+
   /// The lightest variant: the one most likely to run on a small device.
   ModelVariant get lightest => variants.first;
 

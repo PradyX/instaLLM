@@ -12,6 +12,7 @@ import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/model_selection/domain/model_import.dart';
+import 'package:installm/features/model_selection/domain/model_install_state.dart';
 import 'package:installm/features/model_selection/presentation/download_progress_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:installm/storage/secure_storage.dart';
@@ -110,10 +111,13 @@ class ModelSelectionController extends _$ModelSelectionController {
       customModels: customModels,
     );
 
+    // Each record is checked against storage before it is shown: a file removed
+    // outside the app, or a record left by a build that registered a download
+    // it never finished, must not be presented as a working install.
     final updatedModels = await Future.wait(
       combinedModels.map((model) async {
-        final isDownloaded = await _isModelBundleDownloaded(model);
-        return model.copyWith(isDownloaded: isDownloaded);
+        final filePresent = await _isModelBundleDownloaded(model);
+        return withVerifiedInstall(model, filePresent: filePresent);
       }),
     );
     final modelsWithCachedCapabilities = await _applyCachedCapabilities(
@@ -181,8 +185,8 @@ class ModelSelectionController extends _$ModelSelectionController {
 
     final updatedModels = await Future.wait(
       merged.map((model) async {
-        final isDownloaded = await _isModelBundleDownloaded(model);
-        return model.copyWith(isDownloaded: isDownloaded);
+        final filePresent = await _isModelBundleDownloaded(model);
+        return withVerifiedInstall(model, filePresent: filePresent);
       }),
     );
 
@@ -420,8 +424,9 @@ class ModelSelectionController extends _$ModelSelectionController {
       final isDownloaded = await _isModelBundleDownloaded(model);
       final updatedModels = state.models
           .map(
-            (m) =>
-                m.id == model.id ? m.copyWith(isDownloaded: isDownloaded) : m,
+            (m) => m.id == model.id
+                ? withVerifiedInstall(m, filePresent: isDownloaded)
+                : m,
           )
           .toList();
 
@@ -588,7 +593,11 @@ class ModelSelectionController extends _$ModelSelectionController {
       );
 
       final updatedModels = state.models
-          .map((m) => m.id == model.id ? m.copyWith(isDownloaded: false) : m)
+          .map(
+            (m) => m.id == model.id
+                ? m.copyWith(isDownloaded: false, fileMissing: false)
+                : m,
+          )
           .toList();
 
       String? newSelectedId = state.selectedModelId;
@@ -862,7 +871,7 @@ class ModelSelectionController extends _$ModelSelectionController {
     }
 
     final isDownloaded = await _isModelBundleDownloaded(model);
-    final registered = model.copyWith(isDownloaded: isDownloaded);
+    final registered = withVerifiedInstall(model, filePresent: isDownloaded);
     final updatedModels = [...state.models, registered];
     final hadSelection = state.selectedModelId != null;
     state = state.copyWith(

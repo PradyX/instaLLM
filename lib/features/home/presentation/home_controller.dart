@@ -885,7 +885,12 @@ class HomeController extends _$HomeController {
     final modelPath = await _storageService.resolveModelPath(selectedModel);
     if (modelPath == null ||
         !await _storageService.isModelPathDownloaded(modelPath)) {
-      throw Exception('Selected model file is missing.');
+      // A record can outlive its file. Say what to do instead of reporting a
+      // missing selection the user never made.
+      throw Exception(
+        "This model's file is missing from this device. Open Models and "
+        'download it again to chat with it.',
+      );
     }
 
     final aiMessageId = IdGenerator.message();

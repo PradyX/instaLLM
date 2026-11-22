@@ -74,6 +74,13 @@ class LlmModel {
   final String? repositoryChatTemplate;
 
   final bool isDownloaded;
+
+  /// True when the record says installed but its file is not on this device.
+  ///
+  /// Derived when the library loads and never stored: it is a fact about
+  /// storage, not about the model, and the next load asks storage again.
+  final bool fileMissing;
+
   final bool isCustom;
 
   /// Where this model came from; null for catalog models saved before Phase 2.
@@ -160,6 +167,7 @@ class LlmModel {
     this.promptFormatId = 'chatml',
     this.repositoryChatTemplate,
     this.isDownloaded = false,
+    this.fileMissing = false,
     this.isCustom = false,
     this.modelSource,
     this.externalPath,
@@ -173,6 +181,7 @@ class LlmModel {
     String? description,
     List<ModelCapability>? capabilities,
     bool? isDownloaded,
+    bool? fileMissing,
     String? localFileName,
     String? mmprojLocalFileName,
     String? promptFormatId,
@@ -198,6 +207,7 @@ class LlmModel {
           ? this.repositoryChatTemplate
           : repositoryChatTemplate as String?,
       isDownloaded: isDownloaded ?? this.isDownloaded,
+      fileMissing: fileMissing ?? this.fileMissing,
       isCustom: isCustom ?? this.isCustom,
       modelSource: modelSource == _unset
           ? this.modelSource

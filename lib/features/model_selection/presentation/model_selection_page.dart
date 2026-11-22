@@ -999,6 +999,17 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     size: 16,
                     color: colorScheme.onSurfaceVariant,
                   ),
+                ] else if (family.hasMissingFile) ...[
+                  // A record whose file is gone: a warning, not a check.
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'File missing — download again',
+                    child: Icon(
+                      Icons.report_gmailerrorred_rounded,
+                      size: 16,
+                      color: colorScheme.error,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -1206,8 +1217,47 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           color: colorScheme.outlineVariant.withValues(alpha: 0.6),
         ),
         const SizedBox(height: 14),
+        if (model.fileMissing) ...[
+          _buildMissingFileNotice(context, model),
+          const SizedBox(height: 14),
+        ],
         _buildDetailActions(context, model, isSelected: isSelected),
       ],
+    );
+  }
+
+  /// Says plainly that a record's file is gone, so the Download button under it
+  /// is understood as a repair rather than a first install.
+  Widget _buildMissingFileNotice(BuildContext context, LlmModel model) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.report_gmailerrorred_rounded,
+            size: 20,
+            color: colorScheme.error,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "This model's file is missing from this device. Download it "
+              'again to chat with it — nothing else about the model was lost.',
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1694,7 +1744,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                 ? 'Downloads with the model'
                 : 'None'),
       ),
-      ('Installed', model.isDownloaded ? 'Yes' : 'No'),
+      (
+        'Installed',
+        model.isDownloaded
+            ? 'Yes'
+            : model.fileMissing
+            ? 'File missing'
+            : 'No',
+      ),
       (
         'Capabilities',
         model.capabilities.isEmpty

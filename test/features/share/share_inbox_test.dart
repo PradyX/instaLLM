@@ -19,6 +19,9 @@ class _FakeReceiver implements SharedTextReceiver {
   void listen(void Function(String text) onText) {
     listener = onText;
   }
+
+  @override
+  Future<void> setShareTargetEnabled(bool enabled) async {}
 }
 
 void main() {

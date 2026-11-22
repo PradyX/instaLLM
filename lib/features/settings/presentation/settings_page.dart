@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:installm/i18n/strings.g.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +9,7 @@ import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/play_review/review_prompt.dart';
 import 'package:installm/core/settings/attachment_settings_provider.dart';
 import 'package:installm/core/services/attachment_image_service.dart';
+import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart'
@@ -137,6 +140,33 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
+          if (defaultTargetPlatform == TargetPlatform.android) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Sharing',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: SwitchListTile(
+                secondary: const Icon(Icons.ios_share_rounded),
+                title: const Text('Share to InstaLLM'),
+                subtitle: const Text(
+                  'Other apps can hand InstaLLM text or a link. It waits in '
+                  'the composer until you send it: nothing is uploaded and '
+                  'nothing is sent on its own.',
+                ),
+                value: ref.watch(shareTargetEnabledProvider),
+                onChanged: (value) => ref
+                    .read(shareTargetEnabledProvider.notifier)
+                    .setEnabled(value),
+              ),
+            ),
+          ],
           const SizedBox(height: 24),
           Text(
             'Voice',

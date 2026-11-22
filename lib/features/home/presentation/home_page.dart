@@ -131,11 +131,16 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (next == null) return;
       _applyComposerDraft(next);
     });
-    // Text prepared while this page was not built (voice, for example) is
-    // waiting in the provider when the chat opens again.
-    final pendingDraft = ref.read(composerDraftProvider);
-    if (pendingDraft != null) {
-      _applyComposerDraft(pendingDraft);
+    // Text prepared while this page was not built (voice, a share, a link) is
+    // waiting in the provider when the chat opens again. Applying it consumes
+    // the draft, and a provider cannot be modified while the tree is still
+    // building, so it happens once the first frame is done.
+    if (ref.read(composerDraftProvider) != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final pendingDraft = ref.read(composerDraftProvider);
+        if (pendingDraft != null) _applyComposerDraft(pendingDraft);
+      });
     }
 
     // Reading a reply aloud follows the generation that produced it: the

@@ -5,6 +5,7 @@ import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/share/application/share_inbox.dart';
 import 'package:installm/features/share/application/share_providers.dart';
+import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/core/theme/theme.dart';
 import 'package:installm/core/theme/theme_provider.dart';
 import 'package:installm/core/theme/appearance_provider.dart';
@@ -65,6 +66,9 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
       onText: _stage,
     );
     unawaited(inbox.start());
+    // Re-apply the stored Sharing choice at launch, so a component state that
+    // drifted (a restore, a reinstall) matches what Settings shows.
+    ref.read(shareTargetEnabledProvider);
   }
 
   void _stage(String text) {

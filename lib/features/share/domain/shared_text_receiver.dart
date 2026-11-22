@@ -1,10 +1,9 @@
 import 'package:flutter/services.dart';
 
-/// Text another app handed to InstaLLM through the Android share sheet
-/// (Road Map 5 Phase 5.1).
+/// Text or a link another app handed to InstaLLM (Road Map 5 Phase 5.1).
 ///
-/// Only the transport: the text is never sent to a model here, and nothing is
-/// stored. What the user shared is a draft until they send it.
+/// Only the transport: the payload is never sent to a model here, and nothing
+/// is stored. What the user shared is a draft until they send it.
 abstract class SharedTextReceiver {
   /// The text that launched this run, or null when the app was opened normally.
   ///
@@ -14,6 +13,12 @@ abstract class SharedTextReceiver {
 
   /// Calls [onText] for every share that arrives while the app is running.
   void listen(void Function(String text) onText);
+
+  /// Shows or hides InstaLLM as a share and link target on the device.
+  ///
+  /// The switch has to reach the platform, because the Android component that
+  /// appears in other apps' share sheets outlives this process.
+  Future<void> setShareTargetEnabled(bool enabled);
 }
 
 /// The Android implementation, backed by `installm/share` in `MainActivity`.
@@ -47,6 +52,17 @@ class PlatformSharedTextReceiver implements SharedTextReceiver {
       onText(text);
       return null;
     });
+  }
+
+  @override
+  Future<void> setShareTargetEnabled(bool enabled) async {
+    try {
+      await _channel.invokeMethod<bool>('setShareTargetEnabled', enabled);
+    } on MissingPluginException {
+      // A platform with no share sheet has nothing to switch on.
+    } on PlatformException {
+      // The switch keeps its stored value; the next launch applies it again.
+    }
   }
 
   static String? _clean(String? text) {

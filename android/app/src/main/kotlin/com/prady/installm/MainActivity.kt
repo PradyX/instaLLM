@@ -1,6 +1,8 @@
 package com.prady.installm
 
+import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.StatFs
 import com.prady.installm.tools.ToolExecutor
 import io.flutter.embedding.android.FlutterActivity
@@ -13,12 +15,17 @@ class MainActivity : FlutterActivity() {
     private val toolExecutorChannel = "installm/tool_executor"
     private val toolExecutor = ToolExecutor()
 
-    // Text another app sent through the Android share sheet (Road Map 5 Phase
-    // 5.1). Nothing is uploaded and nothing is sent to a model: the text waits
+    // Text or a link another app sent to InstaLLM (Road Map 5 Phase 5.1).
+    // Nothing is uploaded and nothing is sent to a model: the payload waits
     // here until Dart stages it in the composer, and is cleared once read.
     private val shareChannelName = "installm/share"
     private var shareChannel: MethodChannel? = null
     private var pendingSharedText: String? = null
+
+    // The manifest alias that makes InstaLLM appear in other apps' share sheets
+    // and in link handling. It ships disabled: the user turns it on in Settings
+    // › Sharing, and until then this activity ignores anything shared.
+    private val shareTargetComponent = "com.prady.installm.ShareTarget"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -95,7 +102,16 @@ class MainActivity : FlutterActivity() {
                     // the next time the app is opened from the launcher.
                     val text = pendingSharedText ?: sharedTextFrom(intent)
                     pendingSharedText = null
-                    result.success(text)
+                    result.success(if (isShareTargetEnabled()) text else null)
+                }
+
+                "setShareTargetEnabled" -> {
+                    val enabled = call.arguments as? Boolean ?: false
+                    try {
+                        result.success(setShareTargetEnabled(enabled))
+                    } catch (e: Exception) {
+                        result.error("share_target_error", e.message, null)
+                    }
                 }
 
                 else -> result.notImplemented()
@@ -103,9 +119,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /** True only once the user has switched sharing on. */
+    private fun isShareTargetEnabled(): Boolean =
+        packageManager.getComponentEnabledSetting(ComponentName(this, shareTargetComponent)) ==
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+
+    /** Enables or disables the share alias and reports the state that took. */
+    private fun setShareTargetEnabled(enabled: Boolean): Boolean {
+        val state =
+            if (enabled) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            }
+        packageManager.setComponentEnabledSetting(
+            ComponentName(this, shareTargetComponent),
+            state,
+            PackageManager.DONT_KILL_APP,
+        )
+        return isShareTargetEnabled()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (!isShareTargetEnabled()) return
         val text = sharedTextFrom(intent) ?: return
         val channel = shareChannel
         if (channel == null) {
@@ -115,9 +153,21 @@ class MainActivity : FlutterActivity() {
         channel.invokeMethod("sharedText", text)
     }
 
-    /** The text of an ACTION_SEND intent, or null when this launch is not one. */
+    /**
+     * What another app handed over: the text of an ACTION_SEND, or the http(s)
+     * link of an ACTION_VIEW. Null when this launch carried neither.
+     */
     private fun sharedTextFrom(intent: Intent?): String? {
-        if (intent == null || intent.action != Intent.ACTION_SEND) return null
+        if (intent == null) return null
+
+        if (intent.action == Intent.ACTION_VIEW) {
+            val scheme = intent.data?.scheme?.lowercase()
+            if (scheme != "http" && scheme != "https") return null
+            val link = intent.dataString?.trim()
+            return if (link.isNullOrEmpty()) null else link
+        }
+
+        if (intent.action != Intent.ACTION_SEND) return null
         if (!intent.type.orEmpty().startsWith("text/")) return null
         val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()?.trim()
         return if (text.isNullOrEmpty()) null else text

@@ -37,6 +37,7 @@ import 'package:installm/features/documents/application/document_library.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
 import 'package:installm/features/documents/domain/document.dart';
 import 'package:installm/features/documents/domain/document_context.dart';
+import 'package:installm/features/home/application/reply_notice_service.dart';
 import 'package:installm/features/documents/domain/document_scope.dart';
 import 'package:installm/features/documents/domain/embedding_model_ref.dart';
 import 'package:installm/features/documents/domain/document_retrieval.dart';
@@ -362,6 +363,7 @@ class HomeController extends _$HomeController {
   bool _conversationStateHydrated = false;
   bool _suppressNextConversationLoad = false;
   bool _stopRequestedByUser = false;
+  bool _notifyOnCompletion = true;
   SkillSession? _turnSkills;
 
   ToolRegistry get _turnRegistry =>
@@ -580,7 +582,11 @@ class HomeController extends _$HomeController {
     Map<String, MessageAttachment> reusedAttachments = const {},
     List<String> documentPaths = const [],
     List<String> documentLabels = const [],
+    // A scheduled job posts its own notice when the run is recorded, so its
+    // turn must not also announce the reply (Road Map 5 Phase 5.6).
+    bool notifyOnCompletion = true,
   }) async {
+    _notifyOnCompletion = notifyOnCompletion;
     if (imagePaths.isEmpty && text.trim().startsWith('/')) {
       await ref.read(skillsProvider.notifier).whenReady;
       await ref.read(skillChoicesProvider.notifier).whenReady;
@@ -889,6 +895,28 @@ class HomeController extends _$HomeController {
       debugPrint('HomeController: could not open a conversation: $error');
       return null;
     }
+  }
+
+  /// Tells the user a reply is ready when they are not looking at it
+  /// (Road Map 5 Phase 5.6).
+  ///
+  /// The service decides whether a notice is due (app in the background, or a
+  /// different conversation on screen) and builds it from the reply alone: the
+  /// question is never handed over, so it cannot leak onto the lock screen.
+  void _announceReply(String messageId, String text) {
+    if (_disposed) return;
+    final conversationId = _activeConversationId;
+    if (conversationId == null) return;
+    unawaited(
+      ref
+          .read(replyNoticeServiceProvider)
+          .announceReply(
+            conversationId: conversationId,
+            messageId: messageId,
+            reply: text,
+            fromScheduledJob: !_notifyOnCompletion,
+          ),
+    );
   }
 
   /// Returns the active conversation id, creating a conversation when none is
@@ -1238,6 +1266,7 @@ class HomeController extends _$HomeController {
           promptTokens: promptTokens,
           contextTokens: contextTokens,
         );
+        _announceReply(aiMessageId, firstReply.text);
         _startMemoryRefresh(assembly: assembly, model: selectedModel);
       } else if (firstReply is RegistryToolReply) {
         await _answerAfterToolCall(
@@ -1507,6 +1536,7 @@ class HomeController extends _$HomeController {
       sources: sources,
       toolActivity: toolActivity,
     );
+    _announceReply(aiMessageId, finalText);
     _startMemoryRefresh(assembly: assembly, model: selectedModel);
   }
 

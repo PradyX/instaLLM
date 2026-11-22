@@ -265,6 +265,62 @@ class LocalNotificationService {
     }
   }
 
+  /// Tells the user a reply finished while they were looking elsewhere
+  /// (Road Map 5 Phase 5.6).
+  ///
+  /// [body] is an excerpt of the answer, already cut by `ReplyNotice`; the
+  /// question is never part of it. The payload is `chat:<conversationId>`, so
+  /// tapping the notice opens the conversation the answer belongs to.
+  Future<void> showReplyReady({
+    required int id,
+    required String body,
+    required String payload,
+  }) async {
+    await initialize();
+    if (!_notificationsAvailable) return;
+
+    const androidDetails = AndroidNotificationDetails(
+      'reply_updates',
+      'Replies',
+      channelDescription: 'Tells you when a reply is ready',
+      icon: _androidStatusIcon,
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: true,
+    );
+    const linuxDetails = LinuxNotificationDetails(
+      category: LinuxNotificationCategory.transferComplete,
+      urgency: LinuxNotificationUrgency.normal,
+      defaultActionName: 'Open InstaLLM',
+    );
+    const details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+      macOS: iosDetails,
+      linux: linuxDetails,
+    );
+
+    try {
+      await _plugin.show(
+        id: id,
+        title: 'Reply ready',
+        body: body,
+        notificationDetails: details,
+        payload: payload,
+      );
+    } catch (error, stackTrace) {
+      AppLogger.warning(
+        'LocalNotificationService failed to show notification: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
   /// Tells the user a supervised agent run ended or needs them.
   ///
   /// A run started on purpose to continue while the user is elsewhere, so the

@@ -128,7 +128,11 @@ class ScheduledJobRunner {
     await notifier.updateTask(base.withRun(run));
 
     try {
-      await _ref.read(homeControllerProvider.notifier).sendMessage(task.prompt);
+      // The run's own notice is posted below, so the turn must not announce
+      // the reply as well (Road Map 5 Phase 5.6).
+      await _ref
+          .read(homeControllerProvider.notifier)
+          .sendMessage(task.prompt, notifyOnCompletion: false);
       final reply = _lastAssistantReply();
       final finished = run.finish(
         state: TaskRunState.completed,

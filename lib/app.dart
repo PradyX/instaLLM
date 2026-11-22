@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/home/application/reply_notice_service.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/reminders/application/scheduled_job_service.dart';
 import 'package:installm/features/share/application/assist_launch_provider.dart';
@@ -78,6 +79,9 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
     // Scheduled jobs (Road Map 5 Phase 5.4) are checked while the app is
     // alive: at launch, every tick, and whenever it comes back to the front.
     ref.read(scheduledJobServiceProvider).start();
+    // A reply that finishes while the user is elsewhere posts a short notice
+    // and opens its conversation when tapped (Road Map 5 Phase 5.6).
+    ref.read(replyNoticeServiceProvider).start();
   }
 
   void _stage(SharedPayload payload) {

@@ -14,18 +14,22 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 /// dependency: PDF comes from `syncfusion_flutter_pdf`, which the document
 /// extractor already uses.
 enum ChatExportFormat {
-  pdf('PDF', 'pdf'),
-  markdown('Markdown', 'md'),
-  text('Plain text', 'txt'),
-  json('JSON', 'json');
+  pdf('PDF', 'pdf', 'application/pdf'),
+  markdown('Markdown', 'md', 'text/markdown'),
+  text('Plain text', 'txt', 'text/plain'),
+  json('JSON', 'json', 'application/json');
 
-  const ChatExportFormat(this.label, this.extension);
+  const ChatExportFormat(this.label, this.extension, this.mimeType);
 
   /// Name shown in the menu and in the save dialog's type group.
   final String label;
 
   /// Extension without the dot.
   final String extension;
+
+  /// What the saved file is handed to another program as (Road Map 5 Phase
+  /// 5.0): a viewer needs the type, not the extension.
+  final String mimeType;
 }
 
 /// Turns the conversation on screen into an exportable document.
@@ -53,13 +57,20 @@ abstract final class ChatExport {
     ];
   }
 
-  /// Document sources cited by any answer, in first-seen order and deduplicated
-  /// by their printed label.
+  /// Sources cited by any answer, in first-seen order and deduplicated by their
+  /// printed label: the documents an answer grounded in, and the pages a web
+  /// turn read (Road Map 5 Phase 5.5), so an export keeps its evidence.
   static List<String> citationsFor(List<Message> messages) {
     final seen = <String>{};
     for (final message in messages) {
       for (final source in message.sources) {
         seen.add(source.citationLabel);
+      }
+      for (final source in message.webSources) {
+        final named = source.title.trim().isEmpty
+            ? source.host
+            : source.title.trim();
+        seen.add('$named — ${source.url}');
       }
     }
     return [...seen];

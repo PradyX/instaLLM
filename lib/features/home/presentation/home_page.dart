@@ -17,6 +17,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/artifacts/data/chat_export.dart';
+import 'package:installm/features/artifacts/data/chat_export_store.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/group_chat/application/active_room.dart';
@@ -705,32 +706,58 @@ class _HomePageState extends ConsumerState<HomePage> {
       messages: messages,
     );
     final fileName = ChatExport.fileName(title: title, format: format);
-    // Written either where the save dialog points or, when a platform has no
-    // save dialog, in the app's own exports folder.
-    String path;
-    try {
-      final location = await getSaveLocation(
-        suggestedName: fileName,
-        acceptedTypeGroups: [
-          XTypeGroup(label: format.label, extensions: [format.extension]),
-        ],
-      );
-      if (location == null) return; // the user cancelled; nothing was written
-      final file = File(location.path);
-      await file.writeAsBytes(bytes, flush: true);
-      path = file.path;
-    } on UnimplementedError {
-      path = await _writeExportToAppFolder(fileName, bytes);
-    } catch (_) {
-      path = await _writeExportToAppFolder(fileName, bytes);
+    // Android has no save dialog, and the app's own folder is invisible to a
+    // viewer, so the file goes into Downloads where another program can open
+    // it. Everywhere else the user's own save dialog decides, and a platform
+    // without one falls back to the app's exports folder.
+    ChatExportLocation? saved = await ChatExportStore.saveToDownloads(
+      name: fileName,
+      format: format,
+      bytes: bytes,
+    );
+    if (saved == null) {
+      try {
+        final location = await getSaveLocation(
+          suggestedName: fileName,
+          acceptedTypeGroups: [
+            XTypeGroup(label: format.label, extensions: [format.extension]),
+          ],
+        );
+        if (location == null) return; // the user cancelled; nothing was written
+        final file = File(location.path);
+        await file.writeAsBytes(bytes, flush: true);
+        saved = ChatExportLocation(path: file.path, label: file.path);
+      } on UnimplementedError {
+        saved = await _writeExportToAppFolder(fileName, bytes);
+      } catch (_) {
+        saved = await _writeExportToAppFolder(fileName, bytes);
+      }
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Saved to $path')));
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Saved to ${saved.label}'),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () async {
+            final opened = await ChatExportStore.open(
+              location: saved!,
+              format: format,
+            );
+            if (opened || !mounted) return;
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text('No app here can open a ${format.label} file.'),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
-  Future<String> _writeExportToAppFolder(
+  Future<ChatExportLocation> _writeExportToAppFolder(
     String fileName,
     Uint8List bytes,
   ) async {
@@ -739,7 +766,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     await directory.create(recursive: true);
     final file = File(p.join(directory.path, fileName));
     await file.writeAsBytes(bytes, flush: true);
-    return file.path;
+    return ChatExportLocation(path: file.path, label: file.path);
   }
 
   void _scrollToBottom({bool animated = false}) {

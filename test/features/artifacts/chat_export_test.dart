@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/artifacts/data/chat_export.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/conversations/domain/message_source.dart';
+import 'package:installm/features/web_research/domain/web_research.dart';
 
 const _source = MessageSource(
   marker: 1,
@@ -60,6 +61,35 @@ void main() {
     expect(output, contains('[1] notes.md · Setup'));
   });
 
+  test('a web answer keeps the pages it read in the sources', () {
+    final output = ChatExport.markdown(
+      title: 'Android',
+      messages: [
+        _message(id: 'w1', role: MessageRole.user, content: 'Latest Android?'),
+        Message(
+          id: 'w2',
+          conversationId: 'chat-1',
+          role: MessageRole.assistant,
+          content: 'The latest Android version is 17 [3].',
+          createdAt: DateTime(2026, 11, 23, 2, 26),
+          webSources: [
+            WebSource(
+              marker: 3,
+              url: 'https://en.wikipedia.org/wiki/Android_17',
+              title: 'Android 17',
+              fetchedAt: DateTime(2026, 11, 23, 2, 26, 40),
+            ),
+          ],
+        ),
+      ],
+    );
+    expect(output, contains('## Sources'));
+    expect(
+      output,
+      contains('Android 17 — https://en.wikipedia.org/wiki/Android_17'),
+    );
+  });
+
   test('plain text labels the speakers and lists sources', () {
     final output = ChatExport.text(title: 'Setup notes', messages: messages);
     expect(output, startsWith('Setup notes'));
@@ -100,6 +130,15 @@ void main() {
     // A PDF starts with its header and is far larger than an empty one.
     expect(String.fromCharCodes(bytes.sublist(0, 5)), '%PDF-');
     expect(bytes.length, greaterThan(1000));
+  });
+
+  test('each format knows the type it is handed to a viewer as', () {
+    expect(ChatExportFormat.pdf.mimeType, 'application/pdf');
+    expect(ChatExportFormat.markdown.mimeType, 'text/markdown');
+    expect(ChatExportFormat.text.mimeType, 'text/plain');
+    expect(ChatExportFormat.json.mimeType, 'application/json');
+    expect(ChatExportFormat.pdf.extension, 'pdf');
+    expect(ChatExportFormat.markdown.extension, 'md');
   });
 
   test('file names are the title plus the local time', () {

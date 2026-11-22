@@ -2,11 +2,14 @@ package com.prady.installm
 
 import android.app.role.RoleManager
 import android.content.ComponentName
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Environment
 import android.os.StatFs
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import java.io.File
 import com.prady.installm.tools.ToolExecutor
@@ -44,6 +47,13 @@ class MainActivity : FlutterActivity() {
 
     // Request code for the system's assistant-role prompt (API 29+).
     private val ASSISTANT_ROLE_REQUEST = 4703
+
+    // Chat export (Road Map 5 Phase 5.0): a saved file has to be openable by
+    // another program, and on Android the app's own folder is not. An export
+    // therefore goes into the public Downloads collection through MediaStore
+    // (no storage permission on API 29+), and this channel hands the file to
+    // the app the user picks to view it.
+    private val exportsChannelName = "installm/exports"
 
     // Ask with InstaLLM (Road Map 5 Phase 5.2): a PROCESS_TEXT launch may hand
     // the answer back to the app the text was selected in, but only when that
@@ -154,6 +164,111 @@ class MainActivity : FlutterActivity() {
 
                 else -> result.notImplemented()
             }
+        }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, exportsChannelName)
+            .setMethodCallHandler { call, result ->
+                val args = call.arguments as? Map<*, *>
+                when (call.method) {
+                    "saveToDownloads" -> {
+                        val name = args?.get("name") as? String
+                        val mimeType = args?.get("mimeType") as? String
+                        val bytes = args?.get("bytes") as? ByteArray
+                        if (name == null || mimeType == null || bytes == null) {
+                            result.error(
+                                "export_error",
+                                "An export needs a name, a type and its bytes.",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            result.success(saveExportToDownloads(name, mimeType, bytes))
+                        } catch (e: Exception) {
+                            result.error("export_error", e.message, null)
+                        }
+                    }
+
+                    "openFile" -> {
+                        val uri = args?.get("uri") as? String
+                        val mimeType = args?.get("mimeType") as? String ?: "*/*"
+                        if (uri == null) {
+                            result.error("open_error", "A file URI is required.", null)
+                            return@setMethodCallHandler
+                        }
+                        result.success(openExportedFile(uri, mimeType))
+                    }
+
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /**
+     * Copies an export into the public Downloads collection and reports where
+     * it landed.
+     *
+     * MediaStore is used instead of a file path because another program has to
+     * be able to open what was saved: on API 29+ the insert is the app's own
+     * write, so no storage permission is asked for. Null on older releases and
+     * on any failure, which leaves the caller with its own exports folder.
+     */
+    private fun saveExportToDownloads(
+        name: String,
+        mimeType: String,
+        bytes: ByteArray,
+    ): Map<String, String>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val resolver = contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, name)
+            put(MediaStore.Downloads.MIME_TYPE, mimeType)
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+            put(MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: return null
+        try {
+            resolver.openOutputStream(uri)?.use { it.write(bytes) }
+                ?: throw IllegalStateException("Downloads did not open for writing.")
+            values.clear()
+            values.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            return null
+        }
+
+        // MediaStore renames a duplicate, so the name is read back rather than
+        // assumed: the notice has to say where the file really is.
+        var savedName = name
+        resolver.query(
+            uri,
+            arrayOf(MediaStore.Downloads.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) savedName = cursor.getString(0) ?: name
+        }
+        return mapOf(
+            "uri" to uri.toString(),
+            "displayPath" to "Downloads/$savedName",
+        )
+    }
+
+    /** Hands an exported file to another app to view, or reports that none could. */
+    private fun openExportedFile(uri: String, mimeType: String): Boolean {
+        val view = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(Uri.parse(uri), mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            startActivity(Intent.createChooser(view, null))
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

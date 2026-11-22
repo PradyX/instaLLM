@@ -41,6 +41,8 @@ import 'package:installm/features/voice/application/tts_controller.dart';
 import 'package:installm/features/voice/application/voice_conversation_controller.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
+import 'package:installm/features/share/application/process_text_provider.dart';
+import 'package:installm/features/share/application/share_providers.dart';
 import 'package:installm/features/share/domain/shared_payload.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
@@ -406,6 +408,30 @@ class _HomePageState extends ConsumerState<HomePage> {
     });
   }
 
+  /// Hands the answer back to the app the selection came from.
+  ///
+  /// The platform refuses this for a read-only selection, so the button is
+  /// never shown for one; a refusal still says so instead of pretending the
+  /// text was replaced.
+  Future<void> _replaceSelection(String answer) async {
+    final replaced = await ref
+        .read(sharedContentReceiverProvider)
+        .returnProcessedText(answer);
+    if (!mounted) return;
+    if (!replaced) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This selection is read-only, so the answer stays in this chat.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    ref.read(processTextRequestProvider.notifier).clear();
+  }
+
   /// Empties the composer's images, including the copies reused from history.
   void _clearDraftImages() {
     setState(() {
@@ -726,6 +752,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(homeControllerProvider);
+    // True while an app is waiting for an answer it can put back into an
+    // editable selection (Ask with InstaLLM). A read-only selection, and no
+    // request at all, both leave it false.
+    final canReplaceSelection = ref.watch(processTextRequestProvider) == false;
     final generationStatus = ref.watch(homeGenerationStatusProvider);
     ref.listen<ToolApprovalRequest?>(toolApprovalControllerProvider, (
       previous,
@@ -863,6 +893,31 @@ class _HomePageState extends ConsumerState<HomePage> {
                                         _readingMessageId == message.id,
                                     isPaused: ttsState.isPaused,
                                     onPauseReading: () => _toggleReadingPause(),
+                                    // Ask with InstaLLM: an editable selection
+                                    // can be replaced by this answer, so the
+                                    // caller gets a way to hand it back. A
+                                    // read-only one never shows this.
+                                    extraActions:
+                                        canReplaceSelection &&
+                                            message.isAssistant &&
+                                            index == messages.length - 1
+                                        ? [
+                                            OutlinedButton.icon(
+                                              onPressed: () =>
+                                                  _replaceSelection(
+                                                    message.content,
+                                                  ),
+                                              icon: const Icon(
+                                                Icons
+                                                    .subdirectory_arrow_left_rounded,
+                                                size: 16,
+                                              ),
+                                              label: const Text(
+                                                'Replace selection',
+                                              ),
+                                            ),
+                                          ]
+                                        : const [],
                                   );
                                 },
                               ),

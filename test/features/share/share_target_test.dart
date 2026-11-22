@@ -18,6 +18,9 @@ class _FakeReceiver implements SharedContentReceiver {
   Future<void> setShareTargetEnabled(bool enabled) async {
     applied = enabled;
   }
+
+  @override
+  Future<bool> returnProcessedText(String text) async => false;
 }
 
 /// A container whose stored choice is [stored], recording what is written.

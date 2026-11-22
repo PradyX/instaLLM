@@ -22,6 +22,12 @@ abstract class SharedContentReceiver {
   /// The switch has to reach the platform, because the Android component that
   /// appears in other apps' share sheets outlives this process.
   Future<void> setShareTargetEnabled(bool enabled);
+
+  /// Hands [text] back to the app a selection came from, replacing it.
+  ///
+  /// Returns false when no editable selection is waiting: a read-only one is
+  /// never replaced, and the platform refuses it even if a caller asks.
+  Future<bool> returnProcessedText(String text);
 }
 
 /// The Android implementation, backed by `installm/share` in `MainActivity`.
@@ -65,6 +71,23 @@ class PlatformSharedContentReceiver implements SharedContentReceiver {
       // A platform with no share sheet has nothing to switch on.
     } on PlatformException {
       // The switch keeps its stored value; the next launch applies it again.
+    }
+  }
+
+  @override
+  Future<bool> returnProcessedText(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    try {
+      return await _channel.invokeMethod<bool>(
+            'returnProcessedText',
+            trimmed,
+          ) ??
+          false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
     }
   }
 }

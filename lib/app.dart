@@ -6,6 +6,7 @@ import 'package:installm/features/home/presentation/home_controller.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/share_inbox.dart';
 import 'package:installm/features/share/application/share_providers.dart';
+import 'package:installm/features/share/application/process_text_provider.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/features/share/domain/shared_payload.dart';
 import 'package:installm/core/theme/theme.dart';
@@ -81,6 +82,10 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
       ref.read(composerDraftProvider.notifier).setDraft(text);
     }
     ref.read(draftAttachmentsProvider.notifier).stage(payload.attachments);
+    final readOnly = payload.processTextReadOnly;
+    if (readOnly != null) {
+      ref.read(processTextRequestProvider.notifier).begin(readOnly: readOnly);
+    }
     ref.read(appRouterProvider).go(AppRoutes.home);
   }
 

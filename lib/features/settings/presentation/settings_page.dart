@@ -156,9 +156,10 @@ class SettingsPage extends ConsumerWidget {
                 secondary: const Icon(Icons.ios_share_rounded),
                 title: const Text('Share to InstaLLM'),
                 subtitle: const Text(
-                  'Other apps can hand InstaLLM text or a link. It waits in '
-                  'the composer until you send it: nothing is uploaded and '
-                  'nothing is sent on its own.',
+                  'Other apps can hand InstaLLM text, a link, an image or a PDF, '
+                  'and can offer it when you select text. It waits in the '
+                  'composer until you send it: nothing is uploaded and nothing '
+                  'is sent on its own.',
                 ),
                 value: ref.watch(shareTargetEnabledProvider),
                 onChanged: (value) => ref

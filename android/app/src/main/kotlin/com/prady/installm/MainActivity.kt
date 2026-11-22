@@ -40,6 +40,11 @@ class MainActivity : FlutterActivity() {
     // › Sharing, and until then this activity ignores anything shared.
     private val shareTargetComponent = "com.prady.installm.ShareTarget"
 
+    // Ask with InstaLLM (Road Map 5 Phase 5.2): a PROCESS_TEXT launch may hand
+    // the answer back to the app the text was selected in, but only when that
+    // selection is editable. Null until a PROCESS_TEXT intent is read.
+    private var processTextReadOnly: Boolean? = null
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -127,6 +132,11 @@ class MainActivity : FlutterActivity() {
                     }
                 }
 
+                "returnProcessedText" -> {
+                    val text = call.arguments as? String
+                    result.success(returnProcessedText(text))
+                }
+
                 else -> result.notImplemented()
             }
         }
@@ -172,7 +182,25 @@ class MainActivity : FlutterActivity() {
      * nothing InstaLLM can show.
      */
     private fun sharedContentFrom(intent: Intent?): Map<String, Any?>? {
+        processTextReadOnly = null
         if (intent == null) return null
+
+        if (intent.action == Intent.ACTION_PROCESS_TEXT) {
+            val selection = processTextFrom(intent)
+            if (selection == null) return null
+            val readOnly = intent.getBooleanExtra(
+                Intent.EXTRA_PROCESS_TEXT_READONLY,
+                true,
+            )
+            processTextReadOnly = readOnly
+            return mapOf(
+                "text" to selection,
+                "attachments" to emptyList<Map<String, String>>(),
+                "unreadable" to 0,
+                "processTextReadOnly" to readOnly,
+            )
+        }
+
         val text = sharedTextFrom(intent)
         val attachments = mutableListOf<Map<String, String>>()
         val unreadable = sharedAttachmentsFrom(intent, attachments)
@@ -182,6 +210,51 @@ class MainActivity : FlutterActivity() {
             "attachments" to attachments,
             "unreadable" to unreadable,
         )
+    }
+
+    /**
+     * The text the user selected in another app, or null.
+     *
+     * The platform sends one CharSequence; an app that sends several chunks
+     * gets them joined with newlines rather than losing all but the first, and
+     * an entry that is neither shape is skipped instead of crashing the launch.
+     */
+    @Suppress("DEPRECATION")
+    private fun processTextFrom(intent: Intent): String? {
+        val raw = try {
+            intent.extras?.get(Intent.EXTRA_PROCESS_TEXT)
+        } catch (e: Exception) {
+            null
+        }
+        val chunks = when (raw) {
+            null -> emptyList()
+            is CharSequence -> listOf(raw.toString())
+            is Array<*> -> raw.mapNotNull { (it as? CharSequence)?.toString() }
+            is Iterable<*> -> raw.mapNotNull { (it as? CharSequence)?.toString() }
+            else -> emptyList()
+        }.map { it.trim() }.filter { it.isNotEmpty() }
+        return if (chunks.isEmpty()) null else chunks.joinToString("\n")
+    }
+
+    /**
+     * Hands [text] back to the app the selection came from.
+     *
+     * A read-only selection has no edit to make, so nothing is ever returned
+     * for one: the request is refused here rather than trusted to the UI. Only
+     * an editable request gets a result, and only once the app is finished.
+     */
+    private fun returnProcessedText(text: String?): Boolean {
+        val readOnly = processTextReadOnly ?: return false
+        if (readOnly) return false
+        val processed = text?.trim()
+        if (processed.isNullOrEmpty()) return false
+        processTextReadOnly = null
+        setResult(
+            RESULT_OK,
+            Intent().putExtra(Intent.EXTRA_PROCESS_TEXT, processed),
+        )
+        finish()
+        return true
     }
 
     /**

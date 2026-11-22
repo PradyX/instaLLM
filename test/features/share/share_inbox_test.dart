@@ -23,6 +23,9 @@ class _FakeReceiver implements SharedContentReceiver {
 
   @override
   Future<void> setShareTargetEnabled(bool enabled) async {}
+
+  @override
+  Future<bool> returnProcessedText(String text) async => false;
 }
 
 void main() {

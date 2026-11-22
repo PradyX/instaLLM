@@ -35,11 +35,29 @@ class SharedAttachment {
 }
 
 /// One share: some text or a link, some files, or both.
+///
+/// A text selection handed over through `ACTION_PROCESS_TEXT` (Road Map 5 Phase
+/// 5.2) arrives the same way, with [processTextReadOnly] saying whether the app
+/// may hand an answer back to the app the text came from.
 class SharedPayload {
-  const SharedPayload({this.text, this.attachments = const []});
+  const SharedPayload({
+    this.text,
+    this.attachments = const [],
+    this.processTextReadOnly,
+  });
 
   final String? text;
   final List<SharedAttachment> attachments;
+
+  /// True for a read-only selection, false when it can be replaced, null when
+  /// this payload is not a text selection at all.
+  final bool? processTextReadOnly;
+
+  /// True when this is an "Ask with InstaLLM" request from another app.
+  bool get isProcessText => processTextReadOnly != null;
+
+  /// True only when the caller's selection may be replaced by an answer.
+  bool get canReturnText => processTextReadOnly == false;
 
   bool get isEmpty =>
       (text == null || text!.trim().isEmpty) && attachments.isEmpty;
@@ -91,7 +109,12 @@ SharedPayload? sharedPayloadFromMap(Object? raw) {
     }
   }
 
-  final payload = SharedPayload(text: text, attachments: attachments);
+  final rawReadOnly = raw['processTextReadOnly'];
+  final payload = SharedPayload(
+    text: text,
+    attachments: attachments,
+    processTextReadOnly: rawReadOnly is bool ? rawReadOnly : null,
+  );
   return payload.isEmpty ? null : payload;
 }
 

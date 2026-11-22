@@ -69,6 +69,45 @@ void main() {
     expect(payload.attachments.single.name, 'dog.png');
   });
 
+  test(
+    'an editable selection is a process-text request that can be replaced',
+    () {
+      final payload = sharedPayloadFromMap({
+        'text': 'Selected paragraph',
+        'attachments': const [],
+        'processTextReadOnly': false,
+      });
+
+      expect(payload!.text, 'Selected paragraph');
+      expect(payload.isProcessText, isTrue);
+      expect(payload.canReturnText, isTrue);
+    },
+  );
+
+  test('a read-only selection is a process-text request that must not be '
+      'replaced', () {
+    final payload = sharedPayloadFromMap({
+      'text': 'Selected paragraph',
+      'processTextReadOnly': true,
+    });
+
+    expect(payload!.isProcessText, isTrue);
+    expect(payload.canReturnText, isFalse);
+  });
+
+  test('a share is not a process-text request, and a missing flag is not '
+      'invented', () {
+    final share = sharedPayloadFromMap({'text': 'https://example.com'});
+    expect(share!.isProcessText, isFalse);
+    expect(share.canReturnText, isFalse);
+
+    final malformed = sharedPayloadFromMap({
+      'text': 'Selected paragraph',
+      'processTextReadOnly': 'yes please',
+    });
+    expect(malformed!.isProcessText, isFalse);
+  });
+
   test('nothing shared reads as no payload at all', () {
     expect(sharedPayloadFromMap(null), isNull);
     expect(sharedPayloadFromMap('text'), isNull);

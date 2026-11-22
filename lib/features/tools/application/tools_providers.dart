@@ -7,6 +7,7 @@ import 'package:installm/features/documents/application/documents_controller.dar
 import 'package:installm/features/documents/application/network_policy_controller.dart';
 import 'package:installm/features/documents/data/duckduckgo_search.dart';
 import 'package:installm/features/documents/data/web_fetch_service.dart';
+import 'package:installm/features/workspaces/application/workspaces_controller.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
 import 'package:installm/features/kanban/application/kanban_controller.dart'
     show activeWorkspaceIdProvider;
@@ -138,18 +139,11 @@ typedef WebSearchRunner = Future<WebSearchOutcome> Function(String query);
 /// policy refuses, and the research step cannot either. `duckduckgo` needs no
 /// key; `tavily` and `brave` read theirs from secure storage.
 Future<WebSearchOutcome> runWebSearch(Ref ref, String query) async {
-  final workspaceId = ref.read(activeWorkspaceIdProvider);
-  if (workspaceId == null) return const WebSearchOutcome();
-  final NetworkPolicy policy;
-  try {
-    policy = ref
-        .read(networkPolicyControllerProvider)
-        .snapshot
-        .forWorkspace(workspaceId);
-  } catch (_) {
+  final policy = await resolveNetworkPolicyForActiveWorkspace(ref);
+  if (policy == null || !policy.allowsWebSearch) {
     return const WebSearchOutcome();
   }
-  if (!policy.allowsWebSearch) return const WebSearchOutcome();
+  final workspaceId = ref.read(activeWorkspaceIdProvider)!;
   final provider = policy.webSearchProvider.trim().toLowerCase();
   if (provider == 'duckduckgo') {
     final result = await KeylessWebSearch().search(query);
@@ -174,6 +168,36 @@ Future<WebSearchOutcome> runWebSearch(Ref ref, String query) async {
     ),
   );
   return WebSearchOutcome(snippets: await service.search(query, policy));
+}
+
+/// The network policy in force for the active workspace, or null when there is
+/// no workspace to scope it to.
+///
+/// A plain `read` of the workspaces and policy controllers answers with their
+/// empty first build when nothing else is watching them, which is exactly the
+/// state that produced a false "web search is off" on the device (the turn ran
+/// before either file had been read). This waits for both loads instead, and
+/// falls back to reading the policy file directly when the controller has not
+/// been opened yet.
+Future<NetworkPolicy?> resolveNetworkPolicyForActiveWorkspace(Ref ref) async {
+  final workspaces = ref.read(workspacesProvider);
+  if (!workspaces.isReady) {
+    try {
+      await ref.read(workspacesProvider.notifier).whenReady;
+    } catch (_) {
+      return null;
+    }
+  }
+  final workspaceId = ref.read(activeWorkspaceIdProvider);
+  if (workspaceId == null || workspaceId.trim().isEmpty) return null;
+  try {
+    final state = ref.read(networkPolicyControllerProvider);
+    if (state.isOpen) return state.snapshot.forWorkspace(workspaceId);
+    final store = await ref.read(networkPolicyStoreProvider.future);
+    return store.load().forWorkspace(workspaceId);
+  } catch (_) {
+    return null;
+  }
 }
 
 /// The seam the chat turn reads, so both surfaces share one policy check.

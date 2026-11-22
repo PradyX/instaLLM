@@ -1,9 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:installm/features/documents/application/network_policy_controller.dart';
 import 'package:installm/features/documents/data/web_fetch_service.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
-import 'package:installm/features/kanban/application/kanban_controller.dart'
-    show activeWorkspaceIdProvider;
 import 'package:installm/features/tools/application/tools_providers.dart';
 import 'package:installm/features/web_research/domain/web_research.dart';
 
@@ -19,27 +16,19 @@ class WebResearchResult {
   bool get isOk => research != null;
 }
 
-/// The network policy the research step obeys, in the active workspace.
+/// The research step's policy, read fresh for each turn.
 ///
-/// Separated from the controller so the loop can be exercised without a policy
-/// file, a workspace or a device — the production provider still reads exactly
-/// the policy the `web_search` and `fetch_url` tools read.
-final webResearchPolicyProvider = Provider<NetworkPolicy>((ref) {
-  final workspaceId = ref.read(activeWorkspaceIdProvider);
-  if (workspaceId == null) return NetworkPolicy.closed;
-  try {
-    return ref
-        .read(networkPolicyControllerProvider)
-        .snapshot
-        .forWorkspace(workspaceId);
-  } catch (_) {
-    return NetworkPolicy.closed;
-  }
-});
-
+/// It is deliberately not a cached provider: the workspace switch is read
+/// while the user is looking at the chat, so a value captured at first build
+/// would keep answering with the old policy (that staleness is what turned a
+/// disabled switch into "no results" on the device). The read goes through the
+/// same helper the `web_search` tool uses, which waits for the workspace and
+/// policy files instead of reading a controller that has not been opened.
 final webResearchServiceProvider = Provider<WebResearchService>(
   (ref) => WebResearchService(
-    policy: () => ref.read(webResearchPolicyProvider),
+    policy: () async =>
+        await resolveNetworkPolicyForActiveWorkspace(ref) ??
+        NetworkPolicy.closed,
     search: ref.read(webSearchRunnerProvider),
   ),
 );
@@ -55,14 +44,14 @@ final webResearchServiceProvider = Provider<WebResearchService>(
 /// asked for it.
 class WebResearchService {
   WebResearchService({
-    required NetworkPolicy Function() policy,
+    required Future<NetworkPolicy> Function() policy,
     required WebSearchRunner search,
     WebFetchService? fetcher,
   }) : _policy = policy,
        _search = search,
        _fetcher = fetcher ?? WebFetchService();
 
-  final NetworkPolicy Function() _policy;
+  final Future<NetworkPolicy> Function() _policy;
   final WebSearchRunner _search;
   final WebFetchService _fetcher;
 
@@ -70,11 +59,13 @@ class WebResearchService {
   /// that one turn cannot drain a phone's context window.
   static const int maxPages = 3;
 
-  /// Characters of each page kept for the prompt.
-  static const int maxExcerptCharacters = 1500;
+  /// Characters of each page kept for the prompt. A small on-device model
+  /// drowns in three long pages, so the excerpt is the opening of each page
+  /// rather than a slice large enough to bury the question.
+  static const int maxExcerptCharacters = 700;
 
   Future<WebResearchResult> research(String question) async {
-    final policy = _policy();
+    final policy = await _policy();
     if (!policy.allowsWebSearch) {
       return const WebResearchResult.failed(
         WebResearchFailure(

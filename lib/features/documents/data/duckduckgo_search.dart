@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:installm/features/documents/data/web_fetch_service.dart';
 import 'package:installm/features/documents/domain/network_policy.dart';
@@ -25,6 +27,12 @@ class KeylessWebSearch {
 
   static const String duckDuckGoEndpoint = 'https://html.duckduckgo.com/html/';
   static const String braveEndpoint = 'https://search.brave.com/search';
+
+  /// Keyless JSON fallback: Wikipedia's own search API. An encyclopedia is not
+  /// the whole web, but it answers factual questions without a rate limit, and
+  /// it is what keeps the unit working on a network where the engines above
+  /// refuse (Brave answers 429 there within seconds of a second search).
+  static const String wikipediaEndpoint = 'https://en.wikipedia.org/w/api.php';
 
   /// A plain browser user agent: both endpoints answer a bare client with a
   /// challenge page instead of results.
@@ -61,15 +69,79 @@ class KeylessWebSearch {
             : 'the search service answered ${duck.status}',
       );
     }
-    if (brave.status != 200) {
-      return DuckDuckGoResult(
-        error:
-            'the search services answered ${duck.status} and ${brave.status}',
+    final braveResults = brave.status == 200
+        ? parseBrave(brave.body, fetchedAt: _clock(), limit: limit)
+        : const <WebSnippet>[];
+    if (braveResults.isNotEmpty) {
+      return DuckDuckGoResult(snippets: braveResults);
+    }
+
+    final wiki = await _get(wikipediaEndpoint, {
+      'action': 'query',
+      'list': 'search',
+      'srsearch': trimmed,
+      'srlimit': '$limit',
+      'format': 'json',
+      'utf8': '1',
+    });
+    if (wiki != null && wiki.status == 200) {
+      final results = parseWikipedia(
+        wiki.body,
+        fetchedAt: _clock(),
+        limit: limit,
+      );
+      if (results.isNotEmpty) return DuckDuckGoResult(snippets: results);
+    }
+
+    return DuckDuckGoResult(
+      error:
+          'duckduckgo answered ${duck.status}, brave ${brave.status}, '
+          'wikipedia ${wiki?.status ?? 'unreachable'}',
+    );
+  }
+
+  /// Reads Wikipedia's search JSON into snippets with real article URLs.
+  static List<WebSnippet> parseWikipedia(
+    String body, {
+    required DateTime fetchedAt,
+    int limit = 5,
+  }) {
+    final decoded = jsonDecodeOrNull(body);
+    if (decoded is! Map) return const [];
+    final query = decoded['query'];
+    if (query is! Map) return const [];
+    final results = query['search'];
+    if (results is! List) return const [];
+    final snippets = <WebSnippet>[];
+    for (final entry in results) {
+      if (snippets.length >= limit) break;
+      if (entry is! Map) continue;
+      final title = entry['title'];
+      if (title is! String || title.trim().isEmpty) continue;
+      final text = _squash(
+        WebFetchService.htmlToText('${entry['snippet'] ?? ''}'),
+      );
+      snippets.add(
+        WebSnippet(
+          url:
+              'https://en.wikipedia.org/wiki/'
+              '${Uri.encodeComponent(title.trim().replaceAll(' ', '_'))}',
+          fetchedAt: fetchedAt,
+          text: text.isEmpty ? title.trim() : text,
+          title: title.trim(),
+          provider: 'duckduckgo',
+        ),
       );
     }
-    return DuckDuckGoResult(
-      snippets: parseBrave(brave.body, fetchedAt: _clock(), limit: limit),
-    );
+    return snippets;
+  }
+
+  static Object? jsonDecodeOrNull(String body) {
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<({int status, String body})?> _get(

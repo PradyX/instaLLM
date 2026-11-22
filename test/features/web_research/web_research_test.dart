@@ -186,7 +186,7 @@ second body
       ({NetworkPolicy policy, WebSearchRunner runner, WebFetchService? fetcher})
       harness,
     ) => WebResearchService(
-      policy: () => harness.policy,
+      policy: () async => harness.policy,
       search: harness.runner,
       fetcher: harness.fetcher,
     );
@@ -370,6 +370,27 @@ second body
     );
     expect(results.single.title, 'Android version history');
     expect(results.single.text, contains('Android 17'));
+  });
+
+  test('wikipedia json becomes real article sources', () {
+    const body =
+        '{"query":{"search":[{"title":"Android version history",'
+        '"snippet":"The <span class=\\"searchmatch\\">Android</span> version '
+        'history began in 2008."},'
+        '{"title":"Android 17","snippet":"Android 17 is the latest release."}]}}';
+    final results = KeylessWebSearch.parseWikipedia(body, fetchedAt: _readAt);
+    expect(results, hasLength(2));
+    expect(
+      results.first.url,
+      'https://en.wikipedia.org/wiki/Android_version_history',
+    );
+    expect(results.first.title, 'Android version history');
+    expect(results.first.text, contains('version history began'));
+    expect(results[1].url, 'https://en.wikipedia.org/wiki/Android_17');
+    expect(
+      KeylessWebSearch.parseWikipedia('<html></html>', fetchedAt: _readAt),
+      isEmpty,
+    );
   });
 
   test('duckduckgo is a keyless known provider', () {

@@ -114,9 +114,11 @@ class WebResearch {
       buffer.writeln();
     }
     buffer.writeln(
-      'Answer from these pages and cite the one you used as [n] right after '
-      'the claim. If they do not answer the question, say so plainly instead '
-      'of guessing; never cite a page you did not read.',
+      'Answer the question in one or two sentences using only these pages, '
+      'and end the answer with the number of the page you used in square '
+      'brackets, for example: The latest version is 17 [3]. If the pages do '
+      'not answer the question, say so plainly instead of guessing; never cite '
+      'a page you did not read.',
     );
     return buffer.toString().trimRight();
   }

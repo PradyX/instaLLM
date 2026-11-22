@@ -51,7 +51,9 @@ class ShareTargetNotifier extends Notifier<bool> {
 
   Future<void> _apply(bool enabled) async {
     try {
-      await ref.read(sharedTextReceiverProvider).setShareTargetEnabled(enabled);
+      await ref
+          .read(sharedContentReceiverProvider)
+          .setShareTargetEnabled(enabled);
     } catch (_) {
       // The stored choice is what matters; a platform that refuses the
       // component change is retried on the next launch.

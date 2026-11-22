@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/features/conversations/domain/message.dart';
+import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/conversations/domain/message_source.dart';
 import 'package:installm/features/conversations/domain/message_tool_activity.dart';
 import 'package:installm/features/documents/application/documents_controller.dart';
@@ -149,6 +150,19 @@ class _ChatBubbleState extends State<ChatBubble> {
             if (index < widget.message.imageAttachments.length - 1 ||
                 text.trim().isNotEmpty)
               const SizedBox(height: 12),
+          ],
+          for (
+            var index = 0;
+            index < widget.message.documentAttachments.length;
+            index++
+          ) ...[
+            _MessageDocument(
+              document: widget.message.documentAttachments[index],
+              isUser: isUser,
+            ),
+            if (index < widget.message.documentAttachments.length - 1 ||
+                text.trim().isNotEmpty)
+              const SizedBox(height: 8),
           ],
           if (hasCodeFences)
             _MarkdownCodeMessage(
@@ -515,6 +529,50 @@ class _MessageSources extends ConsumerWidget {
       if (chunk.index == source.chunkIndex) return chunk.text;
     }
     return null;
+  }
+}
+
+/// A document attached to a message: the file's name on the bubble, so a sent
+/// PDF reads as part of the message rather than as nothing at all.
+class _MessageDocument extends StatelessWidget {
+  const _MessageDocument({required this.document, required this.isUser});
+
+  final MessageAttachment document;
+  final bool isUser;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final label = (document.label ?? '').trim().isEmpty
+        ? 'document'
+        : document.label!.trim();
+    final foreground = isUser ? colorScheme.onPrimary : colorScheme.onSurface;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isUser
+            ? colorScheme.onPrimary.withValues(alpha: 0.14)
+            : colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.description_outlined, size: 16, color: foreground),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelMedium?.copyWith(color: foreground),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

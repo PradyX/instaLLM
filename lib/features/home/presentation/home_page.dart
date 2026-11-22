@@ -40,6 +40,8 @@ import 'package:installm/core/navigation/app_shell.dart';
 import 'package:installm/features/voice/application/tts_controller.dart';
 import 'package:installm/features/voice/application/voice_conversation_controller.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/share/application/draft_attachments_provider.dart';
+import 'package:installm/features/share/domain/shared_payload.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/personas/application/personas_controller.dart';
@@ -82,10 +84,16 @@ class _HomePageState extends ConsumerState<HomePage> {
   ProviderSubscription<HomeGenerationStatus>? _generationSubscription;
   ProviderSubscription<HomeGenerationStatus>? _starPromptSubscription;
   ProviderSubscription<String?>? _conversationSubscription;
+  ProviderSubscription<List<SharedAttachment>>? _draftAttachmentsSubscription;
 
   /// Reply currently being read aloud, so its own button can offer a stop.
   String? _readingMessageId;
   final List<XFile> _draftImages = [];
+
+  /// Documents (a PDF another app shared) waiting to travel with the next
+  /// message. They are indexed into the knowledge collection when sent, so the
+  /// model reads their text, and the file itself is attached to the message.
+  final List<SharedAttachment> _draftDocuments = [];
 
   /// Draft images taken from this conversation's history, keyed by their
   /// stored path, so they can be sent as the copies they already are instead
@@ -104,6 +112,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// afford per turn, so the composer stops taking them.
   static const int _maxDraftImages = 4;
 
+  /// Two documents fit one message; more is a knowledge import, not an
+  /// attachment.
+  static const int _maxDraftDocuments = 2;
+
+  /// True while the message being composed carries an image or a document.
+  bool get _hasDraftAttachments =>
+      _draftImages.isNotEmpty || _draftDocuments.isNotEmpty;
+
   @override
   void dispose() {
     _messagesSubscription?.close();
@@ -112,6 +128,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _generationSubscription?.close();
     _starPromptSubscription?.close();
     _conversationSubscription?.close();
+    _draftAttachmentsSubscription?.close();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -131,17 +148,23 @@ class _HomePageState extends ConsumerState<HomePage> {
       if (next == null) return;
       _applyComposerDraft(next);
     });
-    // Text prepared while this page was not built (voice, a share, a link) is
-    // waiting in the provider when the chat opens again. Applying it consumes
-    // the draft, and a provider cannot be modified while the tree is still
-    // building, so it happens once the first frame is done.
-    if (ref.read(composerDraftProvider) != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final pendingDraft = ref.read(composerDraftProvider);
-        if (pendingDraft != null) _applyComposerDraft(pendingDraft);
-      });
-    }
+    // Text and files prepared while this page was not built (voice, a share, a
+    // link) are waiting in their providers when the chat opens again. Taking
+    // them consumes the draft, and a provider cannot be modified while the tree
+    // is still building, so it happens once the first frame is done.
+    _draftAttachmentsSubscription = ref.listenManual(draftAttachmentsProvider, (
+      _,
+      next,
+    ) {
+      if (next.isEmpty) return;
+      _consumeStagedAttachments();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final pendingDraft = ref.read(composerDraftProvider);
+      if (pendingDraft != null) _applyComposerDraft(pendingDraft);
+      _consumeStagedAttachments();
+    });
 
     // Reading a reply aloud follows the generation that produced it: the
     // setting is off by default, and only a run that just finished qualifies.
@@ -243,6 +266,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final selectedModel = selectionState.selectedModel;
     final text = _messageController.text.trim();
     final draftImages = List<XFile>.of(_draftImages);
+    final draftDocuments = List<SharedAttachment>.of(_draftDocuments);
 
     if (draftImages.isNotEmpty && !_isVisionReady(selectedModel)) {
       _showVisionRequiredMessage();
@@ -250,12 +274,14 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
 
     if (text.isEmpty) {
-      if (draftImages.isNotEmpty) {
+      final attachmentCount = draftImages.length + draftDocuments.length;
+      if (attachmentCount > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Add a question before sending '
-              '${draftImages.length == 1 ? 'the image' : 'the images'}.',
+              attachmentCount == 1
+                  ? 'Add a question before sending the attachment.'
+                  : 'Add a question before sending the attachments.',
             ),
             behavior: SnackBarBehavior.floating,
           ),
@@ -276,7 +302,14 @@ class _HomePageState extends ConsumerState<HomePage> {
           file.path: _reusedImages[file.path]!,
     };
     _clearDraftImages();
+    _clearDraftDocuments();
     _scheduleScrollToBottom(animated: true);
+
+    // The file is indexed first so the reply to this very message can retrieve
+    // it; a failure is reported but never stops the file from being attached.
+    if (draftDocuments.isNotEmpty) {
+      await _indexSharedDocuments(draftDocuments);
+    }
 
     await ref
         .read(homeControllerProvider.notifier)
@@ -284,6 +317,10 @@ class _HomePageState extends ConsumerState<HomePage> {
           text,
           imagePaths: [for (final file in draftImages) file.path],
           reusedAttachments: reusedImages,
+          documentPaths: [for (final document in draftDocuments) document.path],
+          documentLabels: [
+            for (final document in draftDocuments) document.name,
+          ],
         );
 
     if (!mounted) return;
@@ -326,12 +363,101 @@ class _HomePageState extends ConsumerState<HomePage> {
     }
   }
 
+  /// Moves files another app shared into the message being composed.
+  ///
+  /// Images join the composer's images, so the existing preview, removal and
+  /// send paths apply to them; a vision model is still required to send them
+  /// and the send says so. Documents wait beside them and are indexed into the
+  /// knowledge collection when the message is sent.
+  void _consumeStagedAttachments() {
+    final staged = ref.read(draftAttachmentsProvider.notifier).take();
+    if (staged.isEmpty || !mounted) return;
+
+    final images = <XFile>[];
+    final documents = <SharedAttachment>[];
+    for (final attachment in staged) {
+      if (attachment.isImage) {
+        if (_draftImages.length + images.length < _maxDraftImages) {
+          images.add(XFile(attachment.path));
+        }
+      } else if (_draftDocuments.length + documents.length <
+          _maxDraftDocuments) {
+        documents.add(attachment);
+      }
+    }
+
+    if (images.isEmpty && documents.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'A message carries up to $_maxDraftImages images and '
+            '$_maxDraftDocuments documents, so what was shared did not fit. '
+            'Send this one first.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _draftImages.addAll(images);
+      _draftDocuments.addAll(documents);
+    });
+  }
+
   /// Empties the composer's images, including the copies reused from history.
   void _clearDraftImages() {
     setState(() {
       _draftImages.clear();
       _reusedImages.clear();
     });
+  }
+
+  void _clearDraftDocuments() {
+    if (_draftDocuments.isEmpty) return;
+    setState(_draftDocuments.clear);
+  }
+
+  void _removeDraftDocument(int index) {
+    setState(() => _draftDocuments.removeAt(index));
+  }
+
+  /// Indexes shared documents into the collection chat retrieves from.
+  ///
+  /// The file is attached to the message either way: a collection that cannot
+  /// be written to (no embedding model yet, for example) is reported in the
+  /// words the documents library already uses, and never silently drops the
+  /// attachment.
+  Future<void> _indexSharedDocuments(List<SharedAttachment> documents) async {
+    final conversationId = await ref
+        .read(homeControllerProvider.notifier)
+        .ensureActiveConversation();
+    if (conversationId == null || !mounted) return;
+
+    final notifier = ref.read(documentsProvider.notifier);
+    for (final document in documents) {
+      await notifier.addDocument(
+        document.path,
+        name: document.name,
+        addedByConversationId: conversationId,
+      );
+      final error = ref.read(documentsProvider).errorMessage;
+      if (error == null) continue;
+      notifier.clearError();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$error The file is still attached to this message.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final status = ref.read(documentsProvider).statusMessage;
+    notifier.clearStatus();
+    if (status != null && mounted) setState(() => _attachNotice = status);
   }
 
   void _removeDraftImage(int index) {
@@ -1116,7 +1242,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ChatComposer(
-            commands: _draftImages.isNotEmpty || !skills.isReady
+            commands: _hasDraftAttachments || !skills.isReady
                 ? const []
                 : SkillCommand.options(
                     skills.skills
@@ -1137,7 +1263,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 : t.skills.chatHint,
             onSend: _sendMessage,
             sendsOnEnter: sendsMessageOnEnter,
-            header: (isGenerating || _draftImages.isNotEmpty)
+            header: (isGenerating || _hasDraftAttachments)
                 ? Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -1190,6 +1316,15 @@ class _HomePageState extends ConsumerState<HomePage> {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _buildDraftImagesPreview(
+                            context,
+                            colorScheme,
+                            textTheme,
+                          ),
+                        ),
+                      if (_draftDocuments.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _buildDraftDocumentsPreview(
                             context,
                             colorScheme,
                             textTheme,
@@ -1401,6 +1536,62 @@ class _HomePageState extends ConsumerState<HomePage> {
                 _DraftImageThumb(
                   file: _draftImages[index],
                   onRemove: () => _removeDraftImage(index),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Pending documents in the composer, each removable before sending.
+  Widget _buildDraftDocumentsPreview(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    final count = _draftDocuments.length;
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            count == 1 ? '1 document attached' : '$count documents attached',
+            style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'The text is indexed when you send, so the reply can read it.',
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (var index = 0; index < count; index++)
+                InputChip(
+                  avatar: const Icon(Icons.description_outlined, size: 16),
+                  label: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(
+                      _draftDocuments[index].name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  tooltip: 'Remove this document',
+                  onDeleted: () => _removeDraftDocument(index),
+                  deleteIcon: const Icon(Icons.close_rounded, size: 16),
+                  visualDensity: VisualDensity.compact,
                 ),
             ],
           ),

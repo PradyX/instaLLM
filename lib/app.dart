@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/share_inbox.dart';
 import 'package:installm/features/share/application/share_providers.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
+import 'package:installm/features/share/domain/shared_payload.dart';
 import 'package:installm/core/theme/theme.dart';
 import 'package:installm/core/theme/theme_provider.dart';
 import 'package:installm/core/theme/appearance_provider.dart';
@@ -42,12 +44,13 @@ class MyApp extends ConsumerWidget {
   }
 }
 
-/// Stages text another app shared into the chat composer (Road Map 5 Phase
+/// Stages what another app shared for the chat composer (Road Map 5 Phase
 /// 5.1).
 ///
 /// It sits above the router rather than in a page, because a share can arrive
-/// while any screen is open: the draft is handed to the composer provider and
-/// the chat is brought to the front, where the user still has to press send.
+/// while any screen is open: text and links go to the composer draft, files go
+/// to the draft-attachment provider, and the chat is brought to the front,
+/// where the user still has to press send.
 class _ShareInboxBridge extends ConsumerStatefulWidget {
   const _ShareInboxBridge({required this.child});
 
@@ -62,8 +65,8 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
   void initState() {
     super.initState();
     final inbox = ShareInbox(
-      receiver: ref.read(sharedTextReceiverProvider),
-      onText: _stage,
+      receiver: ref.read(sharedContentReceiverProvider),
+      onPayload: _stage,
     );
     unawaited(inbox.start());
     // Re-apply the stored Sharing choice at launch, so a component state that
@@ -71,9 +74,13 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
     ref.read(shareTargetEnabledProvider);
   }
 
-  void _stage(String text) {
+  void _stage(SharedPayload payload) {
     if (!mounted) return;
-    ref.read(composerDraftProvider.notifier).setDraft(text);
+    final text = payload.text;
+    if (text != null) {
+      ref.read(composerDraftProvider.notifier).setDraft(text);
+    }
+    ref.read(draftAttachmentsProvider.notifier).stage(payload.attachments);
     ref.read(appRouterProvider).go(AppRoutes.home);
   }
 

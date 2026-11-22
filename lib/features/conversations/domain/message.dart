@@ -190,6 +190,12 @@ class Message {
       if (attachment.type == AttachmentType.image) attachment,
   ];
 
+  /// Document attachments (a shared PDF), in the order they were added.
+  List<MessageAttachment> get documentAttachments => [
+    for (final attachment in attachments)
+      if (attachment.type == AttachmentType.document) attachment,
+  ];
+
   Message copyWith({
     String? conversationId,
     String? content,

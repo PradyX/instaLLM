@@ -1,4 +1,5 @@
-import 'package:installm/features/share/domain/shared_text_receiver.dart';
+import 'package:installm/features/share/domain/shared_content_receiver.dart';
+import 'package:installm/features/share/domain/shared_payload.dart';
 
 /// Turns platform share events into one callback (Road Map 5 Phase 5.1).
 ///
@@ -7,16 +8,15 @@ import 'package:installm/features/share/domain/shared_text_receiver.dart';
 /// platform channel, and so the listener is attached before the launch payload
 /// is read: a share delivered in between must not be lost.
 class ShareInbox {
-  ShareInbox({required this.receiver, required this.onText});
+  ShareInbox({required this.receiver, required this.onPayload});
 
-  final SharedTextReceiver receiver;
-  final void Function(String text) onText;
+  final SharedContentReceiver receiver;
+  final void Function(SharedPayload payload) onPayload;
 
   /// Attaches the live listener, then stages whatever launched the app.
   Future<void> start() async {
-    receiver.listen(onText);
+    receiver.listen(onPayload);
     final initial = await receiver.takeInitial();
-    final text = initial?.trim();
-    if (text != null && text.isNotEmpty) onText(text);
+    if (initial != null && !initial.isEmpty) onPayload(initial);
   }
 }

@@ -2,16 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:installm/features/share/application/share_providers.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
-import 'package:installm/features/share/domain/shared_text_receiver.dart';
+import 'package:installm/features/share/domain/shared_content_receiver.dart';
+import 'package:installm/features/share/domain/shared_payload.dart';
 
-class _FakeReceiver implements SharedTextReceiver {
+class _FakeReceiver implements SharedContentReceiver {
   bool? applied;
 
   @override
-  Future<String?> takeInitial() async => null;
+  Future<SharedPayload?> takeInitial() async => null;
 
   @override
-  void listen(void Function(String text) onText) {}
+  void listen(void Function(SharedPayload payload) onPayload) {}
 
   @override
   Future<void> setShareTargetEnabled(bool enabled) async {
@@ -27,7 +28,7 @@ ProviderContainer _container(
 }) {
   return ProviderContainer(
     overrides: [
-      sharedTextReceiverProvider.overrideWithValue(receiver),
+      sharedContentReceiverProvider.overrideWithValue(receiver),
       shareTargetEnabledProvider.overrideWith(
         () => ShareTargetNotifier(
           read: () async => stored,

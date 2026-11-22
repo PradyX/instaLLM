@@ -576,6 +576,8 @@ class HomeController extends _$HomeController {
     String text, {
     List<String> imagePaths = const [],
     Map<String, MessageAttachment> reusedAttachments = const {},
+    List<String> documentPaths = const [],
+    List<String> documentLabels = const [],
   }) async {
     if (imagePaths.isEmpty && text.trim().startsWith('/')) {
       await ref.read(skillsProvider.notifier).whenReady;
@@ -623,6 +625,8 @@ class HomeController extends _$HomeController {
       appendUserMessage: true,
       imagePaths: imagePaths,
       reusedAttachments: reusedAttachments,
+      documentPaths: documentPaths,
+      documentLabels: documentLabels,
     );
   }
 
@@ -682,13 +686,17 @@ class HomeController extends _$HomeController {
     List<Message>? baseMessages,
     List<String> imagePaths = const [],
     Map<String, MessageAttachment> reusedAttachments = const {},
+    List<String> documentPaths = const [],
+    List<String> documentLabels = const [],
   }) async {
     final generationStatus = ref.read(homeGenerationStatusProvider);
     if (generationStatus.isGenerating) return;
 
     final trimmed = promptText.trim();
     if (trimmed.isEmpty) return;
-    final command = imagePaths.isEmpty ? MemoryCommand.parse(trimmed) : null;
+    final command = imagePaths.isEmpty && documentPaths.isEmpty
+        ? MemoryCommand.parse(trimmed)
+        : null;
     if (command != null && appendUserMessage) {
       await _runMemoryCommand(command, trimmed, baseMessages: baseMessages);
       return;
@@ -777,6 +785,50 @@ class HomeController extends _$HomeController {
                     },
             ),
           );
+        }
+
+        // A shared document travels with the message as its own attachment,
+        // copied into this chat's storage: the original another app shared can
+        // be gone tomorrow, and the chat must still hold what was sent. The
+        // composer also indexes the file into the knowledge collection, which
+        // is the text the model actually reads.
+        final usableDocumentPaths = [
+          for (final path in documentPaths)
+            if (path.trim().isNotEmpty) path,
+        ];
+        for (var index = 0; index < usableDocumentPaths.length; index++) {
+          final documentPath = usableDocumentPaths[index];
+          final givenLabel = index < documentLabels.length
+              ? documentLabels[index].trim()
+              : '';
+          final label = givenLabel.isEmpty
+              ? p.basename(documentPath)
+              : givenLabel;
+          try {
+            final storedDocumentPath = await _storageService
+                .copyAttachmentToChat(
+                  conversationId: conversationId,
+                  messageId: userMessageId,
+                  sourcePath: documentPath,
+                  preferredFileName: label,
+                  uniqueSuffix: usableDocumentPaths.length > 1
+                      ? '$index'
+                      : null,
+                );
+            attachments.add(
+              MessageAttachment.create(
+                type: AttachmentType.document,
+                path: storedDocumentPath,
+                label: label,
+                metadata: const {'sharedFromAnotherApp': true},
+              ),
+            );
+          } catch (error) {
+            _appendAssistantError(
+              'Could not attach "$label": $error The message was sent '
+              'without it.',
+            );
+          }
         }
 
         state = [

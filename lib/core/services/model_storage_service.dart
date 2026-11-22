@@ -275,6 +275,32 @@ class ModelStorageService {
     return file.length();
   }
 
+  /// Bytes a download has actually received, resumable ones included.
+  ///
+  /// A chunked download truncates the target file to its final size before the
+  /// first byte arrives, so the file length reads "complete" while the content
+  /// is still mostly unwritten. Progress, the free-space check and the resume
+  /// point all need the received count, not that reservation: using the length
+  /// made a resumed model report more than 100% and never settle.
+  Future<int> getDownloadedBytes(String fileName) async {
+    final path = await getLocalFilePath(fileName);
+    final metadataFile = File('$path.json');
+    if (await metadataFile.exists()) {
+      try {
+        final decoded = jsonDecode(await metadataFile.readAsString());
+        if (decoded is Map<String, dynamic>) {
+          final metadata = DownloadMetadata.fromJson(decoded);
+          return metadata.chunks.fold<int>(0, (sum, c) => sum + c.received);
+        }
+      } catch (_) {
+        // Unreadable metadata restarts the download; report nothing received.
+        return 0;
+      }
+      return 0;
+    }
+    return getLocalFileSize(fileName);
+  }
+
   Future<int?> getRemoteFileSize(String url, {CancelToken? cancelToken}) async {
     try {
       final headRes = await _dio.head(
@@ -461,12 +487,19 @@ class ModelStorageService {
       if (chunk.isFinished) continue;
 
       final pending = <int>[];
+      // Where this session's bytes begin. A resumed chunk already has
+      // [chunk.received] bytes on disk, and this session's stream starts at
+      // chunk.start + that count, so writes must be placed from there too.
+      // Writing from chunk.start instead shifted every resumed chunk left by
+      // its own resume point and left the tail of each chunk empty, which
+      // silently corrupted the finished file.
+      final writeBase = chunk.start + chunk.received;
       var written = 0;
       Future<void> flush() async {
         if (pending.isEmpty) return;
         final block = List<int>.from(pending);
         pending.clear();
-        await synchronizedWrite(chunk.start + written, block);
+        await synchronizedWrite(writeBase + written, block);
         written += block.length;
         // Durable now: only written bytes count as received, so an interrupted
         // download resumes from what is really on disk.
@@ -532,6 +565,8 @@ class ModelStorageService {
         await raf.close();
       }
     }
+
+    await _verifyDownloadedModel(savePath, metadataPath, totalSize);
 
     AppLogger.debug(
       'Model download finished: ${p.basename(savePath)} ($totalSize bytes, '
@@ -627,6 +662,50 @@ class ModelStorageService {
       cancelToken: cancelToken,
       deleteOnError: true,
       options: Options(validateStatus: (status) => (status ?? 500) < 400),
+    );
+    await _verifyDownloadedModel(savePath, '$savePath.json', null);
+  }
+
+  /// Refuses to call a download finished when the file is not a GGUF model.
+  ///
+  /// A corrupted transfer must not leave a file that looks installed: the
+  /// progress metadata is kept out of the way (deleted with the bad file) and
+  /// the failure is raised, so the next attempt starts from a clean slate
+  /// instead of resuming onto corruption.
+  Future<void> _verifyDownloadedModel(
+    String savePath,
+    String metadataPath,
+    int? expectedSize,
+  ) async {
+    final file = File(savePath);
+    final size = await file.exists() ? await file.length() : 0;
+    var valid = size >= 4 && (expectedSize == null || size == expectedSize);
+    if (valid) {
+      final raf = await file.open(mode: FileMode.read);
+      try {
+        final magic = await raf.read(4);
+        valid =
+            magic.length == 4 &&
+            magic[0] == 0x47 &&
+            magic[1] == 0x47 &&
+            magic[2] == 0x55 &&
+            magic[3] == 0x46;
+      } finally {
+        await raf.close();
+      }
+    }
+    if (valid) return;
+
+    try {
+      if (await file.exists()) await file.delete();
+      final metadata = File(metadataPath);
+      if (await metadata.exists()) await metadata.delete();
+    } catch (_) {
+      // Cleaning up is best effort; the error below is what the user sees.
+    }
+    throw StateError(
+      'The downloaded file is not a valid GGUF model (${p.basename(savePath)}, '
+      '$size bytes). It was removed; try downloading it again.',
     );
   }
 

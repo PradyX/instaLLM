@@ -7,7 +7,12 @@ class DownloadProgress {
 
   const DownloadProgress({required this.received, required this.total});
 
-  double get progress => total > 0 ? received / total : 0;
+  /// Finished fraction, never outside 0–1.
+  ///
+  /// A resumed chunked download can briefly report more received bytes than the
+  /// total it knows about (a flushed chunk plus the scan's own count), and a bar
+  /// past its end reads as a stuck download.
+  double get progress => total > 0 ? (received / total).clamp(0.0, 1.0) : 0;
 }
 
 /// Models downloading right now, keyed by model id.

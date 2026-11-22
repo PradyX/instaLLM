@@ -324,8 +324,13 @@ class ModelSelectionController extends _$ModelSelectionController {
           ),
         ),
       );
+      // Bytes actually received, so a resumed download reports where it really
+      // is: a chunked download reserves the whole file up front, and counting
+      // that reservation made the bar jump past 100% and stay there.
       final existingSizes = await Future.wait(
-        assets.map((asset) => _storageService.getLocalFileSize(asset.fileName)),
+        assets.map(
+          (asset) => _storageService.getDownloadedBytes(asset.fileName),
+        ),
       );
 
       final totalRemoteBytes = remoteSizes.whereType<int>().fold<int>(
@@ -800,7 +805,14 @@ class ModelSelectionController extends _$ModelSelectionController {
     required ModelQuantizationChoices choices,
     required HuggingFaceModelVariant variant,
   }) async {
-    if (variant.fileName == model.localFileName) {
+    // Case-insensitive: a repository often spells the file differently from
+    // the catalog (`jinen-v2-small-Q4_K_M.gguf` against
+    // `jinen-v2-small-q4_k_m.gguf`). Comparing exactly registered a second
+    // model entry for the same file, so the download ran under an id the open
+    // card never watched: no progress and a Download button that looked dead.
+    final localFileName = model.localFileName;
+    if (localFileName != null &&
+        variant.fileName.toLowerCase() == localFileName.toLowerCase()) {
       await downloadModel(model);
       return;
     }
@@ -1062,6 +1074,9 @@ class ModelSelectionController extends _$ModelSelectionController {
       }
       return error.message ?? 'Unexpected network error.';
     }
+    // A corrupt transfer reports itself this way, and its sentence is already
+    // the one the user needs to read.
+    if (error is StateError) return error.message;
     return error.toString();
   }
 

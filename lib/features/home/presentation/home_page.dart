@@ -6,13 +6,17 @@ import 'package:installm/features/kanban/application/kanban_controller.dart'
     show activeWorkspaceIdProvider;
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:installm/core/navigation/app_router.dart';
+import 'package:installm/features/artifacts/data/chat_export.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/group_chat/application/active_room.dart';
@@ -486,6 +490,58 @@ class _HomePageState extends ConsumerState<HomePage> {
         .editAndResendMessage(message.id, updatedText);
   }
 
+  /// Saves the open conversation as a file the user picks (Road Map 5 Phase
+  /// 5.0). A platform without a save dialog falls back to the app's own
+  /// `exports` folder, and the notice always says where the file landed.
+  Future<void> _exportActiveChat(ChatExportFormat format) async {
+    final messages = ref.read(homeControllerProvider);
+    if (messages.isEmpty) return;
+    final title =
+        ref.read(conversationControllerProvider).activeConversation?.title ??
+        'Chat';
+    final bytes = ChatExport.build(
+      format: format,
+      title: title,
+      messages: messages,
+    );
+    final fileName = ChatExport.fileName(title: title, format: format);
+    // Written either where the save dialog points or, when a platform has no
+    // save dialog, in the app's own exports folder.
+    String path;
+    try {
+      final location = await getSaveLocation(
+        suggestedName: fileName,
+        acceptedTypeGroups: [
+          XTypeGroup(label: format.label, extensions: [format.extension]),
+        ],
+      );
+      if (location == null) return; // the user cancelled; nothing was written
+      final file = File(location.path);
+      await file.writeAsBytes(bytes, flush: true);
+      path = file.path;
+    } on UnimplementedError {
+      path = await _writeExportToAppFolder(fileName, bytes);
+    } catch (_) {
+      path = await _writeExportToAppFolder(fileName, bytes);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Saved to $path')));
+  }
+
+  Future<String> _writeExportToAppFolder(
+    String fileName,
+    Uint8List bytes,
+  ) async {
+    final support = await getApplicationSupportDirectory();
+    final directory = Directory(p.join(support.path, 'exports'));
+    await directory.create(recursive: true);
+    final file = File(p.join(directory.path, fileName));
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
   void _scrollToBottom({bool animated = false}) {
     if (!_scrollController.hasClients) return;
 
@@ -604,6 +660,23 @@ class _HomePageState extends ConsumerState<HomePage> {
                 icon: Icons.settings_outlined,
                 onPressed: () => showRoomSettings(context, room.id),
               ),
+            if (room == null && messages.isNotEmpty) ...[
+              PopupMenuButton<ChatExportFormat>(
+                tooltip: 'Save chat as',
+                padding: EdgeInsets.zero,
+                iconSize: 20,
+                icon: Icon(Icons.save_alt_rounded, color: colorScheme.primary),
+                onSelected: _exportActiveChat,
+                itemBuilder: (context) => [
+                  for (final format in ChatExportFormat.values)
+                    PopupMenuItem(
+                      value: format,
+                      child: Text('Save as ${format.label}'),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 6),
+            ],
             if (room != null && !room.isDirect) const SizedBox(width: 6),
             if (room?.isDirect != true)
               _toolbarIconButton(

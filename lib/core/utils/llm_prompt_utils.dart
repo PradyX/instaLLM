@@ -53,6 +53,49 @@ String buildLlmChatPrompt(
 /// template: the app builds the prompt itself, so the template's own text for
 /// that state is what it inserts. The gemma3 branch ignores it, because the
 /// templates that declare a reasoning control are chatml-shaped.
+/// The prompt format a model's own GGUF chat template declares.
+///
+/// Read from `tokenizer.chat_template` instead of a model's name or the
+/// repository it came from: the template is what the file was trained to see,
+/// and one repository can ship several. A missing or blank template means the
+/// file declares no instruction format at all — a base completion model, which
+/// no amount of formatting turns into a chat assistant — and is reported as
+/// `null` so callers can say so instead of guessing.
+String? promptFormatFromTemplate(String? template) {
+  final text = template?.trim();
+  if (text == null || text.isEmpty) return null;
+  final lower = text.toLowerCase();
+  if (lower.contains('[inst]')) return 'llama2';
+  if (lower.contains('### instruction')) return 'alpaca';
+  if (lower.contains('<|start_header_id|>')) return 'llama3';
+  // `<|user|>` is shared by two families: Phi-3 closes a turn with `<|end|>`,
+  // Zephyr (which TinyLlama Chat and many 2023 fine-tunes use) with `</s>`.
+  if (lower.contains('<|user|>')) {
+    return lower.contains('<|end|>') ? 'phi3' : 'zephyr';
+  }
+  if (lower.contains('<start_of_turn>')) return 'gemma';
+  if (lower.contains('<|im_start|>')) return 'chatml';
+  // A template exists but is none of the shapes the app builds by hand. ChatML
+  // is the closest thing to a common denominator, so it is still better than
+  // sending a bare prompt.
+  return 'chatml';
+}
+
+/// Whether [promptFormatId] is a chat format the app builds itself.
+///
+/// A recorded format is only a fallback: when a file carries its own template,
+/// that template decides.
+bool isKnownPromptFormat(String promptFormatId) => const {
+  'chatml',
+  'gemma3',
+  'gemma',
+  'llama2',
+  'llama3',
+  'alpaca',
+  'phi3',
+  'zephyr',
+}.contains(promptFormatId);
+
 BuiltLlmPrompt buildModelChatPrompt(
   List<LlmPromptMessage> messages, {
   String systemPrompt = 'You are a helpful and concise assistant.',
@@ -62,6 +105,38 @@ BuiltLlmPrompt buildModelChatPrompt(
   switch (promptFormatId) {
     case 'gemma3':
       return _buildGemma3Prompt(messages, systemPrompt: systemPrompt);
+    case 'gemma':
+      return _buildGemmaPrompt(messages, systemPrompt: systemPrompt);
+    case 'llama2':
+      return _buildLlama2Prompt(
+        messages,
+        systemPrompt: systemPrompt,
+        assistantPrefill: assistantPrefill,
+      );
+    case 'llama3':
+      return _buildLlama3Prompt(
+        messages,
+        systemPrompt: systemPrompt,
+        assistantPrefill: assistantPrefill,
+      );
+    case 'alpaca':
+      return _buildAlpacaPrompt(
+        messages,
+        systemPrompt: systemPrompt,
+        assistantPrefill: assistantPrefill,
+      );
+    case 'phi3':
+      return _buildPhi3Prompt(
+        messages,
+        systemPrompt: systemPrompt,
+        assistantPrefill: assistantPrefill,
+      );
+    case 'zephyr':
+      return _buildZephyrPrompt(
+        messages,
+        systemPrompt: systemPrompt,
+        assistantPrefill: assistantPrefill,
+      );
     default:
       return BuiltLlmPrompt(
         prompt: buildLlmChatPrompt(
@@ -75,9 +150,185 @@ BuiltLlmPrompt buildModelChatPrompt(
 
 String modelStopToken(String promptFormatId) {
   return switch (promptFormatId) {
-    'gemma3' => '<end_of_turn>',
+    'gemma3' || 'gemma' => '<end_of_turn>',
+    'llama2' || 'alpaca' => '</s>',
+    'llama3' => '<|eot_id|>',
+    'phi3' => '<|end|>',
+    'zephyr' => '</s>',
     _ => '<|im_end|>',
   };
+}
+
+BuiltLlmPrompt _buildLlama2Prompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+  required String assistantPrefill,
+}) {
+  final promptBuffer = StringBuffer();
+  final system = systemPrompt.trim();
+  var openedInstruction = false;
+
+  for (final message in messages) {
+    if (message.isUser) {
+      if (!openedInstruction && system.isNotEmpty) {
+        promptBuffer.write('[INST] <<SYS>>\n$system\n<</SYS>>\n\n');
+        openedInstruction = true;
+      } else {
+        promptBuffer.write('[INST] ');
+        openedInstruction = true;
+      }
+      promptBuffer.write('${message.text.trim()} [/INST]');
+      continue;
+    }
+    promptBuffer.write(' ${message.text.trim()} </s>');
+  }
+
+  if (!openedInstruction) {
+    promptBuffer.write('[INST] ${system.isEmpty ? '' : '$system '}[/INST]');
+  }
+  promptBuffer.write(assistantPrefill.isEmpty ? '' : ' $assistantPrefill');
+
+  return BuiltLlmPrompt(prompt: promptBuffer.toString());
+}
+
+BuiltLlmPrompt _buildLlama3Prompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+  required String assistantPrefill,
+}) {
+  final promptBuffer = StringBuffer();
+  final imagePaths = <String>[];
+  final system = systemPrompt.trim();
+
+  void writeTurn(String role, String body) {
+    promptBuffer.write(
+      '<|start_header_id|>$role<|end_header_id|>\n\n$body<|eot_id|>',
+    );
+  }
+
+  if (system.isNotEmpty) writeTurn('system', system);
+  for (final message in messages) {
+    if (message.isUser) {
+      imagePaths.addAll(message.usableImagePaths);
+      writeTurn('user', message.text.trim());
+      continue;
+    }
+    writeTurn('assistant', message.text.trim());
+  }
+  promptBuffer.write(
+    '<|start_header_id|>assistant<|end_header_id|>\n\n$assistantPrefill',
+  );
+
+  return BuiltLlmPrompt(
+    prompt: promptBuffer.toString(),
+    imagePaths: imagePaths,
+  );
+}
+
+BuiltLlmPrompt _buildAlpacaPrompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+  required String assistantPrefill,
+}) {
+  final promptBuffer = StringBuffer();
+  promptBuffer.writeln(
+    'Below is an instruction that describes a task. Write a response that '
+    'appropriately completes the request.',
+  );
+  final system = systemPrompt.trim();
+  if (system.isNotEmpty) {
+    promptBuffer
+      ..writeln()
+      ..writeln(system);
+  }
+
+  for (final message in messages) {
+    promptBuffer
+      ..writeln()
+      ..writeln(message.isUser ? '### Instruction:' : '### Response:')
+      ..writeln(message.text.trim());
+  }
+  promptBuffer
+    ..writeln()
+    ..writeln('### Response:')
+    ..write(assistantPrefill);
+
+  return BuiltLlmPrompt(prompt: promptBuffer.toString());
+}
+
+BuiltLlmPrompt _buildPhi3Prompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+  required String assistantPrefill,
+}) {
+  final promptBuffer = StringBuffer();
+  final system = systemPrompt.trim();
+  if (system.isNotEmpty) {
+    promptBuffer.write('<|system|>\n$system<|end|>\n');
+  }
+  for (final message in messages) {
+    promptBuffer.write(
+      message.isUser
+          ? '<|user|>\n${message.text.trim()}<|end|>\n'
+          : '<|assistant|>\n${message.text.trim()}<|end|>\n',
+    );
+  }
+  promptBuffer.write('<|assistant|>\n$assistantPrefill');
+
+  return BuiltLlmPrompt(prompt: promptBuffer.toString());
+}
+
+/// Zephyr and the fine-tunes built on it (TinyLlama Chat among them):
+/// `<|role|>` markers with every turn closed by the end-of-sequence token.
+BuiltLlmPrompt _buildZephyrPrompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+  required String assistantPrefill,
+}) {
+  final promptBuffer = StringBuffer();
+  final system = systemPrompt.trim();
+  if (system.isNotEmpty) {
+    promptBuffer.write('<|system|>\n$system</s>\n');
+  }
+  for (final message in messages) {
+    promptBuffer.write(
+      message.isUser
+          ? '<|user|>\n${message.text.trim()}</s>\n'
+          : '<|assistant|>\n${message.text.trim()}</s>\n',
+    );
+  }
+  promptBuffer.write('<|assistant|>\n$assistantPrefill');
+
+  return BuiltLlmPrompt(prompt: promptBuffer.toString());
+}
+
+/// Gemma 2 and older: no vision markers, so images are ignored the way the
+/// model itself ignores them.
+BuiltLlmPrompt _buildGemmaPrompt(
+  List<LlmPromptMessage> messages, {
+  required String systemPrompt,
+}) {
+  final promptBuffer = StringBuffer();
+  final system = systemPrompt.trim();
+
+  if (system.isNotEmpty) {
+    promptBuffer
+      ..write('<start_of_turn>user\n')
+      ..write('System: $system\n')
+      ..write('<end_of_turn>\n');
+  }
+
+  for (final message in messages) {
+    promptBuffer
+      ..write(
+        message.isUser ? '<start_of_turn>user\n' : '<start_of_turn>model\n',
+      )
+      ..write('${message.text.trim()}\n')
+      ..write('<end_of_turn>\n');
+  }
+
+  promptBuffer.write('<start_of_turn>model\n');
+  return BuiltLlmPrompt(prompt: promptBuffer.toString());
 }
 
 BuiltLlmPrompt _buildGemma3Prompt(

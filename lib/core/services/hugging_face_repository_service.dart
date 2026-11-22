@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 
@@ -295,6 +297,68 @@ class HuggingFaceRepositoryService {
     return HuggingFaceRepository(repoId: repoId, branch: 'main', files: files);
   }
 
+  /// The chat template the repository publishes for its tokenizer.
+  ///
+  /// A GGUF can be missing `tokenizer.chat_template` — several popular
+  /// quantizations were converted before the converter kept it — while the
+  /// repository still declares its template in `tokenizer_config.json`. Without
+  /// that template an instruction model is indistinguishable from a base
+  /// completion model. Returns null when the repository has no usable one.
+  Future<String?> fetchChatTemplate(String repoInput) async {
+    final repoId = parseRepositoryInput(repoInput);
+    if (repoId == null) return null;
+
+    try {
+      final response = await _dio.get(
+        '/$repoId/raw/main/tokenizer_config.json',
+      );
+      final data = response.data;
+      final Map<String, dynamic> json;
+      if (data is Map<String, dynamic>) {
+        json = data;
+      } else if (data is Map) {
+        json = Map<String, dynamic>.from(data);
+      } else if (data is String) {
+        final decoded = jsonDecode(data);
+        if (decoded is! Map) return null;
+        json = Map<String, dynamic>.from(decoded);
+      } else {
+        return null;
+      }
+      return chatTemplateFromTokenizerConfig(json['chat_template']);
+    } catch (_) {
+      // A repository without a readable tokenizer config is not an error: the
+      // file's own metadata still decides.
+      return null;
+    }
+  }
+
+  /// The template inside a `chat_template` value.
+  ///
+  /// Older repositories store one Jinja string; newer ones store a list of
+  /// `{name, template}` entries, where the default is the one a chat needs.
+  static String? chatTemplateFromTokenizerConfig(Object? raw) {
+    if (raw is String) {
+      final text = raw.trim();
+      return text.isEmpty ? null : raw;
+    }
+    if (raw is List) {
+      for (final entry in raw) {
+        if (entry is Map && entry['name'] == 'default') {
+          final template = entry['template'];
+          if (template is String && template.trim().isNotEmpty) return template;
+        }
+      }
+      for (final entry in raw) {
+        if (entry is Map) {
+          final template = entry['template'];
+          if (template is String && template.trim().isNotEmpty) return template;
+        }
+      }
+    }
+    return null;
+  }
+
   /// Context window the repository's GGUF files declare, read from the
   /// model's own metadata on huggingface.co (`gguf.context_length`).
   ///
@@ -466,6 +530,9 @@ class HuggingFaceRepositoryService {
           ? null
           : repository.resolveUrl(projectorPath),
       mmprojLocalFileName: projectorPath?.split('/').last,
+      // Provisional only: a repository is registered before its file exists,
+      // so the real format is read from that file's own `tokenizer.chat_template`
+      // when the model is loaded (ModelPromptFormatService).
       promptFormatId: 'chatml',
       isCustom: true,
       modelSource: ModelSource.customUrl,

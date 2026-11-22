@@ -1007,10 +1007,31 @@ class HomeController extends _$HomeController {
         contextUsage: assembly.usage,
       );
 
+      // The file's own chat template decides how the prompt is written: an
+      // import can be ChatML, Llama 2, Llama 3, Alpaca, Gemma or Phi-3 shaped,
+      // and a base completion model declares no instruction template at all. No
+      // formatting turns that last one into a chat assistant, so it says so
+      // instead of answering with babble.
+      final promptFormat = await ref
+          .read(modelPromptFormatServiceProvider)
+          .resolve(selectedModel);
+      if (!promptFormat.isInstruct) {
+        _replaceAiMessage(
+          aiMessageId,
+          'This model has no instruction template. It is a base completion '
+          'model, trained to continue text rather than to follow a prompt, so '
+          'it cannot answer as a chat assistant. Pick an instruct model — or an '
+          'instruction fine-tune of this one — to chat.',
+        );
+        _setStatus(text: 'Base completion model', isGenerating: false);
+        return;
+      }
+      final promptFormatId = promptFormat.promptFormatId;
+
       final promptBundle = buildModelChatPrompt(
         _promptMessagesFor(assembly.messages),
         systemPrompt: assembly.systemPrompt,
-        promptFormatId: selectedModel.promptFormatId,
+        promptFormatId: promptFormatId,
         assistantPrefill: await _reasoningPrefillFor(selectedModel),
       );
 
@@ -1063,7 +1084,7 @@ class HomeController extends _$HomeController {
       final firstCompletion = await _streamCompletion(
         aiMessageId: aiMessageId,
         promptBundle: promptBundle,
-        promptFormatId: selectedModel.promptFormatId,
+        promptFormatId: promptFormatId,
         maxTokens: maxTokens,
         adaptiveMode: adaptiveMode,
       );
@@ -1299,12 +1320,13 @@ class HomeController extends _$HomeController {
     _setStatus(text: 'Using ${result.toolName}...', isGenerating: true);
 
     if (_stopRequestedByUser || _disposed) return;
+    final promptFormatId = await _promptFormatIdFor(selectedModel);
     final followUpPrompt = buildBudgetedToolFollowUp(
       history: _promptMessagesFor(assembly.messages),
       rawToolCall: firstCompletion.rawText,
       result: result,
       systemPrompt: assembly.systemPrompt,
-      promptFormatId: selectedModel.promptFormatId,
+      promptFormatId: promptFormatId,
       assistantPrefill: await _reasoningPrefillFor(selectedModel),
       inputLimit: assembly.usage.limitTokens,
       retainedImagePaths: promptBundle.imagePaths,
@@ -1321,7 +1343,7 @@ class HomeController extends _$HomeController {
     final secondCompletion = await _streamCompletion(
       aiMessageId: aiMessageId,
       promptBundle: followUpPrompt,
-      promptFormatId: selectedModel.promptFormatId,
+      promptFormatId: promptFormatId,
       maxTokens: maxTokens,
       adaptiveMode: adaptiveMode,
     );
@@ -1502,6 +1524,14 @@ class HomeController extends _$HomeController {
       // A summary that will not end does not hold up the request.
     }
     _memoryRefresh = null;
+  }
+
+  /// The prompt format to write this model's prompts in, read from its file.
+  Future<String> _promptFormatIdFor(LlmModel model) async {
+    final format = await ref
+        .read(modelPromptFormatServiceProvider)
+        .resolve(model);
+    return format.promptFormatId;
   }
 
   /// The message list the model was given, ready to extend for a follow-up.

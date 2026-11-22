@@ -64,6 +64,15 @@ class LlmModel {
   final String? mmprojDownloadUrl;
   final String? mmprojLocalFileName;
   final String promptFormatId;
+
+  /// The chat template the repository published in `tokenizer_config.json`.
+  ///
+  /// A GGUF does not always embed `tokenizer.chat_template` — several popular
+  /// quantizations were converted before the converter kept it — while the
+  /// repository still declares its template. Read at import, and only used
+  /// when the file itself declares nothing.
+  final String? repositoryChatTemplate;
+
   final bool isDownloaded;
   final bool isCustom;
 
@@ -149,6 +158,7 @@ class LlmModel {
     this.mmprojDownloadUrl,
     this.mmprojLocalFileName,
     this.promptFormatId = 'chatml',
+    this.repositoryChatTemplate,
     this.isDownloaded = false,
     this.isCustom = false,
     this.modelSource,
@@ -166,6 +176,7 @@ class LlmModel {
     String? localFileName,
     String? mmprojLocalFileName,
     String? promptFormatId,
+    Object? repositoryChatTemplate = _unset,
     bool? isCustom,
     Object? modelSource = _unset,
     Object? externalPath = _unset,
@@ -183,6 +194,9 @@ class LlmModel {
       mmprojDownloadUrl: mmprojDownloadUrl,
       mmprojLocalFileName: mmprojLocalFileName ?? this.mmprojLocalFileName,
       promptFormatId: promptFormatId ?? this.promptFormatId,
+      repositoryChatTemplate: repositoryChatTemplate == _unset
+          ? this.repositoryChatTemplate
+          : repositoryChatTemplate as String?,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isCustom: isCustom ?? this.isCustom,
       modelSource: modelSource == _unset
@@ -212,6 +226,7 @@ class LlmModel {
       'mmprojDownloadUrl': mmprojDownloadUrl,
       'mmprojLocalFileName': mmprojLocalFileName,
       'promptFormatId': promptFormatId,
+      'repositoryChatTemplate': repositoryChatTemplate,
       'isDownloaded': isDownloaded,
       'isCustom': isCustom,
       'modelSource': modelSource?.name,
@@ -251,6 +266,7 @@ class LlmModel {
       mmprojDownloadUrl: json['mmprojDownloadUrl'] as String?,
       mmprojLocalFileName: json['mmprojLocalFileName'] as String?,
       promptFormatId: json['promptFormatId'] as String? ?? 'chatml',
+      repositoryChatTemplate: json['repositoryChatTemplate'] as String?,
       isDownloaded: json['isDownloaded'] as bool? ?? false,
       isCustom: json['isCustom'] as bool? ?? true,
       modelSource: ModelSource.tryParse(json['modelSource'] as String?),

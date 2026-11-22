@@ -833,10 +833,20 @@ class ModelSelectionController extends _$ModelSelectionController {
     required HuggingFaceRepository repository,
     required HuggingFaceModelVariant variant,
   }) async {
-    final model = HuggingFaceRepositoryService.modelForVariant(
+    var model = HuggingFaceRepositoryService.modelForVariant(
       repository: repository,
       variant: variant,
     );
+
+    // A GGUF does not always embed its chat template, while the repository
+    // still publishes one. Reading it now is what lets the app chat with an
+    // instruction model instead of mistaking it for a base completion model.
+    if (model.repositoryChatTemplate == null) {
+      final template = await _repositoryChatTemplateFor(repository);
+      if (template != null) {
+        model = model.copyWith(repositoryChatTemplate: template);
+      }
+    }
 
     final existingIndex = state.models.indexWhere((m) => m.id == model.id);
     if (existingIndex >= 0) {
@@ -868,6 +878,27 @@ class ModelSelectionController extends _$ModelSelectionController {
     if (!isDownloaded) {
       unawaited(downloadModel(registered));
     }
+  }
+
+  /// Chat template a repository publishes, read at most once per repository.
+  final Map<String, String?> _repositoryTemplates = {};
+
+  Future<String?> _repositoryChatTemplateFor(
+    HuggingFaceRepository repository,
+  ) async {
+    final repoId = repository.repoId;
+    if (_repositoryTemplates.containsKey(repoId)) {
+      return _repositoryTemplates[repoId];
+    }
+    String? template;
+    try {
+      template = await _repositoryService.fetchChatTemplate(repoId);
+    } catch (_) {
+      // A repository without a readable config leaves the file to decide.
+      template = null;
+    }
+    _repositoryTemplates[repoId] = template;
+    return template;
   }
 
   Future<List<LlmModel>> _applyCachedCapabilities(List<LlmModel> models) async {

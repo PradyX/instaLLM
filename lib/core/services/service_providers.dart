@@ -12,6 +12,7 @@ import 'package:installm/core/services/model_storage_service.dart';
 import 'package:installm/core/services/platform_runtime_paths_service.dart';
 import 'package:installm/core/services/process_memory_probe.dart';
 import 'package:installm/features/model_selection/data/model_compatibility_service.dart';
+import 'package:installm/features/model_selection/data/model_prompt_format_service.dart';
 import 'package:installm/features/model_selection/data/model_reasoning_service.dart';
 
 final llmServiceProvider = Provider<LlmService>((ref) {
@@ -64,6 +65,18 @@ final modelStorageServiceProvider = Provider<ModelStorageService>((ref) {
 /// composer and the prompt builder ask for it.
 final modelReasoningServiceProvider = Provider<ModelReasoningService>((ref) {
   return ModelReasoningService(
+    storageService: ref.watch(modelStorageServiceProvider),
+  );
+});
+
+/// The prompt format each installed model declares in its own chat template.
+///
+/// Cached for the session: the answer comes from the GGUF file, and every turn
+/// asks for it.
+final modelPromptFormatServiceProvider = Provider<ModelPromptFormatService>((
+  ref,
+) {
+  return ModelPromptFormatService(
     storageService: ref.watch(modelStorageServiceProvider),
   );
 });

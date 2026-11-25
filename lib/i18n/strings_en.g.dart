@@ -57,6 +57,7 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	late final Translations$vault$en vault = Translations$vault$en._(_root);
 	late final Translations$skills$en skills = Translations$skills$en._(_root);
 	late final Translations$star$en star = Translations$star$en._(_root);
+	late final Translations$update$en update = Translations$update$en._(_root);
 }
 
 // Path: login
@@ -995,6 +996,48 @@ class Translations$star$en {
 	String get rateSubtitle => 'Opens the Play Store listing';
 }
 
+// Path: update
+class Translations$update$en {
+	Translations$update$en._(this._root);
+
+	final Translations _root; // ignore: unused_field
+
+	// Translations
+
+	/// en: 'Update available'
+	String get title => 'Update available';
+
+	/// en: 'You have ${version} · Google Play'
+	String meta({required Object version}) => 'You have ${version} · Google Play';
+
+	/// en: 'A newer InstaLLM is on Google Play. Your chats and models stay exactly as they are.'
+	String get body => 'A newer InstaLLM is on Google Play. Your chats and models stay exactly as they are.';
+
+	/// en: 'Not now'
+	String get notNow => 'Not now';
+
+	/// en: 'Update now'
+	String get updateNow => 'Update now';
+
+	/// en: 'Downloading in the background. You can keep using InstaLLM; it will ask to restart when the download is done.'
+	String get downloading => 'Downloading in the background. You can keep using InstaLLM; it will ask to restart when the download is done.';
+
+	/// en: 'Hide'
+	String get hide => 'Hide';
+
+	/// en: 'Update ready'
+	String get readyTitle => 'Update ready';
+
+	/// en: 'Restart to finish installing. Your current chat is kept.'
+	String get readyBody => 'Restart to finish installing. Your current chat is kept.';
+
+	/// en: 'Later'
+	String get later => 'Later';
+
+	/// en: 'Restart'
+	String get restart => 'Restart';
+}
+
 /// The flat map containing all translations for locale <en>.
 /// Only for edge cases! For simple maps, use the map function of this library.
 ///
@@ -1267,6 +1310,17 @@ extension on Translations {
 			'star.settingsSubtitle' => 'Free, open source, no cloud',
 			'star.rateTitle' => 'Rate InstaLLM on Google Play',
 			'star.rateSubtitle' => 'Opens the Play Store listing',
+			'update.title' => 'Update available',
+			'update.meta' => ({required Object version}) => 'You have ${version} · Google Play',
+			'update.body' => 'A newer InstaLLM is on Google Play. Your chats and models stay exactly as they are.',
+			'update.notNow' => 'Not now',
+			'update.updateNow' => 'Update now',
+			'update.downloading' => 'Downloading in the background. You can keep using InstaLLM; it will ask to restart when the download is done.',
+			'update.hide' => 'Hide',
+			'update.readyTitle' => 'Update ready',
+			'update.readyBody' => 'Restart to finish installing. Your current chat is kept.',
+			'update.later' => 'Later',
+			'update.restart' => 'Restart',
 			_ => null,
 		};
 	}

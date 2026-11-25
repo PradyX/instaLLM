@@ -4,15 +4,16 @@ Paste the block below into Play Console → Testing → Internal testing (or
 Production) → "What's new in this release". Play's limit is 500 characters per
 language; the count in the heading is checked against it.
 
-RELEASE NOTES (versionName 1.6.2 · versionCode 3 · 425/500 characters)
+RELEASE NOTES (versionName 1.7.0 · versionCode 4 · 435/500 characters)
 --------------------------------------------------
-What's new in 1.6.2
+What's new in 1.7.0
 
-• Model downloads now finish: a resumed download no longer corrupts the file, and the progress bar stops at 100%
-• If a model's file has gone missing, the app says so instead of showing a broken install
-• Imported models that bring their own prompt format now answer properly instead of garbled text
-• Save a chat as PDF, Markdown, text or JSON — on Android it lands in Downloads and opens from the notice
+• InstaLLM now asks Google Play for a newer build on launch and offers it in one tap, or stays quiet until you say so
+• A failed Hugging Face repository lookup names its cause (rate limit, timeout, network)
+• Resumed model downloads finish without corrupting the file, and progress stops at 100%
+• A model whose file has gone missing says so instead of looking installed
+• Chats save as PDF, Markdown, text or JSON
 
-SHORTER VARIANT (191/500 characters as one line)
+SHORTER VARIANT (230/500 characters as one line)
 --------------------------------------------------
-1.6.2: model downloads that resume now finish without corrupting the file, imported models answer in the right format, and chats save as PDF, Markdown or JSON. Private, on-device, no account.
+1.7.0: InstaLLM offers Play updates on launch, a failed Hugging Face lookup names its cause, resumed model downloads finish cleanly, and chats save as PDF, Markdown, text or JSON.

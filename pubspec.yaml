@@ -1,7 +1,7 @@
 name: installm
 description: "Private AI. Fully on-device."
 publish_to: 'none'
-version: 1.6.2+3
+version: 1.7.0+4
 
 environment:
   sdk: ^3.10.8
@@ -58,6 +58,7 @@ dependencies:
   speech_to_text: ^7.5.0
   sherpa_onnx: ^2.0.0
   in_app_review: ^2.0.12
+  in_app_update: ^5.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

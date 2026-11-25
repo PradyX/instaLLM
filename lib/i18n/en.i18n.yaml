@@ -298,3 +298,16 @@ star:
   settingsSubtitle: "Free, open source, no cloud"
   rateTitle: "Rate InstaLLM on Google Play"
   rateSubtitle: "Opens the Play Store listing"
+
+update:
+  title: "Update available"
+  meta: "You have ${version} · Google Play"
+  body: "A newer InstaLLM is on Google Play. Your chats and models stay exactly as they are."
+  notNow: "Not now"
+  updateNow: "Update now"
+  downloading: "Downloading in the background. You can keep using InstaLLM; it will ask to restart when the download is done."
+  hide: "Hide"
+  readyTitle: "Update ready"
+  readyBody: "Restart to finish installing. Your current chat is kept."
+  later: "Later"
+  restart: "Restart"

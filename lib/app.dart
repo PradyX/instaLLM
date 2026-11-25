@@ -10,6 +10,7 @@ import 'package:installm/features/share/application/draft_attachments_provider.d
 import 'package:installm/features/share/application/share_inbox.dart';
 import 'package:installm/features/share/application/share_providers.dart';
 import 'package:installm/features/share/application/process_text_provider.dart';
+import 'package:installm/core/play_update/update_prompt.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/features/share/domain/shared_payload.dart';
 import 'package:installm/core/theme/theme.dart';
@@ -82,6 +83,13 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
     // A reply that finishes while the user is elsewhere posts a short notice
     // and opens its conversation when tapped (Road Map 5 Phase 5.6).
     ref.read(replyNoticeServiceProvider).start();
+    // Play's own updater is asked once per launch, after the first frame so it
+    // never delays startup. Off Android, and on a build Play did not install,
+    // it is a quiet no-op.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(maybePromptForUpdate(context, ref));
+    });
   }
 
   void _stage(SharedPayload payload) {

@@ -37,11 +37,12 @@ release from the next, so bump both.
 
 ## 3. Verified in this repository
 
-Checked on 23 November 2026 against `main` at `96db27b` (the tree that carries
-`1.6.2+3`), built with `scripts/build_android_bundle.sh`:
+Checked on 23 November 2026 against `main` at `a8d69ad` (the version bump that
+carries `1.6.2+3`; only these release docs changed after the build), built with
+`scripts/build_android_bundle.sh`:
 
 - Bundles built from this repository, all signed with the same upload key:
-  - `1.6.2+3` (versionCode 3), built on 23 November 2026 from `96db27b`,
+  - `1.6.2+3` (versionCode 3), built on 23 November 2026 from `a8d69ad`,
     148.5 MB as Gradle reports it (142 MB on disk), SHA-256
     `9cbcfec5bd8f3c933d3b547baab260488597783746470a63d1a043d0f40f105e`,
     `flutter build appbundle` exited 0. This bundle carries the

@@ -4,21 +4,15 @@ Paste the block below into Play Console → Testing → Internal testing (or
 Production) → "What's new in this release". Play's limit is 500 characters per
 language; the count in the heading is checked against it.
 
-RELEASE NOTES (versionName 1.6.1 · versionCode 2 · 479/500 characters)
+RELEASE NOTES (versionName 1.6.2 · versionCode 3 · 425/500 characters)
 --------------------------------------------------
-First release.
+What's new in 1.6.2
 
-• Runs GGUF models fully on your phone; offline once a model is installed
-• Import from storage or download from Hugging Face
-• Memory fit ratings and benchmarks on your own device
-• Many chats, personas and memory; switch models without losing history
-• On-device dictation, replies read aloud, photos for vision models
-• Ask across your own local documents, PDFs included
-• Workspaces, bots, bot rooms and backup/restore
-• No account, no analytics, no telemetry
+• Model downloads now finish: a resumed download no longer corrupts the file, and the progress bar stops at 100%
+• If a model's file has gone missing, the app says so instead of showing a broken install
+• Imported models that bring their own prompt format now answer properly instead of garbled text
+• Save a chat as PDF, Markdown, text or JSON — on Android it lands in Downloads and opens from the notice
 
-SHORTER VARIANT (179/500 characters as one line)
+SHORTER VARIANT (191/500 characters as one line)
 --------------------------------------------------
-First release: private on-device AI. Import or download a model and chat
-offline, with voice, vision, local documents, bots and workspaces. No account,
-no analytics, no telemetry.
+1.6.2: model downloads that resume now finish without corrupting the file, imported models answer in the right format, and chats save as PDF, Markdown or JSON. Private, on-device, no account.

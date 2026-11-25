@@ -292,7 +292,7 @@ skills:
 star:
   title: "Enjoying InstaLLM?"
   body: "A star on GitHub helps other people find it."
-  notNow: "Not now"
+  notNow: "No thanks"
   action: "Star on GitHub"
   settingsTitle: "Star InstaLLM on GitHub"
   settingsSubtitle: "Free, open source, no cloud"

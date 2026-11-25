@@ -416,4 +416,36 @@ void main() {
     expect(find.text('ROOMS'), findsOneWidget);
     _expectNoLayoutFailure(tester);
   });
+
+  testWidgets('community dock stays pinned under a long chat list', (
+    tester,
+  ) async {
+    await _setSurface(tester, const Size(1141, 893));
+    await tester.pumpWidget(
+      _harness(
+        fixture: _fixture(chats: 44),
+        section: AppSection.chats,
+        brightness: Brightness.dark,
+        width: 280,
+        height: 893,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final star = find.text('Star this project on GitHub');
+    final sponsor = find.text('Sponsor this project');
+    expect(star, findsOneWidget);
+    expect(sponsor, findsOneWidget);
+
+    // Pinned at the bottom of the rail, never carried off by the list: the
+    // rows that scroll past it stop at the thirty-chat cap.
+    final dockBottom = tester.getBottomLeft(sponsor).dy;
+    expect(dockBottom, inInclusiveRange(840, 893));
+    expect(tester.getTopLeft(star).dy, lessThan(tester.getTopLeft(sponsor).dy));
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    expect(tester.getBottomLeft(sponsor).dy, dockBottom);
+    _expectNoLayoutFailure(tester);
+  });
 }

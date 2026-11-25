@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:installm/core/github_star/star_prompt.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/navigation/navigation_panel_widgets.dart';
 import 'package:installm/core/theme/appearance_surfaces.dart';
@@ -350,201 +353,320 @@ class _AppNavigationPanelState extends ConsumerState<AppNavigationPanel> {
               minimum: EdgeInsets.only(
                 bottom: MediaQuery.viewInsetsOf(context).bottom,
               ),
-              child: CustomScrollView(
-                slivers: [
-                  SliverList.list(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                        child: _WorkspacePicker(
-                          onManage: () => navigate(AppRoutes.workspaces),
-                          enabled: !isGenerating,
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/installm.png',
-                                width: 34,
-                                height: 34,
-                                fit: BoxFit.contain,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: CustomScrollView(
+                      slivers: [
+                        SliverList.list(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                16,
+                                16,
+                                16,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                              child: _WorkspacePicker(
+                                onManage: () => navigate(AppRoutes.workspaces),
+                                enabled: !isGenerating,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      'InstaLLM',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
+                                    Image.asset(
+                                      'assets/icons/installm.png',
+                                      width: 34,
+                                      height: 34,
+                                      fit: BoxFit.contain,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'InstaLLM',
+                                            style: textTheme.titleSmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                          Text(
+                                            workspace?.name ??
+                                                t.navigation.noWorkspace,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: textTheme.labelSmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    Text(
-                                      workspace?.name ??
-                                          t.navigation.noWorkspace,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: textTheme.labelSmall?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      size: 18,
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 18,
-                                color: colorScheme.onSurfaceVariant,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  const gap = 8.0;
+                                  final scale =
+                                      MediaQuery.textScalerOf(
+                                        context,
+                                      ).scale(12) /
+                                      12;
+                                  final columns =
+                                      ((constraints.maxWidth + gap) /
+                                              (72 * scale + gap))
+                                          .floor()
+                                          .clamp(1, 3);
+                                  final width =
+                                      (constraints.maxWidth -
+                                          gap * (columns - 1)) /
+                                      columns;
+                                  return Wrap(
+                                    spacing: gap,
+                                    runSpacing: gap,
+                                    children: [
+                                      for (final (icon, label, route) in [
+                                        (
+                                          const LlmChipIcon(),
+                                          t.navigation.models,
+                                          AppRoutes.modelSelection,
+                                        ),
+                                        (
+                                          const Icon(Icons.speed_outlined),
+                                          t.navigation.benchmark,
+                                          AppRoutes.benchmark,
+                                        ),
+                                        (
+                                          const NavigationSettingsIcon(),
+                                          t.navigation.settings,
+                                          AppRoutes.settings,
+                                        ),
+                                      ])
+                                        SizedBox(
+                                          width: width,
+                                          child: NavigationShortcutTile(
+                                            icon: icon,
+                                            label: label,
+                                            onPressed: () => navigate(route),
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            const gap = 8.0;
-                            final scale =
-                                MediaQuery.textScalerOf(context).scale(12) / 12;
-                            final columns =
-                                ((constraints.maxWidth + gap) /
-                                        (72 * scale + gap))
-                                    .floor()
-                                    .clamp(1, 3);
-                            final width =
-                                (constraints.maxWidth - gap * (columns - 1)) /
-                                columns;
-                            return Wrap(
-                              spacing: gap,
-                              runSpacing: gap,
-                              children: [
-                                for (final (icon, label, route) in [
-                                  (
-                                    const LlmChipIcon(),
-                                    t.navigation.models,
-                                    AppRoutes.modelSelection,
-                                  ),
-                                  (
-                                    const Icon(Icons.speed_outlined),
-                                    t.navigation.benchmark,
-                                    AppRoutes.benchmark,
-                                  ),
-                                  (
-                                    const NavigationSettingsIcon(),
-                                    t.navigation.settings,
-                                    AppRoutes.settings,
-                                  ),
-                                ])
-                                  SizedBox(
-                                    width: width,
-                                    child: NavigationShortcutTile(
-                                      icon: icon,
-                                      label: label,
-                                      onPressed: () => navigate(route),
-                                    ),
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                        child: NavigationVoiceEntry(
-                          key: const ValueKey('navigation-companion'),
-                          selected: section == AppSection.companion,
-                          onPressed: () => navigate(AppRoutes.companion),
-                        ),
-                      ),
-                      leading ??
-                          ShellChatLeading(
-                            isGenerating: isGenerating,
-                            onNavigate: onNavigate,
-                          ),
-                    ],
-                  ),
-                  // The tabs stay pinned: a long chat or bot list scrolls
-                  // under them instead of carrying them off screen.
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _NavigationTabsHeader(
-                      background: appearanceSurfaceColor(
-                        context,
-                        colorScheme.surfaceContainerLow,
-                      ),
-                      child: _NavigationTabs(
-                        tab: tab,
-                        onChanged: (next) => setState(() => _pickedTab = next),
-                      ),
-                    ),
-                  ),
-                  SliverList.list(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (tab == _NavigationTab.chats) ...[
-                              _ChatRows(
-                                current: section == AppSection.chats,
-                                isGenerating: isGenerating,
-                                onOpened: onNavigate,
-                                summaries: fixture?.chats,
-                                onSelect: fixture?.onOpenChat,
-                                onSeeAll: () =>
-                                    navigate(AppRoutes.conversations),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                              child: NavigationVoiceEntry(
+                                key: const ValueKey('navigation-companion'),
+                                selected: section == AppSection.companion,
+                                onPressed: () => navigate(AppRoutes.companion),
                               ),
-                            ] else ...[
-                              _sectionHeader(
-                                context,
-                                label: t.navigation.bots,
-                                onCreate:
-                                    fixture?.onCreateBot ??
-                                    () => _createBot(
-                                      actionContext,
-                                      ref,
-                                      onCreated: onNavigate,
-                                    ),
-                                createTooltip: 'New bot',
-                              ),
-                              BotChatRows(
-                                workspaceId: workspace?.id,
-                                onOpened: onNavigate,
-                                bots: fixture?.bots,
-                                onOpenBot: fixture?.onOpenBot,
-                              ),
-                              _sectionHeader(
-                                context,
-                                label: t.navigation.rooms,
-                                onCreate:
-                                    fixture?.onCreateRoom ??
-                                    (workspace == null
-                                        ? null
-                                        : () => _createRoom(
-                                            actionContext,
-                                            ref,
-                                            workspace.id,
-                                            onCreated: onNavigate,
-                                          )),
-                                createTooltip: 'New room',
-                              ),
-                              RoomChatRows(
-                                workspaceId: workspace?.id,
-                                onOpened: onNavigate,
-                                rooms: fixture?.rooms,
-                                bots: fixture?.bots,
-                                onOpenRoom: fixture?.onOpenRoom,
-                              ),
-                            ],
+                            ),
+                            leading ??
+                                ShellChatLeading(
+                                  isGenerating: isGenerating,
+                                  onNavigate: onNavigate,
+                                ),
                           ],
                         ),
-                      ),
-                    ],
+                        // The tabs stay pinned: a long chat or bot list scrolls
+                        // under them instead of carrying them off screen.
+                        SliverPersistentHeader(
+                          pinned: true,
+                          delegate: _NavigationTabsHeader(
+                            background: appearanceSurfaceColor(
+                              context,
+                              colorScheme.surfaceContainerLow,
+                            ),
+                            child: _NavigationTabs(
+                              tab: tab,
+                              onChanged: (next) =>
+                                  setState(() => _pickedTab = next),
+                            ),
+                          ),
+                        ),
+                        SliverList.list(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (tab == _NavigationTab.chats) ...[
+                                    _ChatRows(
+                                      current: section == AppSection.chats,
+                                      isGenerating: isGenerating,
+                                      onOpened: onNavigate,
+                                      summaries: fixture?.chats,
+                                      onSelect: fixture?.onOpenChat,
+                                      onSeeAll: () =>
+                                          navigate(AppRoutes.conversations),
+                                    ),
+                                  ] else ...[
+                                    _sectionHeader(
+                                      context,
+                                      label: t.navigation.bots,
+                                      onCreate:
+                                          fixture?.onCreateBot ??
+                                          () => _createBot(
+                                            actionContext,
+                                            ref,
+                                            onCreated: onNavigate,
+                                          ),
+                                      createTooltip: 'New bot',
+                                    ),
+                                    BotChatRows(
+                                      workspaceId: workspace?.id,
+                                      onOpened: onNavigate,
+                                      bots: fixture?.bots,
+                                      onOpenBot: fixture?.onOpenBot,
+                                    ),
+                                    _sectionHeader(
+                                      context,
+                                      label: t.navigation.rooms,
+                                      onCreate:
+                                          fixture?.onCreateRoom ??
+                                          (workspace == null
+                                              ? null
+                                              : () => _createRoom(
+                                                  actionContext,
+                                                  ref,
+                                                  workspace.id,
+                                                  onCreated: onNavigate,
+                                                )),
+                                      createTooltip: 'New room',
+                                    ),
+                                    RoomChatRows(
+                                      workspaceId: workspace?.id,
+                                      onOpened: onNavigate,
+                                      rooms: fixture?.rooms,
+                                      bots: fixture?.bots,
+                                      onOpenRoom: fixture?.onOpenRoom,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  _CommunityDock(
+                    onStar: () => unawaited(openGitHubRepository()),
+                    onSponsor: () => unawaited(openSponsorPage()),
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The rail's two optional community actions, pinned under the chat list.
+///
+/// Pinned rather than scrolled: a long list of chats must not push them out of
+/// reach, and a hairline-joined pair reads as one quiet place instead of two
+/// competing buttons. Neither opens anything inside the app — both hand off to
+/// the browser, so nothing is sent from here.
+class _CommunityDock extends StatelessWidget {
+  const _CommunityDock({required this.onStar, required this.onSponsor});
+
+  final VoidCallback onStar;
+  final VoidCallback onSponsor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: Material(
+        color: appearanceSurfaceColor(context, colors.surfaceContainerHigh),
+        borderRadius: BorderRadius.circular(12),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _CommunityDockAction(
+              icon: Icons.star_outline_rounded,
+              label: 'Star this project on GitHub',
+              onPressed: onStar,
+            ),
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: colors.outlineVariant.withValues(alpha: 0.5),
+            ),
+            _CommunityDockAction(
+              icon: Icons.favorite_border_rounded,
+              label: 'Sponsor this project',
+              onPressed: onSponsor,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommunityDockAction extends StatelessWidget {
+  const _CommunityDockAction({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Row(
+              children: [
+                Icon(icon, size: 17, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 12,
+                      letterSpacing: 0,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

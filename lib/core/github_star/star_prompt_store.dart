@@ -18,8 +18,8 @@ class StarPromptState {
   final int shownCount;
   final DateTime? lastShownAt;
 
-  /// True once the user starred the repository, or was asked the full three
-  /// times, so the reminder never comes back.
+  /// True once the user answered the reminder in any way — starring the
+  /// repository or dismissing it — so it never comes back.
   final bool optedOut;
 
   bool get hasBeenSeen => shownCount > 0;

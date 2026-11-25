@@ -977,8 +977,8 @@ class Translations$star$en {
 	/// en: 'A star on GitHub helps other people find it.'
 	String get body => 'A star on GitHub helps other people find it.';
 
-	/// en: 'Not now'
-	String get notNow => 'Not now';
+	/// en: 'No thanks'
+	String get notNow => 'No thanks';
 
 	/// en: 'Star on GitHub'
 	String get action => 'Star on GitHub';
@@ -1304,7 +1304,7 @@ extension on Translations {
 			'skills.scriptFiles' => ({required Object names}) => 'Scripts: ${names}',
 			'star.title' => 'Enjoying InstaLLM?',
 			'star.body' => 'A star on GitHub helps other people find it.',
-			'star.notNow' => 'Not now',
+			'star.notNow' => 'No thanks',
 			'star.action' => 'Star on GitHub',
 			'star.settingsTitle' => 'Star InstaLLM on GitHub',
 			'star.settingsSubtitle' => 'Free, open source, no cloud',

@@ -11,6 +11,7 @@ final starPromptStoreProvider = FutureProvider<StarPromptStore>(
 );
 
 const githubRepoUrl = 'https://github.com/PradyX/instaLLM';
+const sponsorUrl = 'https://github.com/sponsors/PradyX';
 
 /// Whether the About row should carry a quiet dot: the reminder was shown but
 /// never acted on.
@@ -22,43 +23,35 @@ final starPromptSeenProvider = FutureProvider<bool>((ref) async {
 
 enum StarPromptAnswer { notNow, starred }
 
-/// How often the one-question reminder may appear.
-const starPromptInterval = Duration(days: 14);
-const starPromptMaxShows = 3;
-
 class StarPromptController {
   StarPromptController(this._store);
 
   final StarPromptStore _store;
 
-  /// The reminder only appears after a reply finished, at most once every two
-  /// weeks and three times in total, and never again once it was acted on.
-  bool get isDue {
-    final state = _store.load();
-    if (state.optedOut || state.shownCount >= starPromptMaxShows) return false;
-    final last = state.lastShownAt;
-    if (last == null) return true;
-    return DateTime.now().difference(last) >= starPromptInterval;
-  }
+  /// The one-question reminder is offered until it was answered once. It never
+  /// repeats, so nobody reads the same ask in every session.
+  bool get isDue => !_store.load().optedOut;
 
   bool get isReadOnly => _store.isReadOnly;
 
   bool get hasBeenSeen => _store.load().hasBeenSeen;
 
+  /// Records that the dialog was put in front of the user, which only feeds the
+  /// quiet dot on the Settings row.
   void recordShown() {
     final state = _store.load();
     if (state.optedOut) return;
-    final shown = state.shownCount + 1;
     _store.save(
       StarPromptState(
-        shownCount: shown,
+        shownCount: state.shownCount + 1,
         lastShownAt: DateTime.now(),
-        optedOut: shown >= starPromptMaxShows,
       ),
     );
   }
 
-  void star() {
+  /// Any answer ends it for good. Dismissing is an answer too: asking the same
+  /// question twice is what makes a reminder feel like nagging.
+  void recordAnswer() {
     final state = _store.load();
     _store.save(
       StarPromptState(
@@ -71,8 +64,13 @@ class StarPromptController {
 }
 
 /// Opens the repository in the user's browser; nothing is sent from the app.
-Future<void> _openRepository() async {
-  final uri = Uri.parse(githubRepoUrl);
+Future<void> openGitHubRepository() => _openInBrowser(githubRepoUrl);
+
+/// Opens the sponsor page, the second of the sidebar's two community actions.
+Future<void> openSponsorPage() => _openInBrowser(sponsorUrl);
+
+Future<void> _openInBrowser(String url) async {
+  final uri = Uri.parse(url);
   if (await canLaunchUrl(uri)) await launchUrl(uri);
 }
 
@@ -154,10 +152,10 @@ Future<void> maybeShowStarPrompt(BuildContext context, WidgetRef ref) async {
     barrierDismissible: true,
     builder: (_) => const StarPromptDialog(),
   );
-  if (answer == StarPromptAnswer.starred) {
-    controller.star();
-    await _openRepository();
-  }
+  // A tap outside or the back gesture is a dismissal, not a deferral: every
+  // answer, including "No thanks", silences the reminder from now on.
+  controller.recordAnswer();
+  if (answer == StarPromptAnswer.starred) await openGitHubRepository();
 }
 
 /// One quiet row for Settings → About, always available whether or not the
@@ -185,7 +183,7 @@ class StarRepositoryTile extends StatelessWidget {
               ),
             )
           : null,
-      onTap: () => unawaited(_openRepository()),
+      onTap: () => unawaited(openGitHubRepository()),
     );
   }
 }

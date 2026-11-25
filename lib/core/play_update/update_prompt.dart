@@ -38,10 +38,10 @@ class UpdatePromptPolicy {
         updatePromptDismissWindow;
   }
 
-  void dismiss({int? availableVersionCode}) {
+  void dismiss({int? availableVersionCode, DateTime? now}) {
     _store.save(
       UpdatePromptState(
-        dismissedAt: DateTime.now(),
+        dismissedAt: now ?? DateTime.now(),
         dismissedVersionCode: availableVersionCode,
       ),
     );

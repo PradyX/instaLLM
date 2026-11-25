@@ -30,7 +30,10 @@ void main() {
     final policy = UpdatePromptPolicy(UpdatePromptStore(file));
     final now = DateTime(2026, 11, 25, 12);
 
-    policy.dismiss(availableVersionCode: 4);
+    // Stamped with the same clock the assertions read, so the window is
+    // measured from the dismissal rather than from whatever time the suite
+    // happens to run at.
+    policy.dismiss(availableVersionCode: 4, now: now);
 
     expect(policy.shouldPrompt(availableVersionCode: 4, now: now), isFalse);
     expect(

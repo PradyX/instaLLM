@@ -42,8 +42,9 @@ Checked on 23 November 2026 against `main` at `96db27b` (the tree that carries
 
 - Bundles built from this repository, all signed with the same upload key:
   - `1.6.2+3` (versionCode 3), built on 23 November 2026 from `96db27b`,
-    __SIZE__ as Gradle reports it (__ONDISK__ on disk), SHA-256
-    `__SHA__`, `flutter build appbundle` exited 0. This bundle carries the
+    148.5 MB as Gradle reports it (142 MB on disk), SHA-256
+    `9cbcfec5bd8f3c933d3b547baab260488597783746470a63d1a043d0f40f105e`,
+    `flutter build appbundle` exited 0. This bundle carries the
     model-download repair (`2fb40dc`), the missing-file install state
     (`a7e502a`) and the chat-template fix (`ba2abd6`) that `1.6.1` predates.
   - `1.6.0+1` (versionCode 1), SHA-256
@@ -52,16 +53,19 @@ Checked on 23 November 2026 against `main` at `96db27b` (the tree that carries
   - `1.6.1+2` (versionCode 2), built on 17 November 2026, 147.2 MB as Gradle
     reports it (140 MB on disk), SHA-256
     `08bc953132702efc97446749c6c4726265e061d6facb639d3c13618371b1afce`,
-    `flutter build appbundle` exited 0. This is the only bundle on disk now:
-    the build script deletes the previous file first, so the 1.6.0 copy exists
-    only as the Play upload.
+    `flutter build appbundle` exited 0. The build script deletes the previous
+    file first, so only the newest bundle is on disk and the earlier two exist
+    as Play uploads.
 - Signature: `jarsigner -verify` prints `jar verified.`; the signer certificate
   is `CN=pocketllm, OU=pocket llm, O=pocket llm, L=LKO, ST=UP, C=IN`
   (SHA384withRSA, valid until 23 July 2053).
 - Version: `versionCode 3`, `versionName 1.6.2` in the merged release
   manifest, and `versionName 1.6.2` with attribute `versionCode 3` inside the
-  bundle's own `base/manifest` (read back from the `.aab`, not from Gradle's
-  log); `minSdkVersion 24`, `targetSdkVersion 36`. Play requires API 36 for new apps submitted from
+  bundle's own `base/manifest` (read back from the `.aab` with
+  `java -jar bundletool-all-1.18.1.jar dump manifest --bundle=…`, not from
+  Gradle's log: `<manifest … android:versionCode="3"
+  android:versionName="1.6.2" package="com.prady.installm">`);
+  `minSdkVersion 24`, `targetSdkVersion 36`, `compileSdkVersion 36`. Play requires API 36 for new apps submitted from
   31 August 2026, so this target is the current minimum.
 - ABIs in the bundle: `arm64-v8a`, `armeabi-v7a`, `x86_64`. Every 64-bit
   library is 16 KB page aligned (`libapp.so` and `libflutter.so` `LOAD`

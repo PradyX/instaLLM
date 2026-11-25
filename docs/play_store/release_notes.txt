@@ -4,16 +4,16 @@ Paste the block below into Play Console → Testing → Internal testing (or
 Production) → "What's new in this release". Play's limit is 500 characters per
 language; the count in the heading is checked against it.
 
-RELEASE NOTES (versionName 1.7.0 · versionCode 4 · 435/500 characters)
+RELEASE NOTES (versionName 1.7.1 · versionCode 5 · 377/500 characters)
 --------------------------------------------------
-What's new in 1.7.0
+What's new in 1.7.1
 
-• InstaLLM now asks Google Play for a newer build on launch and offers it in one tap, or stays quiet until you say so
-• A failed Hugging Face repository lookup names its cause (rate limit, timeout, network)
-• Resumed model downloads finish without corrupting the file, and progress stops at 100%
-• A model whose file has gone missing says so instead of looking installed
-• Chats save as PDF, Markdown, text or JSON
+• Star InstaLLM on GitHub or sponsor it from one quiet pair of rows in the sidebar
+• The star reminder is asked once; dismissing it ends it for good
+• A model download starts on the first tap of its Download button
+• InstaLLM offers Play updates on launch, or stays quiet until you say so
+• Resumed model downloads finish cleanly and progress stops at 100%
 
-SHORTER VARIANT (230/500 characters as one line)
+SHORTER VARIANT (131/500 characters as one line)
 --------------------------------------------------
-1.7.0: InstaLLM offers Play updates on launch, a failed Hugging Face lookup names its cause, resumed model downloads finish cleanly, and chats save as PDF, Markdown, text or JSON.
+1.7.1: star or sponsor InstaLLM from the sidebar, a model download starts on the first tap, and Play updates are offered on launch.

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:installm/core/utils/logger.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 
 /// Thrown when a Hugging Face repository cannot be read or is unavailable.
@@ -208,6 +209,50 @@ class HuggingFaceRepositoryService {
     return 'Unknown';
   }
 
+  /// Why a repository request failed, in words a user can act on.
+  ///
+  /// The dialog shows one line, so it names the transport or the status rather
+  /// than blaming the connection for every failure.
+  static String describeFailure(DioException error) {
+    final status = error.response?.statusCode;
+    if (status == 429) {
+      return 'Hugging Face is rate-limiting this device (HTTP 429); '
+          'wait a moment and try again';
+    }
+    if (status != null && status >= 500) {
+      return 'Hugging Face is having trouble (HTTP $status); '
+          'try again in a minute';
+    }
+    if (status != null) {
+      return 'Hugging Face answered HTTP $status';
+    }
+    switch (error.type) {
+      case DioExceptionType.connectionTimeout:
+        return 'the connection timed out after 20 s';
+      case DioExceptionType.sendTimeout:
+        return 'sending the request timed out after 20 s';
+      case DioExceptionType.receiveTimeout:
+        return 'Hugging Face stopped sending data for 20 s';
+      case DioExceptionType.badCertificate:
+        return 'the secure connection failed a certificate check; '
+            'a VPN, proxy or hotspot sign-in page can cause this';
+      case DioExceptionType.cancel:
+        return 'the request was cancelled';
+      case DioExceptionType.connectionError:
+        final cause = error.error?.toString().trim();
+        return cause == null || cause.isEmpty
+            ? 'the connection failed'
+            : 'the connection failed ($cause)';
+      case DioExceptionType.badResponse:
+      case DioExceptionType.transformTimeout:
+      case DioExceptionType.unknown:
+        final message = error.message?.trim();
+        return message == null || message.isEmpty
+            ? 'the request failed'
+            : 'the request failed ($message)';
+    }
+  }
+
   /// Fetches the file list of [repoInput] (repo id or URL) with sizes.
   Future<HuggingFaceRepository> fetchRepository(String repoInput) async {
     final repoId = parseRepositoryInput(repoInput);
@@ -231,6 +276,14 @@ class HuggingFaceRepositoryService {
       }
     } on DioException catch (error) {
       final status = error.response?.statusCode;
+      // One line in the log answers the question the dialog cannot: which
+      // request failed, and how. A generic "check your connection" once cost a
+      // session of guessing while the host itself answered other requests.
+      AppLogger.warning(
+        'Hugging Face repository request failed: repo=$repoId, '
+        'type=${error.type.name}, status=${status ?? '-'}, '
+        'uri=${error.requestOptions.uri}',
+      );
       if (status == 401 || status == 403) {
         throw const HuggingFaceRepositoryException(
           'This repository is private or gated. InstaLLM can only browse '
@@ -242,8 +295,9 @@ class HuggingFaceRepositoryService {
           'Repository not found. Check the author/repository name.',
         );
       }
-      throw const HuggingFaceRepositoryException(
-        'Could not reach huggingface.co. Check your internet connection.',
+      throw HuggingFaceRepositoryException(
+        'Could not load $repoId from huggingface.co: '
+        '${describeFailure(error)}.',
       );
     } catch (_) {
       throw const HuggingFaceRepositoryException(

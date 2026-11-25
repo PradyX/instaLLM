@@ -209,18 +209,42 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     }
   }
 
-  /// Downloads a model, asking its repository first when the user presses
-  /// Download: the card then offers that repository's quantizations as chips,
-  /// and the filled chip is the file this button fetches.
+  /// Reads a repository's quantizations so the chips exist for the next press.
   ///
-  /// A model with nothing to choose between — no repository, a repository
-  /// that cannot be read, or one carrying only this file — downloads exactly
-  /// as it did before, so an offline device still works.
+  /// The first press of Download no longer waits on this: a repository it
+  /// cannot read simply leaves the model's own file as the only choice.
+  Future<void> _loadQuantizationChoices(LlmModel model) async {
+    if (_quantizationChoices.containsKey(model.id) ||
+        _quantizationLoading.contains(model.id)) {
+      return;
+    }
+    setState(() => _quantizationLoading.add(model.id));
+    final loaded = await ref
+        .read(modelSelectionControllerProvider.notifier)
+        .loadQuantizationChoices(model);
+    if (!mounted) return;
+    setState(() {
+      _quantizationLoading.remove(model.id);
+      if (loaded == null || loaded.variants.isEmpty) return;
+      _quantizationChoices[model.id] = loaded;
+      _selectedQuantization[model.id] =
+          (loaded.variantFor(model) ?? loaded.variants.first).quantization;
+    });
+  }
+
+  /// Downloads a model; the filled chip is the file this button fetches.
+  ///
+  /// Pressing Download always starts a download. Asking the repository for its
+  /// other quantizations used to happen first and then stop, which showed a
+  /// spinner and nothing else: the chips it revealed render above the button,
+  /// so the press looked like it did nothing at all. The chips still arrive, in
+  /// the Quantization section, while the file the user asked for is already
+  /// coming down.
   Future<void> _handleDownload(LlmModel model) async {
     final controller = ref.read(modelSelectionControllerProvider.notifier);
     final choices = _quantizationChoices[model.id];
 
-    if (choices != null) {
+    if (choices != null && choices.variants.isNotEmpty) {
       final selected = _selectedQuantization[model.id];
       final variant = choices.variants.firstWhere(
         (candidate) => candidate.quantization == selected,
@@ -234,24 +258,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       return;
     }
 
-    if (_quantizationLoading.contains(model.id)) return;
-    setState(() => _quantizationLoading.add(model.id));
-
-    final loaded = await controller.loadQuantizationChoices(model);
-    if (!mounted) return;
-
-    if (loaded == null || loaded.variants.isEmpty) {
-      setState(() => _quantizationLoading.remove(model.id));
-      await controller.downloadModel(model);
-      return;
-    }
-
-    setState(() {
-      _quantizationLoading.remove(model.id);
-      _quantizationChoices[model.id] = loaded;
-      _selectedQuantization[model.id] =
-          (loaded.variantFor(model) ?? loaded.variants.first).quantization;
-    });
+    unawaited(_loadQuantizationChoices(model));
+    await controller.downloadModel(model);
   }
 
   /// The quantizations of this model: its own file's until the repository is
@@ -293,25 +301,32 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var index = 0; index < choices.variants.length; index++) ...[
-            if (index > 0)
-              VerticalDivider(
-                width: 1,
-                thickness: 1,
-                color: colorScheme.outlineVariant,
+      // A repository can offer more quantizations than the pane is wide (a
+      // Qwen repo carries four), so the strip scrolls instead of laying its
+      // chips out past the edge, which Flutter reports as a layout error.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < choices.variants.length; index++) ...[
+              if (index > 0)
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: colorScheme.outlineVariant,
+                ),
+              _buildQuantizationSegment(
+                context,
+                model,
+                choices.variants[index],
+                selected:
+                    choices.variants[index].quantization ==
+                    selectedQuantization,
               ),
-            _buildQuantizationSegment(
-              context,
-              model,
-              choices.variants[index],
-              selected:
-                  choices.variants[index].quantization == selectedQuantization,
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

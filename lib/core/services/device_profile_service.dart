@@ -124,7 +124,13 @@ class DeviceProfileService {
 
     StorageInfo? storage;
     try {
-      storage = await _storageInfoService.getStorageInfo();
+      // A platform call that never answers must not hold the whole profile
+      // hostage: memory is already read, and the fit estimates the model list
+      // shows need the profile the moment it exists. Disk figures are worth a
+      // few seconds at most, and nothing at all if they never arrive.
+      storage = await _storageInfoService.getStorageInfo().timeout(
+        const Duration(seconds: 3),
+      );
     } catch (_) {
       storage = null;
     }
@@ -231,7 +237,15 @@ class DeviceProfileService {
     final file = File(path);
     if (!await file.exists()) return null;
     final length = await file.length();
-    if (length <= 0 || length > _maxProbeBytes) return null;
+    if (length > _maxProbeBytes) return null;
+    // A zero length is not "empty": procfs reports 0 for `/proc/meminfo` and
+    // other files that do have content, so Android read no memory at all and
+    // every fit estimate silently vanished. Ask the file itself, and keep the
+    // size guard by hand.
+    if (length <= 0) {
+      final text = await file.readAsString();
+      return text.length > _maxProbeBytes ? null : text;
+    }
     return file.readAsString();
   }
 }

@@ -2194,8 +2194,20 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     ),
                   ),
                   Expanded(
+                    // An empty cell reads as a layout fault; a dash says the
+                    // estimate is missing and why, like the Context column.
                     child: badgeColor == null
-                        ? const SizedBox.shrink()
+                        ? Tooltip(
+                            message: device == null
+                                ? 'Reading this device\'s memory…'
+                                : 'Fit is not known for this file',
+                            child: Text(
+                              '—',
+                              style: textTheme.labelSmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          )
                         : Align(
                             alignment: Alignment.centerLeft,
                             child: Container(

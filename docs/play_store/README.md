@@ -23,12 +23,13 @@ still signs every release, and a lost upload key needs a Play Console reset.
 
 ## 2. Version
 
-`pubspec.yaml` holds `version: 1.7.0+4`. Play's highest version code is `3`
+`pubspec.yaml` holds `version: 1.7.1+5`. Play's highest version code is `3`
 (`1.6.2`) and it rejects a repeated one, so every upload bumps the number
-after `+`:
+after `+`; the bundles built since then carry codes `4` (`1.7.0`) and `5`
+(`1.7.1`):
 
 ```yaml
-version: 1.7.0+4
+version: 1.7.1+5
 ```
 
 The name before `+` is what users see; the number after `+` is `versionCode`.
@@ -37,11 +38,20 @@ release from the next, so bump both.
 
 ## 3. Verified in this repository
 
-Checked on 25 November 2026 against the working tree that carries `1.7.0+4`
+Checked on 26 November 2026 against the working tree that carries `1.7.1+5`
 (and on 23 November 2026 against `main` at `a8d69ad` for the earlier entry),
 built with `scripts/build_android_bundle.sh`:
 
 - Bundles built from this repository, all signed with the same upload key:
+  - `1.7.1+5` (versionCode 5), built on 26 November 2026 from `e994625`,
+    142 MB on disk (148.6 MB as Gradle reports it), SHA-256
+    `2e17131b50a004cdc66cd76da95c8f65737375a02f5a030aa5aed08994d4fffa`,
+    `scripts/build_android_bundle.sh` exited 0, `jarsigner -verify` prints
+    `jar verified.`, and the manifest reports `versionCode="5"`,
+    `versionName="1.7.1"`, `minSdkVersion 24`, `targetSdkVersion 36` (read back
+    from the sideload APK of the same build with `aapt2 dump badging`). This is
+    the bundle attached to GitHub release `v1.7.1`, along with that APK, the
+    macOS DMG and the Linux archive.
   - `1.7.0+4` (versionCode 4), built on 25 November 2026 from this tree,
     148,554,338 bytes (148.6 MB as Gradle reports it), SHA-256
     `0af47d0ca30e67fac33dbe3a990472c0aeb0d00e695d5878e59e46afddeb93ed`,
@@ -255,7 +265,7 @@ Play review sheet cannot be observed until an install comes from Play.
    instead of the personal accounts' Android device verification.
 
 `1.6.1+2` is the build that went live first release and predates the
-model-install repairs, so this tree carries `1.7.0+4`: Play rejects a repeated
+model-install repairs, so this tree carries `1.7.1+5`: Play rejects a repeated
 version code, and `1.6.1` cannot be fixed in place because the download bug is
 in the shipped Dart code. `1.7.0` is the first build that can also tell its own
 users about the next one, through Play's in-app update API.
@@ -268,12 +278,12 @@ framed screenshot art for all four device classes
 notes (`release_notes.txt`), the support email (`info@prady.website`), the
 published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
 1.6.0 bundle on closed testing (Alpha), the `1.6.1+2` bundle released on Play,
-the `1.6.2+3` bundle built from this tree and the `1.7.0+4` bundle built from
-it afterwards.
+the `1.6.2+3` bundle built from this tree, the `1.7.0+4` bundle built from it
+afterwards and the `1.7.1+5` bundle released on GitHub as `v1.7.1`.
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the production review.
-2. Upload the `1.7.0+4` bundle, then promote it to production (section 4,
+2. Upload the `1.7.1+5` bundle, then promote it to production (section 4,
    steps 4 and 5). Once that build is on a testing track, install it from the
    Play link and confirm the update prompt appears on the next launch against
    an even newer build.

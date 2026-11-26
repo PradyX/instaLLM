@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/home/application/reply_notice_service.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
@@ -43,8 +44,26 @@ class MyApp extends ConsumerWidget {
       darkTheme: theme.dark(),
       themeMode: themeMode,
       routerConfig: router,
-      builder: (context, child) =>
-          AppearanceBackground(child: _ShareInboxBridge(child: child!)),
+      // The system bars follow the app's own theme: dark icons on a light bar,
+      // light icons on a dark one. Left to the platform, an edge-to-edge nav
+      // bar keeps its white icons and Android lays a black scrim behind them,
+      // which is a black bar at the bottom of a cream screen.
+      builder: (context, child) {
+        final themed = Theme.of(context);
+        final dark = themed.brightness == Brightness.dark;
+        final icons = dark ? Brightness.light : Brightness.dark;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: icons,
+            statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: themed.scaffoldBackgroundColor,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemNavigationBarIconBrightness: icons,
+          ),
+          child: AppearanceBackground(child: _ShareInboxBridge(child: child!)),
+        );
+      },
     );
   }
 }

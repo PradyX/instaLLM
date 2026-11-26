@@ -14,15 +14,10 @@ Future<void> main() async {
   // Load environment variables
   await dotenv.load(fileName: ".env");
 
-  // Enable Edge-to-Edge UI for Android 15+
+  // Enable Edge-to-Edge UI for Android 15+. The bars' colours and icon
+  // brightness follow the app's theme, so they are set per frame in MyApp
+  // rather than once here, where only the pre-theme frame would see them.
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.transparent,
-      systemNavigationBarDividerColor: Colors.transparent,
-      statusBarColor: Colors.transparent,
-    ),
-  );
 
   // Initialize global Flutter/Dart error handlers.
   AppLogger.initErrorHandlers();

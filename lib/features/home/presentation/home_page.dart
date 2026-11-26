@@ -31,7 +31,6 @@ import 'package:installm/features/documents/application/documents_controller.dar
 import 'package:installm/core/widgets/chat_bubble.dart';
 import 'package:installm/core/widgets/chat_composer.dart';
 import 'package:installm/core/widgets/composer_model_pill.dart';
-import 'package:installm/core/widgets/composer_reasoning_pill.dart';
 import 'package:installm/features/home/presentation/composer_attach_button.dart';
 import 'package:installm/features/voice/application/composer_dictation_controller.dart';
 import 'package:installm/features/home/presentation/composer_shortcuts.dart';
@@ -1459,7 +1458,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     ],
                   )
                 : null,
-            leading: ComposerModelPill(
+            leading: ComposerModelControl(
               models: downloadedModels,
               selected: pillModel,
               enabled: !isGenerating,
@@ -1467,11 +1466,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .read(modelSelectionControllerProvider.notifier)
                   .selectModel(next),
               onEmptyPressed: () => context.push(AppRoutes.modelSelection),
-              reasoning: ComposerReasoningControl(
-                modelId: pillModel?.id ?? '',
-                enabled: !isGenerating,
-                inline: true,
-              ),
             ),
             middle: hasDownloadedModel
                 ? ComposerAttachButton(

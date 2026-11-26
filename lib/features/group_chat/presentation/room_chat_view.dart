@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/widgets/chat_bubble.dart';
 import 'package:installm/core/widgets/composer_model_pill.dart';
-import 'package:installm/core/widgets/composer_reasoning_pill.dart';
 import 'package:installm/core/widgets/default_bot_avatar.dart';
 import 'package:installm/features/bots/application/bots_controller.dart';
 import 'package:installm/features/bots/presentation/bot_editor_page.dart';
@@ -251,7 +250,7 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                 hintText: chat.isDirect
                     ? t.skills.botHint(name: bot?.name ?? chat.name)
                     : t.skills.roomHint,
-                leading: ComposerModelPill(
+                leading: ComposerModelControl(
                   models: chatModels,
                   selected: answerModel,
                   enabled: !running,
@@ -260,11 +259,6 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                     notifier.updateChat(chat.copyWith(modelId: model.id)),
                   ),
                   onEmptyPressed: () => context.push(AppRoutes.modelSelection),
-                  reasoning: ComposerReasoningControl(
-                    modelId: answerModel?.id ?? '',
-                    enabled: !running,
-                    inline: true,
-                  ),
                 ),
                 onSend: () => _send(_inputController.text),
                 onMicPressed: () => unawaited(

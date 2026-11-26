@@ -6,6 +6,9 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
+- **The composer's model and thinking controls are one pill**: the pill reads `Qwen3.5 · 0.8B · off` with a single chevron, and the menu behind it lists every model and, under one divider, that model's thinking states as two segments.
+  - The second chip is gone: `composer_reasoning_pill.dart` folded into `ComposerModelControl`, which reads the model's declared reasoning and the stored choice and hands plain values to the pill, so the widget stays testable without Riverpod.
+  - The model mark is now a stack of planes instead of a chip outline with pins, which read as a crosshair at the 16 px the composer draws it; `LlmChipIcon` keeps its API, so the rail, the pill and the context page change together.
 - **Every dependency is on its newest release, including four major migrations**: riverpod 2.6 → 3.4, go_router 13.2 → 18.1, freezed 2.5 → 4.0 and sherpa_onnx 1.13 → 2.0, among 83 upgraded packages.
   - Every controller moved off riverpod 2's `StateNotifier`/`StateProvider` onto `Notifier`, with `ref.mounted` and `ref.onDispose` replacing `mounted` and `dispose()`.
   - Riverpod 3's ten-attempt retry is switched off at the root `ProviderScope`, so a store that cannot open reports its error at once.

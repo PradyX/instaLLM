@@ -64,8 +64,8 @@ class ChatComposer extends StatelessWidget {
   /// Extra rows above the field (home's generating row, draft preview).
   final Widget? header;
 
-  /// First action in the bottom row (home's model pill, which carries the
-  /// reasoning selector inside its own pill).
+  /// First action in the bottom row (home's model control, whose one menu
+  /// carries both the model and that model's thinking state).
   final Widget? leading;
 
   /// Right-aligned action next to mic/send (home's attach button).

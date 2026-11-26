@@ -1510,7 +1510,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Material(
-          color: Colors.transparent,
+          // The model the chat is running is the list's selected item, so its
+          // row carries the selection rather than only its icon.
+          color: inUse
+              ? colorScheme.primary.withValues(alpha: 0.07)
+              : Colors.transparent,
           child: InkWell(
             onTap: () => _toggleFamilyDetails(family, model),
             child: Container(
@@ -1879,17 +1883,21 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         // carries one, and a label on all of them turns a list of names into a
         // list of buttons. The tooltip keeps the verb for the pointer and for
         // screen readers.
+        //
+        // An installed model offers the same circle the in-use one fills: the
+        // column then reads as one choice among the models on disk, rather
+        // than as a row of arrows pointing somewhere else.
         return IconButton(
           onPressed: model.isDownloaded
               ? () => controller.selectModel(model)
               : () => _handleDownload(model),
-          tooltip: model.isDownloaded ? 'Open' : 'Download',
+          tooltip: model.isDownloaded ? 'Use this model' : 'Download',
           visualDensity: VisualDensity.compact,
-          iconSize: 22,
+          iconSize: model.isDownloaded ? 21 : 22,
           color: colorScheme.primary,
           icon: Icon(
             model.isDownloaded
-                ? Icons.arrow_forward_rounded
+                ? Icons.radio_button_unchecked_rounded
                 : Icons.download_rounded,
           ),
         );

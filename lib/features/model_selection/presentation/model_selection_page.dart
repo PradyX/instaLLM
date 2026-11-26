@@ -2223,8 +2223,25 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                                 color: badgeColor.withValues(alpha: 0.85),
                                 borderRadius: BorderRadius.circular(5),
                               ),
+                              // A phone's fit column is about eighty pixels
+                              // wide, so it gets one short word rather than
+                              // "Recommended" cut down to "Reco…".
                               child: Text(
-                                rating!.label,
+                                compact
+                                    ? switch (rating!) {
+                                        ModelCompatibilityRating.recommended =>
+                                          'Fits',
+                                        ModelCompatibilityRating.shouldRun =>
+                                          'OK',
+                                        ModelCompatibilityRating.mayBeSlow =>
+                                          'Slow',
+                                        ModelCompatibilityRating.memoryRisk =>
+                                          'Risk',
+                                        ModelCompatibilityRating
+                                            .notRecommended =>
+                                          'No',
+                                      }
+                                    : rating!.label,
                                 maxLines: 1,
                                 softWrap: false,
                                 overflow: TextOverflow.ellipsis,

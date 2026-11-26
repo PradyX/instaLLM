@@ -768,7 +768,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(17),
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -781,7 +781,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(9),
+              borderRadius: BorderRadius.circular(17),
             ),
             child: Row(
               children: [
@@ -800,33 +800,87 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               ],
             ),
           ),
-          Row(
-            children: [
-              Text(
-                'Only what fits here',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurface,
-                ),
-              ),
-              Transform.scale(
-                scale: 0.85,
-                child: Switch(
-                  value: _onlyWhatFits,
-                  onChanged: (value) => setState(() => _onlyWhatFits = value),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
-              const Spacer(),
-              if (deviceMemory != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
                 Text(
-                  _formatBytes(deviceMemory),
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                  'Only what fits here',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
                   ),
                 ),
-            ],
+                const SizedBox(width: 8),
+                _buildFitsSwitch(
+                  context,
+                  value: _onlyWhatFits,
+                  onChanged: (value) => setState(() => _onlyWhatFits = value),
+                ),
+                const Spacer(),
+                if (deviceMemory != null)
+                  Text(
+                    _formatBytes(deviceMemory),
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// The "only what fits" toggle, drawn here rather than taken from Material:
+  /// a switch scaled down to fit a 12px label row blurs its own track and
+  /// thumb, and its off state reads as a stray grey pill. This one is a 44×26
+  /// pill that goes to the accent colour when on.
+  Widget _buildFitsSwitch(
+    BuildContext context, {
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const height = 24.0;
+    const inset = 3.0;
+    const thumb = height - inset * 2;
+
+    return Semantics(
+      toggled: value,
+      label: 'Only what fits here',
+      child: GestureDetector(
+        onTap: () => onChanged(!value),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          width: 42,
+          height: height,
+          padding: const EdgeInsets.all(inset),
+          decoration: BoxDecoration(
+            color: value
+                ? colorScheme.primary
+                : colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(height / 2),
+            border: Border.all(
+              color: value ? colorScheme.primary : colorScheme.outlineVariant,
+            ),
+          ),
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              width: thumb,
+              height: thumb,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: value ? colorScheme.onPrimary : colorScheme.outline,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -845,19 +899,29 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     // leaves grey wedges that read as square cuts at the ends of the rail.
     return InkWell(
       onTap: onTap,
+      // The theme's highlight is a cream wash: on a segment it painted a
+      // full-height square slab over the rail's rounded end, which is what
+      // read as a cut corner. The selected pill is the only selection cue the
+      // rail needs, so the wash is kept transparent.
+      highlightColor: Colors.transparent,
+      hoverColor: colorScheme.outlineVariant.withValues(alpha: 0.18),
+      focusColor: colorScheme.outlineVariant.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(17),
       child: SizedBox(
         width: width,
         height: 34,
         child: Center(
           child: Container(
             height: 28,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+            margin: const EdgeInsets.symmetric(horizontal: 4),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             alignment: Alignment.center,
             decoration: selected
                 ? BoxDecoration(
                     color: colorScheme.surface,
-                    borderRadius: BorderRadius.circular(7),
+                    // Half the pill's height, so it reads as a rounded slot in
+                    // the rail rather than a box with softened corners.
+                    borderRadius: BorderRadius.circular(14),
                   )
                 : null,
             child: Text(
@@ -981,13 +1045,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   ),
                 ),
               ),
-              Transform.scale(
-                scale: 0.8,
-                child: Switch(
-                  value: _onlyWhatFits,
-                  onChanged: (value) => setState(() => _onlyWhatFits = value),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
+              _buildFitsSwitch(
+                context,
+                value: _onlyWhatFits,
+                onChanged: (value) => setState(() => _onlyWhatFits = value),
               ),
             ],
           ),

@@ -1522,15 +1522,20 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
     final model = variant.model;
     final inUse = model.id == state.selectedModelId;
-    final title = _repositoryLabel(model) ?? family.displayName;
+    // The publisher reads as a fact about the file, so it sits in the meta
+    // line; the title is then the repository name alone, which is what the
+    // catalog row is actually pointing at.
+    final repository = _repositoryLabel(model);
+    final title = repository?.repo ?? family.displayName;
     final device = ref.watch(deviceProfileProvider).value;
 
     final sizeBytes = variant.fileSizeBytes ?? variant.approximateFileSizeBytes;
     final contextTokens = model.ggufMetadata?.contextLength;
     final meta = <String>[
+      ?repository?.publisher,
       variant.parameterSize,
-      ?variant.quantization,
       if (sizeBytes != null) _formatBytes(sizeBytes),
+      ?variant.quantization,
       if (contextTokens != null) '${_formatContext(contextTokens)} context',
     ].join(' · ');
     final fit = _rowFitLabel(context, variant, device);
@@ -1628,14 +1633,23 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
   }
 
-  /// `Qwen/Qwen3-0.6B`: the repository a catalog entry comes from, which is the
-  /// name Hugging Face lists it under. Null for a model added by direct URL,
-  /// whose own name then stands in.
-  String? _repositoryLabel(LlmModel model) {
+  /// `Qwen/Qwen3-0.6B`: the publisher who owns a catalog entry and the
+  /// repository Hugging Face lists it under. Null for a model added by direct
+  /// URL, whose own name then stands in.
+  ({String? publisher, String repo})? _repositoryLabel(LlmModel model) {
     final url = model.downloadUrl;
     if (url == null || url.trim().isEmpty) return null;
     final repository = HuggingFaceRepositoryService.parseRepositoryInput(url);
-    return repository == null || repository.trim().isEmpty ? null : repository;
+    final trimmed = repository?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    final slash = trimmed.indexOf('/');
+    if (slash <= 0 || slash == trimmed.length - 1) {
+      return (publisher: null, repo: trimmed);
+    }
+    return (
+      publisher: trimmed.substring(0, slash),
+      repo: trimmed.substring(slash + 1),
+    );
   }
 
   TextStyle? _monoTitle(BuildContext context, {required bool wide}) {

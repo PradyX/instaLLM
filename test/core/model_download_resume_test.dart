@@ -99,4 +99,76 @@ void main() {
     expect(part.progress, 0.25);
     expect(unknown.progress, 0);
   });
+
+  test('verifyDownloadedModel keeps GGUF check by default', () async {
+    final dir = Directory(p.join(temp.path, 'models'));
+    await dir.create(recursive: true);
+
+    final validGguf = File(p.join(dir.path, 'valid.gguf'));
+    await validGguf.writeAsBytes([0x47, 0x47, 0x55, 0x46, 1, 2, 3, 4]);
+    await expectLater(
+      storage.verifyDownloadedModel(
+        validGguf.path,
+        '${validGguf.path}.json',
+        8,
+      ),
+      completes,
+    );
+    expect(validGguf.existsSync(), isTrue);
+
+    final notGguf = File(p.join(dir.path, 'bad.gguf'));
+    await notGguf.writeAsBytes([0x08, 0x01, 0x12, 0x00, 1, 2, 3, 4]);
+    await expectLater(
+      storage.verifyDownloadedModel(notGguf.path, '${notGguf.path}.json', 8),
+      throwsStateError,
+    );
+    expect(notGguf.existsSync(), isFalse);
+  });
+
+  test(
+    'verifyDownloadedModel accepts non-GGUF assets when verifyGguf is false',
+    () async {
+      final dir = Directory(p.join(temp.path, 'models'));
+      await dir.create(recursive: true);
+
+      final onnx = File(p.join(dir.path, 'whisper-tiny-encoder.int8.onnx'));
+      await onnx.writeAsBytes([0x08, 0x01, 0x12, 0x00, 1, 2, 3, 4]);
+      await expectLater(
+        storage.verifyDownloadedModel(
+          onnx.path,
+          '${onnx.path}.json',
+          8,
+          verifyGguf: false,
+        ),
+        completes,
+      );
+      expect(onnx.existsSync(), isTrue);
+
+      final truncated = File(p.join(dir.path, 'truncated.onnx'));
+      await truncated.writeAsBytes([0x08, 0x01]);
+      await expectLater(
+        storage.verifyDownloadedModel(
+          truncated.path,
+          '${truncated.path}.json',
+          8,
+          verifyGguf: false,
+        ),
+        throwsStateError,
+      );
+      expect(truncated.existsSync(), isFalse);
+
+      final empty = File(p.join(dir.path, 'empty.txt'));
+      await empty.writeAsBytes(const <int>[]);
+      await expectLater(
+        storage.verifyDownloadedModel(
+          empty.path,
+          '${empty.path}.json',
+          null,
+          verifyGguf: false,
+        ),
+        throwsStateError,
+      );
+      expect(empty.existsSync(), isFalse);
+    },
+  );
 }

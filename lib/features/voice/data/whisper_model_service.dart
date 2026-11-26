@@ -103,6 +103,7 @@ class WhisperModelService {
         file.url,
         file.fileName,
         cancelToken: cancelToken,
+        verifyGguf: false,
         onProgress: (received, _) {
           onProgress?.call(bytesBefore + received, option.approximateBytes);
         },

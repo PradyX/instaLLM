@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/core/services/app_storage_service.dart';
@@ -361,6 +361,7 @@ class ModelStorageService {
     String fileName, {
     void Function(int received, int total)? onProgress,
     CancelToken? cancelToken,
+    bool verifyGguf = true,
   }) async {
     final elapsed = Stopwatch()..start();
     final dir = await getModelDir();
@@ -404,6 +405,7 @@ class ModelStorageService {
           savePath: savePath,
           onProgress: onProgress,
           cancelToken: cancelToken,
+          verifyGguf: verifyGguf,
         );
         return;
       }
@@ -556,6 +558,7 @@ class ModelStorageService {
           savePath: savePath,
           onProgress: onProgress,
           cancelToken: cancelToken,
+          verifyGguf: verifyGguf,
         );
         return;
       }
@@ -566,7 +569,12 @@ class ModelStorageService {
       }
     }
 
-    await _verifyDownloadedModel(savePath, metadataPath, totalSize);
+    await verifyDownloadedModel(
+      savePath,
+      metadataPath,
+      totalSize,
+      verifyGguf: verifyGguf,
+    );
 
     AppLogger.debug(
       'Model download finished: ${p.basename(savePath)} ($totalSize bytes, '
@@ -654,6 +662,7 @@ class ModelStorageService {
     required String savePath,
     void Function(int received, int total)? onProgress,
     CancelToken? cancelToken,
+    bool verifyGguf = true,
   }) async {
     await _dio.download(
       url,
@@ -663,35 +672,51 @@ class ModelStorageService {
       deleteOnError: true,
       options: Options(validateStatus: (status) => (status ?? 500) < 400),
     );
-    await _verifyDownloadedModel(savePath, '$savePath.json', null);
+    await verifyDownloadedModel(
+      savePath,
+      '$savePath.json',
+      null,
+      verifyGguf: verifyGguf,
+    );
   }
 
-  /// Refuses to call a download finished when the file is not a GGUF model.
+  /// Refuses to call a download finished when the file is invalid.
+  ///
+  /// When [verifyGguf] is true (the default for LLM models), the file must
+  /// start with the 4-byte `GGUF` magic header. Non-GGUF assets such as
+  /// Whisper ONNX/tokens files pass `verifyGguf: false` and are still checked
+  /// for non-empty existence and [expectedSize] match.
   ///
   /// A corrupted transfer must not leave a file that looks installed: the
   /// progress metadata is kept out of the way (deleted with the bad file) and
   /// the failure is raised, so the next attempt starts from a clean slate
   /// instead of resuming onto corruption.
-  Future<void> _verifyDownloadedModel(
+  @visibleForTesting
+  Future<void> verifyDownloadedModel(
     String savePath,
     String metadataPath,
-    int? expectedSize,
-  ) async {
+    int? expectedSize, {
+    bool verifyGguf = true,
+  }) async {
     final file = File(savePath);
     final size = await file.exists() ? await file.length() : 0;
-    var valid = size >= 4 && (expectedSize == null || size == expectedSize);
-    if (valid) {
-      final raf = await file.open(mode: FileMode.read);
-      try {
-        final magic = await raf.read(4);
-        valid =
-            magic.length == 4 &&
-            magic[0] == 0x47 &&
-            magic[1] == 0x47 &&
-            magic[2] == 0x55 &&
-            magic[3] == 0x46;
-      } finally {
-        await raf.close();
+    var valid = size > 0 && (expectedSize == null || size == expectedSize);
+    if (valid && verifyGguf) {
+      if (size < 4) {
+        valid = false;
+      } else {
+        final raf = await file.open(mode: FileMode.read);
+        try {
+          final magic = await raf.read(4);
+          valid =
+              magic.length == 4 &&
+              magic[0] == 0x47 &&
+              magic[1] == 0x47 &&
+              magic[2] == 0x55 &&
+              magic[3] == 0x46;
+        } finally {
+          await raf.close();
+        }
       }
     }
     if (valid) return;
@@ -703,8 +728,9 @@ class ModelStorageService {
     } catch (_) {
       // Cleaning up is best effort; the error below is what the user sees.
     }
+    final kind = verifyGguf ? 'GGUF model' : 'model file';
     throw StateError(
-      'The downloaded file is not a valid GGUF model (${p.basename(savePath)}, '
+      'The downloaded file is not a valid $kind (${p.basename(savePath)}, '
       '$size bytes). It was removed; try downloading it again.',
     );
   }

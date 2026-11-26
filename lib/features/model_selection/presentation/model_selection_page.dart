@@ -1488,6 +1488,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final model = variant.model;
     final inUse = model.id == state.selectedModelId;
     final expanded = _expandedFamilyKey == family.key;
+    // An installed row's job is to become the app's model, so a tap anywhere on
+    // it selects; a catalog row has nothing to select yet, so a tap unfolds it.
+    // A record whose file went missing is the exception: its tap must reach the
+    // card that offers the download that repairs it.
+    final selectsOnTap = family.hasInstalled && !model.fileMissing;
     // The publisher reads as a fact about the file, so it sits in the meta
     // line; the title is then the repository name alone, which is what the
     // catalog row is actually pointing at.
@@ -1516,7 +1521,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               ? colorScheme.primary.withValues(alpha: 0.07)
               : Colors.transparent,
           child: InkWell(
-            onTap: () => _toggleFamilyDetails(family, model),
+            onTap: selectsOnTap
+                ? () => ref
+                      .read(modelSelectionControllerProvider.notifier)
+                      .selectModel(model)
+                : () => _toggleFamilyDetails(family, model),
             child: Container(
               padding: EdgeInsets.symmetric(
                 horizontal: wide ? 24 : 16,

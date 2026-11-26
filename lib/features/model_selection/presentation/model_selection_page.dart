@@ -1625,26 +1625,16 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required VoidCallback onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: expanded ? 'Hide details' : 'Show details',
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          width: 34,
-          height: 40,
-          decoration: BoxDecoration(
-            border: Border.all(color: colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            expanded
-                ? Icons.keyboard_arrow_up_rounded
-                : Icons.keyboard_arrow_down_rounded,
-            size: 20,
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
+    return IconButton(
+      onPressed: onTap,
+      tooltip: expanded ? 'Hide details' : 'Show details',
+      visualDensity: VisualDensity.compact,
+      iconSize: 22,
+      color: colorScheme.primary,
+      icon: Icon(
+        expanded
+            ? Icons.keyboard_arrow_up_rounded
+            : Icons.keyboard_arrow_down_rounded,
       ),
     );
   }
@@ -1682,98 +1672,86 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     ].join(' · ');
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(wide ? 24 : 16, 2, wide ? 24 : 16, 14),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerLow,
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+      // The details hang under the row's text column, not out at the avatar.
+      padding: EdgeInsets.fromLTRB(wide ? 76 : 60, 0, wide ? 24 : 16, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            identity,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              identity,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+          const SizedBox(height: 6),
+          Text(
+            model.description,
+            style: textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 6),
-            Text(
-              model.description,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (model.isCustom) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Custom',
-                    style: textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onTertiaryContainer,
-                    ),
+          ),
+          if (model.isCustom) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Custom',
+                  style: textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onTertiaryContainer,
                   ),
                 ),
               ),
-            ],
-            if (model.capabilities.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: model.capabilities
-                    .map(
-                      (capability) => _buildCapabilityBadge(
-                        context,
-                        capability,
-                        isSelected: false,
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ],
-            const SizedBox(height: 18),
-            _buildVariantLedger(
-              context,
-              family,
-              selectedModelId: state.selectedModelId,
             ),
-            const SizedBox(height: 20),
-            _buildDetailSection(
-              context,
-              'On this device',
-              _buildFitMeter(context, model),
-            ),
-            const SizedBox(height: 18),
-            _buildDetailSection(context, 'File', _buildFacts(context, model)),
-            const SizedBox(height: 14),
-            Divider(
-              height: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 12),
-            if (model.fileMissing) ...[
-              _buildMissingFileNotice(context, model),
-              const SizedBox(height: 12),
-            ],
-            _buildDetailActions(context, model, isSelected: isSelected),
           ],
-        ),
+          if (model.capabilities.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: model.capabilities
+                  .map(
+                    (capability) => _buildCapabilityBadge(
+                      context,
+                      capability,
+                      isSelected: false,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+          const SizedBox(height: 18),
+          _buildVariantLedger(
+            context,
+            family,
+            selectedModelId: state.selectedModelId,
+          ),
+          const SizedBox(height: 20),
+          _buildDetailSection(
+            context,
+            'On this device',
+            _buildFitMeter(context, model),
+          ),
+          const SizedBox(height: 18),
+          _buildDetailSection(context, 'File', _buildFacts(context, model)),
+          const SizedBox(height: 14),
+          Divider(
+            height: 1,
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 12),
+          if (model.fileMissing) ...[
+            _buildMissingFileNotice(context, model),
+            const SizedBox(height: 12),
+          ],
+          _buildDetailActions(context, model, isSelected: isSelected),
+        ],
       ),
     );
   }
@@ -1874,51 +1852,49 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         // "Open" button there would be a no-op beside a row that already says
         // what the chat is running.
         if (inUse) {
-          return Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: 0.12),
-              border: Border.all(
-                color: colorScheme.primary.withValues(alpha: 0.35),
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.check_circle_rounded,
+                size: 16,
+                color: colorScheme.primary,
               ),
-              borderRadius: BorderRadius.circular(9),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.check_circle_rounded,
-                  size: 16,
+              const SizedBox(width: 6),
+              Text(
+                'In use',
+                style: textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: colorScheme.primary,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  'In use',
-                  style: textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         }
 
-        return OutlinedButton(
+        // A row action is a quiet accent label and glyph, not a boxed button:
+        // every row carries one, and outlines on all of them make the list
+        // read as a wall of controls.
+        return TextButton.icon(
           onPressed: model.isDownloaded
               ? () => controller.selectModel(model)
               : () => _handleDownload(model),
-          style: OutlinedButton.styleFrom(
+          style: TextButton.styleFrom(
+            foregroundColor: colorScheme.primary,
             minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            foregroundColor: colorScheme.onSurface,
-            side: BorderSide(color: colorScheme.outlineVariant),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(9),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            visualDensity: VisualDensity.compact,
+            textStyle: textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
             ),
           ),
-          child: Text(model.isDownloaded ? 'Open' : 'Download'),
+          icon: Icon(
+            model.isDownloaded
+                ? Icons.arrow_forward_rounded
+                : Icons.download_rounded,
+            size: 16,
+          ),
+          label: Text(model.isDownloaded ? 'Open' : 'Download'),
         );
       },
     );

@@ -1301,10 +1301,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       }
     }
 
-    const sizeColumnWidth = 56.0;
-    const contextColumnWidth = 96.0;
-    const costColumnWidth = 104.0;
-    const actionColumnWidth = 104.0;
     Widget columnHeader(
       String label, {
       Alignment alignment = Alignment.centerLeft,
@@ -1312,6 +1308,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       alignment: alignment,
       child: Text(
         label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: Theme.of(
           context,
         ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
@@ -1323,6 +1322,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         // A narrow pane cannot hold every column; the context pair is the one
         // that can stand down without taking the row's actions with it.
         final showContext = constraints.maxWidth >= 560;
+        // A phone-width ledger has no room for a heading that wraps to five
+        // lines, and a fixed 104 px Action column only ever holds "Use". The
+        // fit badge is the widest thing a row shows, so the fixed columns give
+        // way to it instead of squeezing the one column that carries meaning.
+        final compact = constraints.maxWidth < 460;
+        final sizeColumnWidth = compact ? 44.0 : 56.0;
+        const contextColumnWidth = 96.0;
+        final costColumnWidth = compact ? 76.0 : 104.0;
+        final actionColumnWidth = compact ? 76.0 : 104.0;
 
         return Container(
           decoration: BoxDecoration(
@@ -1342,7 +1350,11 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       width: sizeColumnWidth,
                       child: columnHeader('Params'),
                     ),
-                    Expanded(child: columnHeader('Fit on this Mac')),
+                    Expanded(
+                      child: columnHeader(
+                        compact ? 'Fit' : 'Fit on this device',
+                      ),
+                    ),
                     if (showContext)
                       SizedBox(
                         width: contextColumnWidth,
@@ -1388,6 +1400,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   expanded:
                       family.variants[index].model.id == _expandedVariantId,
                   sizeWidth: sizeColumnWidth,
+                  compact: compact,
                   showContext: showContext,
                   contextWidth: contextColumnWidth,
                   costWidth: costColumnWidth,
@@ -1411,6 +1424,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required bool inUse,
     required bool expanded,
     required double sizeWidth,
+    required bool compact,
     required bool showContext,
     required double contextWidth,
     required double costWidth,
@@ -1601,6 +1615,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                               ),
                               child: Text(
                                 rating!.label,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
                                 style: textTheme.labelSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w700,
@@ -1618,6 +1635,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                           message: contextTooltip,
                           child: Text(
                             contextLabel,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
                             style: textTheme.labelSmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -1631,10 +1651,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       alignment: Alignment.centerRight,
                       child: Text(
                         sizeBytes == null
-                            ? 'Install to estimate'
+                            ? (compact ? '—' : 'Install to estimate')
                             : exactBytes == null
                             ? '~${_formatBytes(sizeBytes)}'
                             : _formatBytes(exactBytes),
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
                         style: textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),

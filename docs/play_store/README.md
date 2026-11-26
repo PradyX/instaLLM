@@ -286,7 +286,6 @@ afterwards and the `1.7.1+5` bundle released on GitHub as `v1.7.1`.
    Play link and confirm the update prompt appears on the next launch against
    an even newer build.
 
-Known copy issue: `lib/features/model_selection/presentation/model_selection_page.dart:1280`
-hardcodes the column heading "Fit on this Mac", so Android and Linux users see
-the same wording. The 7-inch tablet set leaves the models page out for that
-reason; the macOS desktop and 10-inch sets show it correctly.
+The model ledger's fit column reads "Fit on this device" ("Fit" on a phone
+width), so the Android and Linux screenshots no longer show macOS wording; the
+7-inch tablet set left the models page out before that change was made.

@@ -87,6 +87,9 @@ lib/firebase_options.dart
 # Play Store documents are part of the release, not working notes
 !/docs/play_store/*.md
 
+# The release notes template is release tooling, not a working note
+!/docs/release_notes_template.md
+
 # Design mockups (working files, not part of the app)
 mockups/
 

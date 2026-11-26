@@ -237,11 +237,9 @@ Play review sheet cannot be observed until an install comes from Play.
 4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
    first and install from the Play link to confirm the bundle installs and the
    review prompt path resolves, then promote to production.
-   - Release notes ("What's new in this release"): `release_notes.txt`, a
-     489/500-character block for 1.6.2 with a 253-character variant below it.
-     It names the resumed-download repair, the Hugging Face repository error
-     message, the missing-file message and the prompt-format fix in what the
-     user sees, not commit hashes.
+   - Release notes ("What's new in this release"): `release_notes.txt`, one
+     bullet per user-visible change for 1.7.1 — a 301/500-character block with
+     a 133-character variant below it, each heading carrying its own count.
 5. **Promote Alpha to production** — a closed-testing release moves to
    production without rebuilding. Open **Test and release → Testing → Closed
    testing → Alpha → Releases**, open the release to publish and use **Promote

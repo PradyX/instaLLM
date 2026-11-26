@@ -111,6 +111,54 @@ void main() {
     expect(families.single.variants.single.approximateFileSizeBytes, isNull);
   });
 
+  test('one file listed twice is one choice, and the installed copy wins', () {
+    // A catalog can carry one repository under two ids. The ledger shows
+    // quantization, size, context and an action, so two such rows are
+    // indistinguishable; only one of them should be offered.
+    const listed = LlmModel(
+      id: 'smollm2-135m',
+      name: 'SmolLM2',
+      parameterSize: '135M',
+      description: 'small chat model',
+      downloadUrl:
+          'https://huggingface.co/ggml-org/SmolLM2-135M-GGUF/resolve/main/'
+          'SmolLM2-135M-Q4_K_M.gguf',
+      localFileName: 'smollm2-135m-q4_k_m.gguf',
+    );
+    const listedAgain = LlmModel(
+      id: 'smollm2-135m-gguf',
+      name: 'SmolLM2',
+      parameterSize: '135M',
+      description: 'small chat model, second record',
+      downloadUrl:
+          'https://huggingface.co/ggml-org/SmolLM2-135M-GGUF/resolve/main/'
+          'SmolLM2-135M-Q4_K_M.gguf',
+      localFileName: 'smollm2-135m-q4_k_m.gguf',
+      isDownloaded: true,
+    );
+
+    final family = ModelFamilies.group(const [listed, listedAgain]).single;
+    expect(family.variants, hasLength(1));
+    expect(family.variants.single.id, 'smollm2-135m-gguf');
+
+    // Different quantizations of one size are real choices and both stay.
+    const otherQuant = LlmModel(
+      id: 'smollm2-135m-q8',
+      name: 'SmolLM2',
+      parameterSize: '135M',
+      description: 'small chat model, 8-bit',
+      downloadUrl:
+          'https://huggingface.co/ggml-org/SmolLM2-135M-GGUF/resolve/main/'
+          'SmolLM2-135M-Q8_0.gguf',
+      localFileName: 'smollm2-135m-q8_0.gguf',
+    );
+    final both = ModelFamilies.group(const [listed, otherQuant]).single;
+    expect(both.variants.map((variant) => variant.quantization), {
+      'Q4_K_M',
+      'Q8_0',
+    });
+  });
+
   test('every catalog entry is a distinct downloadable gguf', () {
     final ids = <String>{};
     for (final model in LlmModel.availableModels) {

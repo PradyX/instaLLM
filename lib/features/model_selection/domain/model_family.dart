@@ -336,7 +336,7 @@ class ModelFamilies {
 
     final families = <ModelFamily>[];
     for (final entry in grouped.entries) {
-      final variants = entry.value..sort(_compareVariants);
+      final variants = _dedupeVariants(entry.value)..sort(_compareVariants);
       families.add(
         ModelFamily(
           key: entry.key,
@@ -354,6 +354,35 @@ class ModelFamilies {
       return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
     });
     return families;
+  }
+
+  /// Drops variants of one family that are the same file twice.
+  ///
+  /// A catalog can list one repository under two ids — the same name, size and
+  /// quantization, differing only in the record behind it — and the ledger has
+  /// no column in which those two rows would look any different. Keeping both
+  /// would show the same choice twice, so the installed copy wins and otherwise
+  /// the first record stands for the file.
+  static List<ModelVariant> _dedupeVariants(List<ModelVariant> variants) {
+    final kept = <String, ModelVariant>{};
+    for (final variant in variants) {
+      // The file decides: two records of one quantization at one size are the
+      // same download. Without a quantization, the file name still separates
+      // genuinely different files.
+      final identity =
+          variant.quantization ??
+          variant.model.localFileName ??
+          variant.model.downloadUrl ??
+          variant.model.id;
+      final key = identity.toLowerCase();
+      final existing = kept[key];
+      if (existing == null) {
+        kept[key] = variant;
+      } else if (!existing.isInstalled && variant.isInstalled) {
+        kept[key] = variant;
+      }
+    }
+    return kept.values.toList(growable: false);
   }
 
   /// The grouping key for one catalog entry: its family name *and* its

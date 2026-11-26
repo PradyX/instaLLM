@@ -1726,20 +1726,29 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   .toList(growable: false),
             ),
           ],
-          const SizedBox(height: 18),
-          _buildVariantLedger(
-            context,
-            family,
-            selectedModelId: state.selectedModelId,
-          ),
-          const SizedBox(height: 20),
-          _buildDetailSection(
-            context,
-            'On this device',
-            _buildFitMeter(context, model),
-          ),
-          const SizedBox(height: 18),
-          _buildDetailSection(context, 'File', _buildFacts(context, model)),
+          // A ledger only says something when there is a choice to make: the
+          // row already carries this family's quantization, size and context.
+          if (family.variantCount > 1) ...[
+            const SizedBox(height: 18),
+            _buildVariantLedger(
+              context,
+              family,
+              selectedModelId: state.selectedModelId,
+            ),
+          ],
+          // Before the download the row's own fit line is the estimate, so
+          // "install to estimate" and an empty file table would only repeat
+          // what the row already says.
+          if (model.isDownloaded) ...[
+            const SizedBox(height: 18),
+            _buildDetailSection(
+              context,
+              'On this device',
+              _buildFitMeter(context, model),
+            ),
+            const SizedBox(height: 16),
+            _buildDetailSection(context, 'File', _buildFacts(context, model)),
+          ],
           const SizedBox(height: 14),
           Divider(
             height: 1,

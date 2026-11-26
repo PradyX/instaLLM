@@ -1953,7 +1953,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Row(
                   children: [
                     SizedBox(
@@ -2177,7 +2177,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 children: [
                   SizedBox(
@@ -2187,7 +2187,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       maxLines: 1,
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleSmall?.copyWith(
+                      style: textTheme.labelLarge?.copyWith(
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -2199,12 +2200,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                             alignment: Alignment.centerLeft,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
+                                horizontal: 7,
+                                vertical: 2,
                               ),
                               decoration: BoxDecoration(
                                 color: badgeColor.withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
                                 rating!.label,

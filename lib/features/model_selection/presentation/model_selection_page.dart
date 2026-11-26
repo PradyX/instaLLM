@@ -1300,6 +1300,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           _buildSectionHeader(
             context,
             'INSTALLED',
+            wide: wide,
             trailing: installed.length > 1
                 ? '${installed.length} installed'
                 : null,
@@ -1311,6 +1312,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           _buildSectionHeader(
             context,
             'CATALOG',
+            wide: wide,
             trailing: '${catalog.length} more',
           ),
           for (final family in catalog)
@@ -1324,11 +1326,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     BuildContext context,
     String title, {
     String? trailing,
+    bool wide = true,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
+      padding: EdgeInsets.fromLTRB(wide ? 24 : 12, 14, wide ? 24 : 12, 6),
       child: Row(
         children: [
           Expanded(
@@ -1410,7 +1413,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                 : () => _toggleFamilyDetails(family, model),
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: wide ? 24 : 16,
+                horizontal: wide ? 24 : 12,
                 vertical: wide ? 12 : 9,
               ),
               decoration: BoxDecoration(
@@ -1481,9 +1484,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: wide ? 12 : 6),
                   _buildRowAction(context, model, inUse: inUse),
-                  const SizedBox(width: 8),
                   _buildExpandButton(
                     context,
                     expanded: expanded,
@@ -1522,7 +1524,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     return IconButton(
       onPressed: onTap,
       tooltip: expanded ? 'Hide details' : 'Show details',
-      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 34, height: 40),
       iconSize: 22,
       color: colorScheme.primary,
       icon: Icon(
@@ -1792,7 +1795,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               ? () => controller.selectModel(model)
               : () => _handleDownload(model),
           tooltip: model.isDownloaded ? 'Use this model' : 'Download',
-          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 36, height: 40),
           iconSize: model.isDownloaded ? 21 : 22,
           color: colorScheme.primary,
           icon: Icon(

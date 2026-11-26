@@ -88,11 +88,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// worse first impression than one that shows what will not fit.
   bool _onlyWhatFits = false;
 
-  /// The variant whose details are open in the family ledger, if any. The
-  /// chevron at the end of a row opens and closes this; tapping the row itself
-  /// chooses the model without unfolding it.
-  String? _expandedVariantId;
-
   final TextEditingController _searchController = TextEditingController();
 
   /// Memory estimates per model id, computed when a card is expanded.
@@ -288,119 +283,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
 
     unawaited(_loadQuantizationChoices(model));
     await controller.downloadModel(model);
-  }
-
-  /// The quantizations of this model: its own file's until the repository is
-  /// read, then every one the repository offers with its size. The filled
-  /// segment is the file the download button fetches.
-  Widget _buildQuantizationChoice(BuildContext context, LlmModel model) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final choices = _quantizationChoices[model.id];
-    final ownQuantization = ModelFamilies.quantizationOf(model);
-
-    if (choices == null) {
-      if (ownQuantization == null) {
-        return Text(
-          'Read from the file once it is downloaded.',
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        );
-      }
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          border: Border.all(color: colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          ownQuantization,
-          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-        ),
-      );
-    }
-
-    final selectedQuantization =
-        _selectedQuantization[model.id] ?? ownQuantization;
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      clipBehavior: Clip.antiAlias,
-      // A repository can offer more quantizations than the pane is wide (a
-      // Qwen repo carries four), so the strip scrolls instead of laying its
-      // chips out past the edge, which Flutter reports as a layout error.
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var index = 0; index < choices.variants.length; index++) ...[
-              if (index > 0)
-                VerticalDivider(
-                  width: 1,
-                  thickness: 1,
-                  color: colorScheme.outlineVariant,
-                ),
-              _buildQuantizationSegment(
-                context,
-                model,
-                choices.variants[index],
-                selected:
-                    choices.variants[index].quantization ==
-                    selectedQuantization,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuantizationSegment(
-    BuildContext context,
-    LlmModel model,
-    HuggingFaceModelVariant variant, {
-    required bool selected,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final size = variant.sizeBytes;
-
-    return InkWell(
-      onTap: () {
-        setState(() => _selectedQuantization[model.id] = variant.quantization);
-      },
-      child: Container(
-        color: selected
-            ? colorScheme.primary.withValues(alpha: 0.14)
-            : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              variant.quantization,
-              style: textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: selected
-                    ? colorScheme.primary
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (size != null)
-              Text(
-                _formatBytes(size),
-                style: textTheme.labelSmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
   }
 
   /// Label describing the estimate (or why there is none yet).
@@ -1625,7 +1507,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     unawaited(_loadGgufMetadata(model));
     setState(() {
       _focusedModelId = model.id;
-      _expandedVariantId = null;
       _expandedFamilyKey = _expandedFamilyKey == family.key ? null : family.key;
     });
   }
@@ -1684,9 +1565,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       model.isCustom ? 'Custom' : model.effectiveSource.label,
     ].join(' · ');
 
+    final progress = ref.watch(
+      downloadProgressProvider.select((all) => all[model.id]),
+    );
+
     return Padding(
-      // The details hang under the row's text column, not out at the avatar.
-      padding: EdgeInsets.fromLTRB(wide ? 76 : 60, 0, wide ? 24 : 16, 20),
+      // The details hang under the row's text column, not out at the avatar,
+      // and stand clear of the row's own last line.
+      padding: EdgeInsets.fromLTRB(wide ? 76 : 60, 12, wide ? 24 : 16, 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1739,9 +1625,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   .toList(growable: false),
             ),
           ],
-          // A ledger only says something when there is a choice to make: the
-          // row already carries this family's quantization, size and context.
-          if (family.variantCount > 1) ...[
+          // The ledger is where a variant is downloaded, so it is always here
+          // for a model that is not; a choice between variants keeps it too.
+          if (family.variantCount > 1 || !model.isDownloaded) ...[
             const SizedBox(height: 18),
             _buildVariantLedger(
               context,
@@ -1762,17 +1648,22 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             const SizedBox(height: 16),
             _buildDetailSection(context, 'File', _buildFacts(context, model)),
           ],
-          const SizedBox(height: 14),
-          Divider(
-            height: 1,
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
-          const SizedBox(height: 12),
-          if (model.fileMissing) ...[
-            _buildMissingFileNotice(context, model),
+          // A file that is here has actions of its own; a file that is coming
+          // down keeps its progress and pause. A catalog row with nothing in
+          // flight is downloaded from the ledger above it.
+          if (model.isDownloaded || progress != null) ...[
+            const SizedBox(height: 14),
+            Divider(
+              height: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+            ),
             const SizedBox(height: 12),
+            if (model.fileMissing) ...[
+              _buildMissingFileNotice(context, model),
+              const SizedBox(height: 12),
+            ],
+            _buildDetailActions(context, model, isSelected: isSelected),
           ],
-          _buildDetailActions(context, model, isSelected: isSelected),
         ],
       ),
     );
@@ -2096,9 +1987,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                         alignment: Alignment.centerRight,
                       ),
                     ),
-                    // Keeps the action column over its own cells: each row
-                    // ends with the chevron that folds its details.
-                    const SizedBox(width: 24),
                   ],
                 ),
               ),
@@ -2116,8 +2004,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   device: device,
                   selected: family.variants[index].model.id == _focusedModelId,
                   inUse: family.variants[index].model.id == selectedModelId,
-                  expanded:
-                      family.variants[index].model.id == _expandedVariantId,
                   sizeWidth: sizeColumnWidth,
                   compact: compact,
                   showContext: showContext,
@@ -2141,7 +2027,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     required DeviceProfile? device,
     required bool selected,
     required bool inUse,
-    required bool expanded,
     required double sizeWidth,
     required bool compact,
     required bool showContext,
@@ -2233,61 +2118,48 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         : 'The model provides ${_formatContext(providedContext)} context; about '
               '${_formatContext(runnableContext)} fit this device.';
 
-    final action = switch ((variant.model.isDownloaded, inUse)) {
-      (true, true) => Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.check_circle_rounded,
-            size: 16,
-            color: colorScheme.primary,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            'In use',
-            style: textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: colorScheme.primary,
-            ),
-          ),
-        ],
-      ),
-      (true, false) => FilledButton.tonal(
-        onPressed: () => controller.selectModel(variant.model),
-        style: FilledButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-        ),
-        child: const Text('Use'),
-      ),
-      _ => null,
-    };
-
-    final detail = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 10),
-        _buildDetailSection(
-          context,
-          'Quantization',
-          _buildQuantizationChoice(context, variant.model),
-        ),
-        const SizedBox(height: 12),
-        _buildDetailSection(
-          context,
-          'On this device',
-          _buildFitMeter(context, variant.model),
-        ),
-        const SizedBox(height: 12),
-        _buildDetailSection(
-          context,
-          'File',
-          _buildFacts(context, variant.model),
-        ),
-        const SizedBox(height: 12),
-      ],
+    // The ledger's action column is that variant's own control: a download for
+    // a file that is not here, the circle the rows use once it is, a live
+    // percentage while it arrives, and the filled check for the model in use.
+    final progress = ref.watch(
+      downloadProgressProvider.select((all) => all[variant.model.id]),
     );
+    final Widget action;
+    if (progress != null) {
+      action = Text(
+        '${(progress.progress * 100).round()}%',
+        style: textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      );
+    } else if (!variant.model.isDownloaded) {
+      action = IconButton(
+        onPressed: () => _handleDownload(variant.model),
+        tooltip: variant.quantization == null
+            ? 'Download'
+            : 'Download ${variant.quantization}',
+        visualDensity: VisualDensity.compact,
+        iconSize: 20,
+        color: colorScheme.primary,
+        icon: const Icon(Icons.download_rounded),
+      );
+    } else if (inUse) {
+      action = Icon(
+        Icons.check_circle_rounded,
+        size: 20,
+        color: colorScheme.primary,
+      );
+    } else {
+      action = IconButton(
+        onPressed: () => controller.selectModel(variant.model),
+        tooltip: 'Use this model',
+        visualDensity: VisualDensity.compact,
+        iconSize: 20,
+        color: colorScheme.primary,
+        icon: const Icon(Icons.radio_button_unchecked_rounded),
+      );
+    }
 
     return Material(
       color: selected
@@ -2297,8 +2169,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         onTap: () {
           unawaited(_loadFitReport(variant.model));
           // The row is the model: tapping an installed variant makes it the
-          // app's model, the same as its Use button. Its details stay folded
-          // until the chevron is pressed.
+          // app's model, the same as its circle.
           controller.selectModel(variant.model);
           setState(() => _focusedModelId = variant.model.id);
         },
@@ -2390,43 +2261,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                     width: actionWidth,
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: action ?? const SizedBox.shrink(),
+                      child: action,
                     ),
                   ),
                   const SizedBox(width: 6),
-                  IconButton(
-                    onPressed: () {
-                      unawaited(_loadFitReport(variant.model));
-                      setState(() {
-                        _expandedVariantId =
-                            _expandedVariantId == variant.model.id
-                            ? null
-                            : variant.model.id;
-                      });
-                    },
-                    icon: Icon(
-                      expanded
-                          ? Icons.expand_less_rounded
-                          : Icons.expand_more_rounded,
-                      size: 18,
-                    ),
-                    color: colorScheme.onSurfaceVariant,
-                    tooltip: expanded ? 'Hide details' : 'Show details',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 24,
-                      height: 32,
-                    ),
-                  ),
                 ],
               ),
             ),
-            if (expanded)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: detail,
-              ),
           ],
         ),
       ),

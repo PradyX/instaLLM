@@ -2,6 +2,7 @@
 
 ## How to use it
 
+- Add the same change set to `CHANGELOG.md` under `## [Unreleased]`, one bullet per entry, before tagging.
 - Copy this file to `build/release/RELEASE_NOTES.md` when cutting a release, then fill in the version.
 - It is the exact shape fed to `gh release create --notes-file build/release/RELEASE_NOTES.md` (or `gh release edit`).
 - Keep it bullets: one line per major change, at most two, no prose paragraphs and no narrative framing.

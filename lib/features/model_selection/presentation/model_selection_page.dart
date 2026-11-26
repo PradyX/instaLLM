@@ -1581,18 +1581,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                             style: _monoTitle(context, wide: wide),
                           ),
                         ),
-                        if (inUse) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            'IN USE',
-                            style: textTheme.labelSmall?.copyWith(
-                              fontSize: 10,
-                              letterSpacing: 0.6,
-                              fontWeight: FontWeight.w700,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                        ],
+
                         if (family.hasMissingFile) ...[
                           const SizedBox(width: 6),
                           Tooltip(
@@ -1722,6 +1711,41 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         }
 
         final controller = ref.read(modelSelectionControllerProvider.notifier);
+        // The model in use states that on the right, where the action is: an
+        // "Open" button there would be a no-op beside a row that already says
+        // what the chat is running.
+        if (inUse) {
+          return Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withValues(alpha: 0.12),
+              border: Border.all(
+                color: colorScheme.primary.withValues(alpha: 0.35),
+              ),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 16,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'In use',
+                  style: textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
         return OutlinedButton(
           onPressed: model.isDownloaded
               ? () => controller.selectModel(model)

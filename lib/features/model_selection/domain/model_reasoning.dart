@@ -24,15 +24,16 @@ library;
 /// into the system message through chat-template kwargs, which this app's
 /// runtime does not expose yet; they are left alone rather than half-implemented.
 enum ReasoningChoice {
-  thinkingOn('on', 'Thinking'),
-  thinkingOff('off', 'No thinking');
+  thinkingOn('on', 'On'),
+  thinkingOff('off', 'Off');
 
   const ReasoningChoice(this.id, this.label);
 
   /// Stored form; stable, because a choice is persisted per model.
   final String id;
 
-  /// What the composer shows for this state.
+  /// The state's short name, for the control that already sits beside a
+  /// `Thinking` label: `Off` and `On`, not a second sentence about thinking.
   final String label;
 
   static ReasoningChoice? tryParse(String? value) {

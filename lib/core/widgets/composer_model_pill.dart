@@ -475,9 +475,11 @@ class _ThinkingRow extends StatelessWidget {
         children: [
           Icon(Icons.psychology_outlined, size: 16, color: colorScheme.primary),
           const SizedBox(width: 8),
-          // The label gives way first: the segments have to stay whole, because
-          // a clipped "Thinki…" would not say which state is which.
-          Flexible(
+          // The label takes whatever the segments leave, so the control sits
+          // against the card's right edge where a segmented control belongs and
+          // the label gives way first: a clipped "Thinki…" still says which
+          // setting the row is, a clipped state name does not.
+          Expanded(
             child: Text(
               'Thinking',
               maxLines: 1,
@@ -490,7 +492,8 @@ class _ThinkingRow extends StatelessWidget {
           const SizedBox(width: 8),
           // Both segments must stay whole; where a large text size would not fit,
           // the control scales down rather than clipping a state's name.
-          Flexible(
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 200),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerRight,

@@ -60,15 +60,22 @@ void main() {
     }
   });
 
-  test('the two LFM2 sizes land in one family, sizes and all', () {
+  test('one family per parameter size: the two LFM2 sizes stay apart', () {
+    // A family is a name at one size; only quantizations of that size belong
+    // together. Merging sizes made a row promise a file it would not download.
     final families = ModelFamilies.group(LlmModel.availableModels);
-    final lfm2 = families.where((family) => family.key == 'lfm2').toList();
-    expect(lfm2, hasLength(1), reason: 'one Liquid AI family, two variants');
-    expect(lfm2.single.variants, hasLength(2));
-    expect(lfm2.single.variants.map((v) => v.parameterSize).toSet(), {
+    final lfm2 = families
+        .where((family) => family.key.contains('lfm2'))
+        .toList();
+    expect(lfm2, hasLength(2), reason: '350M and 1.2B are different models');
+    expect(lfm2.map((family) => family.parameterRange).toSet(), {
       '350M',
       '1.2B',
     });
+    for (final family in lfm2) {
+      expect(family.variants, hasLength(1));
+      expect(family.variants.single.parameterSize, family.parameterRange);
+    }
 
     final minicpm = families.where((family) => family.key.contains('minicpm'));
     expect(minicpm, hasLength(1));

@@ -318,7 +318,7 @@ class ModelFamilies {
     final names = <String, List<String>>{};
 
     for (final model in models) {
-      final key = familyKey(model.name);
+      final key = familyKeyFor(model.name, model.parameterSize);
       final quantization = quantizationOf(model);
       grouped
           .putIfAbsent(key, () => <ModelVariant>[])
@@ -356,7 +356,19 @@ class ModelFamilies {
     return families;
   }
 
-  /// The grouping key for a model name.
+  /// The grouping key for one catalog entry: its family name *and* its
+  /// parameter size.
+  ///
+  /// Sizes stay un-linked: `Qwen3 0.6B` and `Qwen3 1.7B` are different models
+  /// that happen to share a name, and merging them into one family made a row
+  /// promise a size it did not download. Only quantizations of one size belong
+  /// together, so the size is part of the key.
+  static String familyKeyFor(String name, String parameterSize) {
+    final size = parameterSize.trim().toUpperCase();
+    return size.isEmpty ? familyKey(name) : '${familyKey(name)}|$size';
+  }
+
+  /// The grouping key for a model name, ignoring its parameter size.
   ///
   /// `imat`, a quantization-method marker, is dropped wherever it appears, so
   /// those files group with the plain spelling of their family.

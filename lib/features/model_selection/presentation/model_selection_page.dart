@@ -24,6 +24,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Choices offered when the user taps "Add Model".
 enum _AddModelAction { importFile, huggingFaceRepo, directUrl }
 
+/// The parameter-size buckets the filter rail offers. Sizes are compared in
+/// billions of parameters, the same number the families sort by.
+enum _SizeBucket {
+  under1('<1B'),
+  upTo3('1–3B'),
+  upTo8('3–8B'),
+  over8('8B+');
+
+  const _SizeBucket(this.label);
+
+  final String label;
+
+  bool contains(double parameters) => switch (this) {
+    _SizeBucket.under1 => parameters < 1,
+    _SizeBucket.upTo3 => parameters >= 1 && parameters < 3,
+    _SizeBucket.upTo8 => parameters >= 3 && parameters < 8,
+    _SizeBucket.over8 => parameters >= 8,
+  };
+}
+
 /// `4096` as `4K`, `32768` as `32K`, `5500` as `5.4K`; smaller values as is.
 String _formatContext(int tokens) {
   if (tokens < 1024) return '$tokens';
@@ -52,13 +72,19 @@ class ModelSelectionPage extends ConsumerStatefulWidget {
 }
 
 class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
-  /// The model the detail pane shows. Null means the first model the list
-  /// shows, which is also where a filter that hides the focused model lands.
+  /// The variant the family ledger highlights, set when a row is opened.
   String? _focusedModelId;
 
-  /// On a narrow window the pane replaces the list instead of sitting beside
-  /// it, and this is what brings the list back.
-  bool _narrowDetailOpen = false;
+  /// The model whose page is open, if any; null shows the catalog list.
+  String? _detailModelId;
+
+  /// The parameter-size bucket the list is narrowed to, if any.
+  _SizeBucket? _sizeBucket;
+
+  /// Whether the list hides models whose file is not expected to run here.
+  /// Off by default: a catalog that hides entries before the user asks is a
+  /// worse first impression than one that shows what will not fit.
+  bool _onlyWhatFits = false;
 
   /// The variant whose details are open in the family ledger, if any. The
   /// chevron at the end of a row opens and closes this; tapping the row itself
@@ -431,25 +457,20 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             if (!nameMatch && !descMatch) return false;
           }
 
+          final bucket = _sizeBucket;
+          if (bucket != null &&
+              !bucket.contains(
+                ModelFamilies.parameterCountOf(model.parameterSize),
+              )) {
+            return false;
+          }
+
           return true;
         })
         .toList(growable: false);
 
-    // The pane follows the list: when a filter hides the focused model it
-    // moves to the first model that is still shown.
-    LlmModel? focused;
-    for (final model in filteredModels) {
-      if (model.id == _focusedModelId) {
-        focused = model;
-        break;
-      }
-    }
-    focused ??= filteredModels.isEmpty ? null : filteredModels.first;
-
-    // One entry per family: the catalog lists `SmolLM2 360M` and `SmolLM2
-    // 1.7B` as separate rows only because they are separate records, so the
-    // list collapses everything a name shares and the pane exposes the
-    // difference between the members instead.
+    // One entry per family: a name at one parameter size. Quantizations of
+    // that size share the family; a different size is a different model.
     final families = ModelFamilies.group(filteredModels);
 
     // "Best fit" (sortFamiliesByFit below) orders families by how well their
@@ -483,11 +504,39 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       });
     }
 
-    ModelFamily? focusedFamily;
-    if (focused != null) {
+    // Only what fits: the same estimate the rows show, applied as a filter.
+    if (_onlyWhatFits) {
+      final fitDevice = ref.watch(deviceProfileProvider).value;
+      families.removeWhere(
+        (family) =>
+            familyFitRank(
+              family,
+              contextTokens: ModelCompatibilityService.defaultContextTokens,
+              totalMemoryBytes: fitDevice?.totalMemoryBytes,
+              availableMemoryBytes: fitDevice?.availableMemoryBytes,
+            ) !=
+            0,
+      );
+    }
+
+    // The model whose page is open, and the family it belongs to. The page
+    // replaces the catalog instead of sitting beside it.
+    LlmModel? detailModel;
+    if (_detailModelId != null) {
+      for (final model in filteredModels) {
+        if (model.id == _detailModelId) {
+          detailModel = model;
+          break;
+        }
+      }
+    }
+    ModelFamily? detailFamily;
+    if (detailModel != null) {
       for (final family in families) {
-        if (family.variants.any((variant) => variant.model.id == focused!.id)) {
-          focusedFamily = family;
+        if (family.variants.any(
+          (variant) => variant.model.id == detailModel!.id,
+        )) {
+          detailFamily = family;
           break;
         }
       }
@@ -548,94 +597,79 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       }
     });
 
+    final installedFamilies = families
+        .where((family) => family.hasInstalled)
+        .toList(growable: false);
+    final catalogFamilies = families
+        .where((family) => !family.hasInstalled)
+        .toList(growable: false);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Models'),
-        actions: [
-          TextButton.icon(
-            onPressed: _showAddModelSheet,
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add model'),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      backgroundColor: colorScheme.surface,
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 760;
+
+          if (detailModel != null) {
+            return _buildDetailPane(
+              context,
+              state,
+              detailModel,
+              family: detailFamily,
+              wide: wide,
+              onBack: () => setState(() {
+                _detailModelId = null;
+                _expandedVariantId = null;
+              }),
+            );
+          }
+
           final list = _buildListPane(
             context,
             state,
-            families,
-            focused,
-            onOpen: (variant) {
-              // A tap chooses the model outright when it is already on disk,
-              // exactly as the pane's Use button would; a model that still has
-              // to download is only opened.
-              ref
-                  .read(modelSelectionControllerProvider.notifier)
-                  .selectModel(variant.model);
-              unawaited(_loadFitReport(variant.model));
-              setState(() {
-                _focusedModelId = variant.id;
-                _narrowDetailOpen = !wide;
-              });
-            },
+            installed: installedFamilies,
+            catalog: catalogFamilies,
+            wide: wide,
           );
 
           if (!wide) {
-            if (_narrowDetailOpen && focused != null) {
-              return _buildDetailPane(
-                context,
-                state,
-                focused,
-                family: focusedFamily,
-                onBack: () => setState(() => _narrowDetailOpen = false),
-              );
-            }
-            return Column(
-              children: [
-                _buildFilterBand(
-                  context,
-                  state,
-                  wide: false,
-                  visibleCapabilities: visibleCapabilities,
-                  capabilityCounts: capabilityCounts,
-                ),
-                Expanded(child: list),
-              ],
+            return SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  _buildPhoneHeader(context, state),
+                  _buildPhoneFilters(
+                    context,
+                    state,
+                    visibleCapabilities: visibleCapabilities,
+                    capabilityCounts: capabilityCounts,
+                  ),
+                  Expanded(child: list),
+                  _buildStorageFooter(context, state),
+                ],
+              ),
             );
           }
 
           return Column(
             children: [
-              _buildFilterBand(
+              _buildToolbar(
                 context,
                 state,
-                wide: true,
-                visibleCapabilities: visibleCapabilities,
-                capabilityCounts: capabilityCounts,
+                modelCount: selectableModels.length,
+                installedCount: installedFamilies.length,
               ),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    SizedBox(width: 300, child: list),
-                    VerticalDivider(
-                      width: 1,
-                      thickness: 1,
-                      color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                    _buildFilterRail(
+                      context,
+                      state,
+                      visibleCapabilities: visibleCapabilities,
+                      capabilityCounts: capabilityCounts,
                     ),
-                    Expanded(
-                      child: focused == null
-                          ? _buildEmptyFilterState(context, state)
-                          : _buildDetailPane(
-                              context,
-                              state,
-                              focused,
-                              family: focusedFamily,
-                            ),
-                    ),
+                    Expanded(child: list),
                   ],
                 ),
               ),
@@ -646,54 +680,95 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
   }
 
-  /// What is on disk, the search and the filters, laid across the whole page
-  /// so the chips have room for one line and the list and the focused model
-  /// share the space below it.
-  Widget _buildFilterBand(
+  /// The desktop toolbar: the catalog's name and counts, then the search, the
+  /// sort control and the one action that adds a model.
+  Widget _buildToolbar(
     BuildContext context,
     ModelSelectionState state, {
-    required bool wide,
-    required List<ModelCapability> visibleCapabilities,
-    required Map<ModelCapability, int> capabilityCounts,
+    required int modelCount,
+    required int installedCount,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final device = ref.watch(deviceProfileProvider).value;
-    final free = state.freeStorageBytes;
-    final total = state.totalStorageBytes;
-    final hasStorage = free != null && total != null && total > 0;
-    final installedCount = state.models
-        .where((model) => model.isDownloaded)
-        .length;
-    final usedRatio = hasStorage
-        ? ((total - free) / total).clamp(0.0, 1.0)
-        : 0.0;
-    final hasFilters =
-        state.selectedCapabilityFilters.isNotEmpty || !state.sortByFit;
-
-    final summaryStyle = textTheme.bodySmall?.copyWith(
-      color: colorScheme.onSurfaceVariant,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            'Models',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            '$modelCount models · $installedCount installed',
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const Spacer(),
+          SizedBox(width: 250, child: _buildSearchField(context, state)),
+          const SizedBox(width: 10),
+          _buildSortButton(context, state, iconOnly: false),
+          const SizedBox(width: 10),
+          FilledButton.icon(
+            onPressed: _showAddModelSheet,
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('Add model'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(9),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
-    final summary = Text(
-      hasStorage
-          ? '$installedCount installed · ${_formatBytes(free)} free'
-          : '$installedCount installed',
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: summaryStyle,
-    );
-    final deviceLabel = device == null
-        ? null
-        : Text(
-            _deviceLabel(device),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: wide ? TextAlign.end : TextAlign.start,
-            style: summaryStyle,
-          );
+  }
 
-    final searchField = TextField(
+  /// The phone's title row. The search lives in its own row below it, so this
+  /// one only carries the page name and the add action.
+  Widget _buildPhoneHeader(BuildContext context, ModelSelectionState state) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Row(
+        children: [
+          Text(
+            'Models',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: _showAddModelSheet,
+            icon: const Icon(Icons.add_rounded, size: 22),
+            tooltip: 'Add model',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context, ModelSelectionState state) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
       controller: _searchController,
+      style: Theme.of(context).textTheme.bodyMedium,
       decoration: InputDecoration(
         hintText: 'Search models',
         prefixIcon: const Icon(Icons.search_rounded, size: 20),
@@ -725,73 +800,105 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             .setSearchQuery(value);
       },
     );
+  }
 
-    // Installed families always come first, and the summary line above already
-    // says how many there are, so no chip stands for that ordering.
-    final chips = <Widget>[
-      FilterChip(
-        selected: state.sortByFit,
-        showCheckmark: false,
-        visualDensity: VisualDensity.compact,
-        avatar: const Icon(Icons.bolt_rounded, size: 16),
-        label: const Text('Best fit'),
-        onSelected: (selected) {
+  /// The ordering control. On a phone the label has no room, so the same menu
+  /// opens from an icon beside the search field.
+  Widget _buildSortButton(
+    BuildContext context,
+    ModelSelectionState state, {
+    required bool iconOnly,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final label = state.sortByFit ? 'Sort: Best fit' : 'Sort: Smallest';
+
+    return PopupMenuButton<bool>(
+      tooltip: 'Sort models',
+      initialValue: state.sortByFit,
+      onSelected: (value) => ref
+          .read(modelSelectionControllerProvider.notifier)
+          .setSortByFit(value),
+      itemBuilder: (context) => const [
+        PopupMenuItem(value: true, child: Text('Best fit for this device')),
+        PopupMenuItem(value: false, child: Text('Smallest first')),
+      ],
+      child: Container(
+        width: iconOnly ? 40 : null,
+        height: 40,
+        alignment: Alignment.center,
+        padding: iconOnly ? null : const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          border: Border.all(color: colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: iconOnly
+            ? Icon(Icons.tune_rounded, size: 18, color: colorScheme.onSurface)
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: textTheme.labelLarge?.copyWith(
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.expand_more_rounded,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  /// The phone's filter block: search with the sort icon, one scrollable
+  /// capability track, one parameter control, and the device switch.
+  Widget _buildPhoneFilters(
+    BuildContext context,
+    ModelSelectionState state, {
+    required List<ModelCapability> visibleCapabilities,
+    required Map<ModelCapability, int> capabilityCounts,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final device = ref.watch(deviceProfileProvider).value;
+    final deviceMemory =
+        device?.totalMemoryBytes ?? device?.availableMemoryBytes;
+
+    final segments = <Widget>[
+      _buildSegment(
+        context,
+        label: 'Best fit',
+        width: 92,
+        selected: state.sortByFit && state.selectedCapabilityFilters.isEmpty,
+        onTap: () {
+          ref.read(modelSelectionControllerProvider.notifier).clearFilters();
           ref
               .read(modelSelectionControllerProvider.notifier)
-              .setSortByFit(selected);
+              .setSortByFit(true);
         },
       ),
-      ...visibleCapabilities.map(
-        (capability) => FilterChip(
+      for (final capability in visibleCapabilities)
+        _buildSegment(
+          context,
+          label: capability.label,
+          width: 92,
           selected: state.selectedCapabilityFilters.contains(capability),
-          showCheckmark: false,
-          visualDensity: VisualDensity.compact,
-          avatar: Icon(_capabilityIcon(capability), size: 16),
-          label: Text(
-            '${capability.label} (${capabilityCounts[capability] ?? 0})',
-          ),
-          onSelected: (_) {
-            ref
-                .read(modelSelectionControllerProvider.notifier)
-                .toggleCapabilityFilter(capability);
-          },
+          onTap: () => ref
+              .read(modelSelectionControllerProvider.notifier)
+              .toggleCapabilityFilter(capability),
         ),
-      ),
     ];
-
-    final filterRow = Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (var index = 0; index < chips.length; index++) ...[
-                  if (index > 0) const SizedBox(width: 6),
-                  chips[index],
-                ],
-              ],
-            ),
-          ),
-        ),
-        if (hasFilters) ...[
-          const SizedBox(width: 4),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(modelSelectionControllerProvider.notifier)
-                  .clearFilters();
-            },
-            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-            child: const Text('Clear'),
-          ),
-        ],
-      ],
-    );
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
       decoration: BoxDecoration(
+        color: colorScheme.surface,
         border: Border(
           bottom: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.6),
@@ -801,93 +908,601 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (wide)
-            Row(
-              children: [
-                Flexible(child: summary),
-                if (deviceLabel != null) ...[
-                  const SizedBox(width: 16),
-                  deviceLabel,
-                ],
-              ],
-            )
-          else ...[
-            summary,
-            ?deviceLabel,
-          ],
-          if (hasStorage) ...[
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: usedRatio,
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(4),
-              color: usedRatio >= 0.9
-                  ? colorScheme.error
-                  : usedRatio >= 0.7
-                  ? Colors.amber.shade700
-                  : colorScheme.primary,
-              backgroundColor: colorScheme.surfaceContainerHighest,
-            ),
-          ],
-          if (state.models.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            if (wide)
-              Row(
-                children: [
-                  SizedBox(width: 280, child: searchField),
-                  const SizedBox(width: 12),
-                  Expanded(child: filterRow),
-                ],
-              )
-            else ...[
-              searchField,
-              const SizedBox(height: 8),
-              filterRow,
+          Row(
+            children: [
+              Expanded(child: _buildSearchField(context, state)),
+              const SizedBox(width: 8),
+              _buildSortButton(context, state, iconOnly: true),
             ],
-          ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 34,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(mainAxisSize: MainAxisSize.min, children: segments),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            height: 34,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Row(
+              children: [
+                for (final bucket in _SizeBucket.values)
+                  Expanded(
+                    child: _buildSegment(
+                      context,
+                      label: bucket.label,
+                      selected: _sizeBucket == bucket,
+                      onTap: () => setState(
+                        () =>
+                            _sizeBucket = _sizeBucket == bucket ? null : bucket,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Row(
+            children: [
+              Text(
+                'Only what fits here',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              Transform.scale(
+                scale: 0.85,
+                child: Switch(
+                  value: _onlyWhatFits,
+                  onChanged: (value) => setState(() => _onlyWhatFits = value),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              const Spacer(),
+              if (deviceMemory != null)
+                Text(
+                  _formatBytes(deviceMemory),
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  /// The left pane: one row per model family. Selecting a row focuses it
-  /// rather than choosing it as the app's model; that is an explicit action in
-  /// the detail pane.
+  Widget _buildSegment(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    double? width,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final child = SizedBox(
+      width: width,
+      height: 34,
+      child: Center(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: textTheme.labelMedium?.copyWith(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+
+    return Material(
+      color: selected ? colorScheme.surface : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: selected
+              ? BoxDecoration(
+                  border: Border.all(color: colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(9),
+                )
+              : null,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  /// The desktop rail: tasks, parameter sizes, the device switch and the disk
+  /// meter, all visible at once so nothing hides behind a "more" control.
+  Widget _buildFilterRail(
+    BuildContext context,
+    ModelSelectionState state, {
+    required List<ModelCapability> visibleCapabilities,
+    required Map<ModelCapability, int> capabilityCounts,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final device = ref.watch(deviceProfileProvider).value;
+    final deviceMemory =
+        device?.totalMemoryBytes ?? device?.availableMemoryBytes;
+    final free = state.freeStorageBytes;
+    final total = state.totalStorageBytes;
+
+    return Container(
+      width: 264,
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        border: Border(
+          right: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+        ),
+      ),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        children: [
+          Text(
+            'FILTERS',
+            style: textTheme.labelSmall?.copyWith(
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Task',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          _buildRailRow(
+            context,
+            label: 'All models',
+            icon: Icons.apps_rounded,
+            selected: state.selectedCapabilityFilters.isEmpty,
+            onTap: () => ref
+                .read(modelSelectionControllerProvider.notifier)
+                .clearFilters(),
+          ),
+          for (final capability in visibleCapabilities)
+            _buildRailRow(
+              context,
+              label: capability.label,
+              icon: _capabilityIcon(capability),
+              count: capabilityCounts[capability],
+              selected: state.selectedCapabilityFilters.contains(capability),
+              onTap: () => ref
+                  .read(modelSelectionControllerProvider.notifier)
+                  .toggleCapabilityFilter(capability),
+            ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: colorScheme.outlineVariant),
+          const SizedBox(height: 16),
+          Text(
+            'Parameters',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final bucket in _SizeBucket.values)
+                _buildSizePill(
+                  context,
+                  label: bucket.label,
+                  selected: _sizeBucket == bucket,
+                  onTap: () => setState(
+                    () => _sizeBucket = _sizeBucket == bucket ? null : bucket,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(height: 1, color: colorScheme.outlineVariant),
+          const SizedBox(height: 16),
+          Text(
+            'This Mac',
+            style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Only what fits here',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: _onlyWhatFits,
+                  onChanged: (value) => setState(() => _onlyWhatFits = value),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+          if (deviceMemory != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              '${_formatBytes(deviceMemory)} unified memory',
+              style: textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          const SizedBox(height: 22),
+          Text(
+            'DISK',
+            style: textTheme.labelSmall?.copyWith(
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildStorageBar(context, state),
+          const SizedBox(height: 8),
+          Text(
+            free == null || total == null
+                ? 'Storage unknown'
+                : '${_formatBytes(free)} free of ${_formatBytes(total)}',
+            style: textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => _showStorageSheet(context, state),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+              child: const Text('Manage'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRailRow(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+    int? count,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Material(
+      color: selected
+          ? colorScheme.primary.withValues(alpha: 0.12)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.onSurface,
+                  ),
+                ),
+              ),
+              if (count != null)
+                Text(
+                  '$count',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSizePill(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Material(
+      color: selected ? colorScheme.primary : Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selected
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: textTheme.labelMedium?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The disk meter both layouts show: the same widget the app already used,
+  /// kept with its thresholds so a nearly full disk still reads as a warning.
+  Widget _buildStorageBar(BuildContext context, ModelSelectionState state) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final free = state.freeStorageBytes;
+    final total = state.totalStorageBytes;
+    if (free == null || total == null || total <= 0) {
+      return const SizedBox.shrink();
+    }
+    final usedRatio = ((total - free) / total).clamp(0.0, 1.0);
+    return LinearProgressIndicator(
+      value: usedRatio,
+      minHeight: 4,
+      borderRadius: BorderRadius.circular(4),
+      color: usedRatio >= 0.9
+          ? colorScheme.error
+          : usedRatio >= 0.7
+          ? Colors.amber.shade700
+          : colorScheme.primary,
+      backgroundColor: colorScheme.surfaceContainerHighest,
+    );
+  }
+
+  /// The phone's bottom bar: the disk meter, then what is left and the way to
+  /// manage it. No divider above it — the meter itself is the edge.
+  Widget _buildStorageFooter(BuildContext context, ModelSelectionState state) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final free = state.freeStorageBytes;
+    final total = state.totalStorageBytes;
+    if (free == null || total == null || total <= 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      color: colorScheme.surface,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: Column(
+        children: [
+          _buildStorageBar(context, state),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${_formatBytes(free)} free of ${_formatBytes(total)}',
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => _showStorageSheet(context, state),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  minimumSize: const Size(0, 32),
+                ),
+                child: const Text('Manage'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// What the disk holds: the installed models and what each one costs. The
+  /// sheet is read-only — deleting stays where it was, on the model's page.
+  void _showStorageSheet(BuildContext context, ModelSelectionState state) {
+    final installed = state.models
+        .where((model) => model.isDownloaded)
+        .toList(growable: false);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Storage',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                state.freeStorageBytes == null ||
+                        state.totalStorageBytes == null
+                    ? '${installed.length} models installed'
+                    : '${installed.length} models installed · '
+                          '${_formatBytes(state.freeStorageBytes!)} free of '
+                          '${_formatBytes(state.totalStorageBytes!)}',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (installed.isEmpty)
+                Text(
+                  'No models are installed yet.',
+                  style: textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                for (final model in installed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            model.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          switch (model.ggufMetadata?.fileSizeBytes) {
+                            final bytes? => _formatBytes(bytes),
+                            _ => model.parameterSize,
+                          },
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The catalog list: what is installed first, then the rest, one flat row
+  /// per model. A row opens the model's own page; the button at its right is
+  /// whatever applies to that model right now.
   Widget _buildListPane(
     BuildContext context,
-    ModelSelectionState state,
-    List<ModelFamily> families,
-    LlmModel? focused, {
-    required ValueChanged<ModelVariant> onOpen,
+    ModelSelectionState state, {
+    required List<ModelFamily> installed,
+    required List<ModelFamily> catalog,
+    required bool wide,
   }) {
+    if (installed.isEmpty && catalog.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [_buildEmptyFilterState(context, state)],
+      );
+    }
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
+      padding: EdgeInsets.only(bottom: wide ? 16 : 8),
       children: [
-        if (families.isEmpty)
-          _buildEmptyFilterState(context, state)
-        else
-          ...families.map(
-            (family) => _buildFamilyRow(
-              context,
-              state,
-              family,
-              publisher: _familyPublishers[family.key],
-              focused:
-                  focused != null &&
-                  family.variants.any(
-                    (variant) => variant.model.id == focused.id,
-                  ),
-              // Tap the variant that is already here, so the tap that opens
-              // a family also chooses the member it can use.
-              onTap: () => onOpen(
-                family.variants.firstWhere(
-                  (variant) => variant.model.isDownloaded,
-                  orElse: () => family.variants.first,
-                ),
+        if (installed.isNotEmpty) ...[
+          _buildSectionHeader(
+            context,
+            'INSTALLED',
+            trailing: installed.length > 1
+                ? '${installed.length} installed'
+                : null,
+          ),
+          for (final family in installed)
+            _buildFamilyRow(context, state, family, wide: wide),
+        ],
+        if (catalog.isNotEmpty) ...[
+          _buildSectionHeader(
+            context,
+            'CATALOG',
+            trailing: '${catalog.length} more',
+          ),
+          for (final family in catalog)
+            _buildFamilyRow(context, state, family, wide: wide),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    String? trailing,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 14, 24, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: textTheme.labelSmall?.copyWith(
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w700,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-      ],
+          if (trailing != null)
+            Text(
+              trailing,
+              style: textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -895,204 +1510,275 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     BuildContext context,
     ModelSelectionState state,
     ModelFamily family, {
-    required String? publisher,
-    required bool focused,
-    required VoidCallback onTap,
+    required bool wide,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final isSelected = family.variants.any(
-      (variant) => variant.model.id == state.selectedModelId,
+    final publisher = _familyPublishers[family.key];
+    // The installed member is the one this row acts on once it is on disk.
+    final variant = family.variants.firstWhere(
+      (candidate) => candidate.model.isDownloaded,
+      orElse: () => family.variants.first,
     );
-    final progressByModel = ref.watch(downloadProgressProvider);
-    DownloadProgress? progress;
-    for (final variant in family.variants) {
-      final candidate = progressByModel[variant.model.id];
-      if (candidate != null) {
-        progress = candidate;
-        break;
-      }
-    }
-    // What any member of the family can do, in the capability bar's own
-    // order, so the row says what the model is for without a second line.
-    final capabilities = ModelCapability.values
-        .where(
-          (capability) => family.variants.any(
-            (variant) => variant.model.capabilities.contains(capability),
-          ),
-        )
-        .toList(growable: false);
+    final model = variant.model;
+    final inUse = model.id == state.selectedModelId;
+    final title = _repositoryLabel(model) ?? family.displayName;
+    final device = ref.watch(deviceProfileProvider).value;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
-      child: Material(
-        color: focused
-            ? colorScheme.primary.withValues(alpha: 0.12)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            child: Row(
-              children: [
-                _buildFamilyMonogram(context, family, publisher),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        family.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: focused
-                              ? colorScheme.primary
-                              : colorScheme.onSurface,
+    final sizeBytes = variant.fileSizeBytes ?? variant.approximateFileSizeBytes;
+    final contextTokens = model.ggufMetadata?.contextLength;
+    final meta = <String>[
+      variant.parameterSize,
+      ?variant.quantization,
+      if (sizeBytes != null) _formatBytes(sizeBytes),
+      if (contextTokens != null) '${_formatContext(contextTokens)} context',
+    ].join(' · ');
+    final fit = _rowFitLabel(context, variant, device);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          unawaited(_loadFitReport(model));
+          unawaited(_loadGgufMetadata(model));
+          setState(() {
+            _focusedModelId = model.id;
+            _detailModelId = model.id;
+          });
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: wide ? 24 : 16,
+            vertical: wide ? 12 : 9,
+          ),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              _buildFamilyMonogram(
+                context,
+                family,
+                publisher,
+                size: wide ? 38 : 34,
+              ),
+              SizedBox(width: wide ? 14 : 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _monoTitle(context, wide: wide),
+                          ),
                         ),
+                        if (inUse) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            'IN USE',
+                            style: textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              letterSpacing: 0.6,
+                              fontWeight: FontWeight.w700,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                        if (family.hasMissingFile) ...[
+                          const SizedBox(width: 6),
+                          Tooltip(
+                            message: 'File missing — download again',
+                            child: Icon(
+                              Icons.report_gmailerrorred_rounded,
+                              size: 15,
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      meta,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
                       ),
-                      const SizedBox(height: 1),
+                    ),
+                    if (fit != null) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        _familySubtitle(family, publisher),
+                        fit.text,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                          color: fit.color,
                         ),
                       ),
-                      if (capabilities.isNotEmpty) ...[
-                        const SizedBox(height: 5),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (
-                              var index = 0;
-                              index < capabilities.length;
-                              index++
-                            ) ...[
-                              if (index > 0) const SizedBox(width: 6),
-                              Tooltip(
-                                message: capabilities[index].label,
-                                child: Icon(
-                                  _capabilityIcon(capabilities[index]),
-                                  size: 14,
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
-                if (progress != null) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '${(progress.progress * 100).round()}%',
-                    style: textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ] else if (isSelected) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.check_circle_rounded,
-                    size: 16,
-                    color: colorScheme.primary,
-                  ),
-                ] else if (family.hasInstalled) ...[
-                  // Installed but not the model in use: a quiet check lets an
-                  // installed family be seen without shouting over the one
-                  // the chat is actually running.
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.check_circle_outline_rounded,
-                    size: 16,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ] else if (family.hasMissingFile) ...[
-                  // A record whose file is gone: a warning, not a check.
-                  const SizedBox(width: 8),
-                  Tooltip(
-                    message: 'File missing — download again',
-                    child: Icon(
-                      Icons.report_gmailerrorred_rounded,
-                      size: 16,
-                      color: colorScheme.error,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              _buildRowAction(context, model, inUse: inUse),
+            ],
           ),
         ),
       ),
     );
   }
 
-  /// Name above, and below it the publisher the family's models come from —
-  /// `4 variants · bartowski · ~1.1 GB` — where that is known, falling back to
-  /// the approximate file size and then the parameter size. The quantization
-  /// is deliberately absent from the list: each family's variants differ in
-  /// size far more noticeably than in quantization, and the pane shows both
-  /// when it matters.
-  String _familySubtitle(ModelFamily family, String? publisher) {
-    final best = family.variants.first;
-    final exactBytes = best.fileSizeBytes;
-    final sizeBytes = exactBytes ?? best.approximateFileSizeBytes;
-    final parts = <String>[?publisher];
-    if (family.variantCount > 1) parts.add('${family.variantCount} variants');
-    if (sizeBytes != null) {
-      parts.add(
-        exactBytes == null
-            ? '~${_formatBytes(sizeBytes)}'
-            : _formatBytes(sizeBytes),
-      );
-    }
-    if (parts.isEmpty) return best.parameterSize;
-    return parts.join(' · ');
+  /// `Qwen/Qwen3-0.6B`: the repository a catalog entry comes from, which is the
+  /// name Hugging Face lists it under. Null for a model added by direct URL,
+  /// whose own name then stands in.
+  String? _repositoryLabel(LlmModel model) {
+    final url = model.downloadUrl;
+    if (url == null || url.trim().isEmpty) return null;
+    final repository = HuggingFaceRepositoryService.parseRepositoryInput(url);
+    return repository == null || repository.trim().isEmpty ? null : repository;
   }
 
-  /// A small avatar per family: the publisher's own Hugging Face picture when
-  /// one was fetched (so `bartowski` models carry bartowski's avatar, the way
-  /// community lists show the author), otherwise a letter monogram whose hue
-  /// varies by family so two rows never read as one.
+  TextStyle? _monoTitle(BuildContext context, {required bool wide}) {
+    return Theme.of(context).textTheme.bodyMedium?.copyWith(
+      fontFamily: 'monospace',
+      fontFamilyFallback: const ['Menlo', 'Roboto Mono', 'Courier New'],
+      fontWeight: FontWeight.w600,
+      fontSize: wide ? 14 : 13,
+      color: Theme.of(context).colorScheme.onSurface,
+    );
+  }
+
+  /// How well the row's own file is expected to run here, with the share of
+  /// the device's memory budget it would take. Null when neither the file size
+  /// nor the device's memory is known, so the row stays quiet instead of
+  /// guessing.
+  ({String text, Color color})? _rowFitLabel(
+    BuildContext context,
+    ModelVariant variant,
+    DeviceProfile? device,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final rating = variantFitRating(
+      variant,
+      kvCacheMetadata: variant.model.ggufMetadata,
+      contextTokens: ModelCompatibilityService.defaultContextTokens,
+      totalMemoryBytes: device?.totalMemoryBytes,
+      availableMemoryBytes: device?.availableMemoryBytes,
+    );
+    if (rating == null) return null;
+    final color = switch (rating) {
+      ModelCompatibilityRating.recommended ||
+      ModelCompatibilityRating.shouldRun => colorScheme.primary,
+      ModelCompatibilityRating.mayBeSlow => Colors.amber.shade700,
+      ModelCompatibilityRating.memoryRisk ||
+      ModelCompatibilityRating.notRecommended => colorScheme.error,
+    };
+    final bytes = variant.fileSizeBytes ?? variant.approximateFileSizeBytes;
+    final budget = ModelCompatibilityEstimator.memoryBudget(
+      totalMemoryBytes: device?.totalMemoryBytes,
+      availableMemoryBytes: device?.availableMemoryBytes,
+    );
+    final text = bytes != null && budget != null
+        ? '${rating.label} · ${(bytes / budget).toStringAsFixed(1)} of '
+              '${_formatBytes(budget)}'
+        : rating.label;
+    return (text: text, color: color);
+  }
+
+  /// The row's action: progress while a file is coming down, the model's own
+  /// page action once it is here, and the download that starts it otherwise.
+  Widget _buildRowAction(
+    BuildContext context,
+    LlmModel model, {
+    required bool inUse,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Consumer(
+      builder: (context, ref, _) {
+        final progress = ref.watch(
+          downloadProgressProvider.select((all) => all[model.id]),
+        );
+        if (progress != null) {
+          return Text(
+            '${(progress.progress * 100).round()}%',
+            style: textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          );
+        }
+
+        final controller = ref.read(modelSelectionControllerProvider.notifier);
+        return OutlinedButton(
+          onPressed: model.isDownloaded
+              ? () => controller.selectModel(model)
+              : () => _handleDownload(model),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            foregroundColor: colorScheme.onSurface,
+            side: BorderSide(color: colorScheme.outlineVariant),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+          ),
+          child: Text(model.isDownloaded ? 'Open' : 'Download'),
+        );
+      },
+    );
+  }
+
+  /// A circular avatar per family: the publisher's own Hugging Face picture
+  /// when one was fetched, otherwise a letter monogram in the same circle, so
+  /// the two states share one footprint.
   Widget _buildFamilyMonogram(
     BuildContext context,
     ModelFamily family,
-    String? publisher,
-  ) {
+    String? publisher, {
+    int size = 32,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bytes = publisher == null ? null : _publisherAvatars[publisher];
     if (bytes != null) {
       return ClipOval(
         child: Image.memory(
           bytes,
-          width: 32,
-          height: 32,
+          width: size.toDouble(),
+          height: size.toDouble(),
           fit: BoxFit.cover,
           gaplessPlayback: true,
         ),
       );
     }
-    final hue = (family.key.hashCode.abs() % 360).toDouble();
-    final color = HSLColor.fromAHSL(1.0, hue, 0.3, 0.34).toColor();
     final initial = family.displayName.trim().isEmpty
         ? '?'
         : family.displayName.trim()[0].toUpperCase();
     return Container(
-      width: 32,
-      height: 32,
+      width: size.toDouble(),
+      height: size.toDouble(),
       alignment: Alignment.center,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: colorScheme.surfaceContainerHigh,
+      ),
       child: Text(
         initial,
         style: TextStyle(
-          color: Colors.white,
-          fontSize: 14,
+          color: colorScheme.onSurface,
+          fontSize: size * 0.4,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1109,6 +1795,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     ModelSelectionState state,
     LlmModel model, {
     required ModelFamily? family,
+    required bool wide,
     VoidCallback? onBack,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1130,114 +1817,154 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       model.isCustom ? 'Custom' : model.effectiveSource.label,
     ].join(' · ');
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
-      children: [
-        if (onBack != null)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: onBack,
-              icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              label: const Text('All models'),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1120),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            wide ? 48 : 16,
+            wide ? 16 : 8,
+            wide ? 48 : 16,
+            28,
+          ),
+          children: [
+            if (onBack != null)
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: onBack,
+                    icon: Icon(Icons.arrow_back_rounded, size: wide ? 20 : 22),
+                    tooltip: 'Back to catalog',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 34,
+                      height: 34,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Catalog',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      model.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _monoTitle(context, wide: false),
+                    ),
+                  ),
+                ],
+              ),
+            Text(
+              family?.displayName ?? model.name,
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.4,
               ),
             ),
-          ),
-        Text(
-          family?.displayName ?? model.name,
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.4,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          identity,
-          style: textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          model.description,
-          style: textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-        if (model.isCustom) ...[
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: colorScheme.tertiaryContainer,
-                borderRadius: BorderRadius.circular(6),
+            const SizedBox(height: 4),
+            Text(
+              identity,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
-              child: Text(
-                'Custom',
-                style: textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.onTertiaryContainer,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              model.description,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (model.isCustom) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Custom',
+                    style: textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onTertiaryContainer,
+                    ),
+                  ),
                 ),
               ),
+            ],
+            if (model.capabilities.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: model.capabilities
+                    .map(
+                      (capability) => _buildCapabilityBadge(
+                        context,
+                        capability,
+                        isSelected: false,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ],
+            if (family != null) ...[
+              const SizedBox(height: 20),
+              _buildVariantLedger(
+                context,
+                family,
+                selectedModelId: state.selectedModelId,
+              ),
+              const SizedBox(height: 26),
+              _buildDetailSection(
+                context,
+                'On this device',
+                _buildFitMeter(context, model),
+              ),
+              const SizedBox(height: 22),
+              _buildDetailSection(context, 'File', _buildFacts(context, model)),
+            ] else ...[
+              const SizedBox(height: 20),
+              _buildDetailSection(
+                context,
+                'Quantization',
+                _buildQuantizationChoice(context, model),
+              ),
+              const SizedBox(height: 18),
+              _buildDetailSection(
+                context,
+                'On this device',
+                _buildFitMeter(context, model),
+              ),
+              const SizedBox(height: 18),
+              _buildDetailSection(context, 'File', _buildFacts(context, model)),
+            ],
+            const SizedBox(height: 18),
+            Divider(
+              height: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
             ),
-          ),
-        ],
-        if (model.capabilities.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: model.capabilities
-                .map(
-                  (capability) => _buildCapabilityBadge(
-                    context,
-                    capability,
-                    isSelected: false,
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        ],
-        if (family != null) ...[
-          const SizedBox(height: 20),
-          _buildVariantLedger(
-            context,
-            family,
-            selectedModelId: state.selectedModelId,
-          ),
-        ] else ...[
-          const SizedBox(height: 20),
-          _buildDetailSection(
-            context,
-            'Quantization',
-            _buildQuantizationChoice(context, model),
-          ),
-          const SizedBox(height: 18),
-          _buildDetailSection(
-            context,
-            'On this device',
-            _buildFitMeter(context, model),
-          ),
-          const SizedBox(height: 18),
-          _buildDetailSection(context, 'File', _buildFacts(context, model)),
-        ],
-        const SizedBox(height: 18),
-        Divider(
-          height: 1,
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+            const SizedBox(height: 14),
+            if (model.fileMissing) ...[
+              _buildMissingFileNotice(context, model),
+              const SizedBox(height: 14),
+            ],
+            _buildDetailActions(context, model, isSelected: isSelected),
+          ],
         ),
-        const SizedBox(height: 14),
-        if (model.fileMissing) ...[
-          _buildMissingFileNotice(context, model),
-          const SizedBox(height: 14),
-        ],
-        _buildDetailActions(context, model, isSelected: isSelected),
-      ],
+      ),
     );
   }
 
@@ -1327,7 +2054,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         // fit badge is the widest thing a row shows, so the fixed columns give
         // way to it instead of squeezing the one column that carries meaning.
         final compact = constraints.maxWidth < 460;
-        final sizeColumnWidth = compact ? 44.0 : 56.0;
+        // Quantization names are short but wide in the mono face: `Q4_K_M`
+        // must not wrap inside its own column.
+        final sizeColumnWidth = compact ? 74.0 : 96.0;
         const contextColumnWidth = 96.0;
         final costColumnWidth = compact ? 76.0 : 104.0;
         final actionColumnWidth = compact ? 76.0 : 104.0;
@@ -1348,7 +2077,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   children: [
                     SizedBox(
                       width: sizeColumnWidth,
-                      child: columnHeader('Params'),
+                      child: columnHeader('Quant'),
                     ),
                     Expanded(
                       child: columnHeader(
@@ -1593,7 +2322,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   SizedBox(
                     width: sizeWidth,
                     child: Text(
-                      variant.parameterSize,
+                      variant.quantization ?? variant.parameterSize,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
                       style: textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -1901,15 +2633,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           : const Icon(Icons.download_rounded, size: 18),
       label: Text(quantization == null ? 'Download' : 'Download $quantization'),
     );
-  }
-
-  /// `macOS · arm64 · 8 cores · 16 GB RAM` with graceful fallbacks.
-  String _deviceLabel(DeviceProfile device) {
-    final memoryBytes = device.totalMemoryBytes ?? device.availableMemoryBytes;
-    final memory = memoryBytes == null || memoryBytes <= 0
-        ? ''
-        : ' · ${_formatBytes(memoryBytes)} RAM';
-    return '${device.summaryLabel}$memory';
   }
 
   Widget _buildEmptyFilterState(

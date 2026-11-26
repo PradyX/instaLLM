@@ -1,5 +1,4 @@
-InstaLLM · Google Play release notes
-====================================
+# InstaLLM · Google Play release notes
 
 ## Where it goes
 

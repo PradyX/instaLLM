@@ -18,6 +18,9 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **Liquid AI LFM2 and OpenBMB MiniCPM3 join the model catalog**: `LFM2 · 350M` (229 MB), `LFM2 · 1.2B` (731 MB) and `MiniCPM3 · 4B` (2.47 GB), all `Q4_K_M`, each with the file its repository actually serves.
+  - Every entry was probed before it shipped: the served byte count, the GGUF header's own architecture (`lfm2`, `lfm2`, `minicpm3`), its chat template and context window — then loaded and made to generate on the pinned `b11819` engine, still through the app's own `llama.framework`.
+  - No capability is claimed for the three, because their files declare none. Liquid AI **LFM3** and MiniCPM4 stay out until the runtime moves: LFM3 support landed upstream in `b11938`, after the pin.
 - **Road Map 2 complete: local agentic workspace (all phases, user-end testing left)**: InstaLLM is a project workspace, not just a chat runtime.
   - *Phase 2.0 workspaces*: a workspace links bots, chats, skills, MCP servers, boards, a vault folder and a repo path, and bots only see assigned workspaces.
   - *Phase 2.1 context intelligence*: a stored compaction policy, a live inspector, per-conversation checkpoints and message pins that survive windowing.

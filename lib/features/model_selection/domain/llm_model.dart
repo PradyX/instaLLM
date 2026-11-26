@@ -620,5 +620,41 @@ class LlmModel {
           'https://huggingface.co/bartowski/Phi-3-mini-4k-instruct-GGUF/resolve/main/Phi-3-mini-4k-instruct-Q4_K_M.gguf',
       localFileName: 'phi-3-mini-4k-instruct-q4_k_m.gguf',
     ),
+    // Liquid AI's LFM2 is a hybrid trained for on-device chat. Every entry
+    // below was checked against what the pinned runtime can load: its GGUF
+    // header declares the architecture, the runtime declares the architecture
+    // name, and the file carries its own chat template. LFM3 is deliberately
+    // absent: it landed upstream in llama.cpp b11938, after this app's pin, so
+    // it would install and then fail to load.
+    LlmModel(
+      id: 'lfm2-350m',
+      name: 'LFM2',
+      parameterSize: '350M',
+      description:
+          'Liquid AI\'s smallest on-device model, quick even on a phone.',
+      downloadUrl:
+          'https://huggingface.co/LiquidAI/LFM2-350M-GGUF/resolve/main/LFM2-350M-Q4_K_M.gguf',
+      localFileName: 'lfm2-350m-q4_k_m.gguf',
+    ),
+    LlmModel(
+      id: 'lfm2-1.2b',
+      name: 'LFM2',
+      parameterSize: '1.2B',
+      description:
+          'Liquid AI\'s 1.2B LFM2, a step up in quality at phone size.',
+      downloadUrl:
+          'https://huggingface.co/LiquidAI/LFM2-1.2B-GGUF/resolve/main/LFM2-1.2B-Q4_K_M.gguf',
+      localFileName: 'lfm2-1.2b-q4_k_m.gguf',
+    ),
+    LlmModel(
+      id: 'minicpm3-4b',
+      name: 'MiniCPM3',
+      parameterSize: '4B',
+      description:
+          'OpenBMB\'s 4B MiniCPM3, a larger local model for a device with room.',
+      downloadUrl:
+          'https://huggingface.co/openbmb/MiniCPM3-4B-GGUF/resolve/main/minicpm3-4b-q4_k_m.gguf',
+      localFileName: 'minicpm3-4b-q4_k_m.gguf',
+    ),
   ];
 }

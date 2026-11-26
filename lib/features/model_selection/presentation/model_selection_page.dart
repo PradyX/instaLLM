@@ -876,7 +876,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               height: thumb,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: value ? colorScheme.onPrimary : colorScheme.outline,
+                color: value ? colorScheme.onPrimary : colorScheme.surface,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x1A000000),
+                    blurRadius: 2,
+                    offset: Offset(0, 1),
+                  ),
+                ],
               ),
             ),
           ),

@@ -6,6 +6,12 @@ import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 import 'package:installm/features/model_selection/presentation/model_reasoning_provider.dart';
 
+/// The divider the merged pill draws between the model and this selector.
+///
+/// Named so a test can prove there is exactly one, and that a model without a
+/// reasoning choice leaves none behind.
+const Key reasoningDividerKey = ValueKey('composer-reasoning-divider');
+
 /// The composer's reasoning chip: whether the model deliberates before it
 /// answers, drawn beside the model pill.
 ///
@@ -20,6 +26,7 @@ class ComposerReasoningControl extends ConsumerWidget {
     super.key,
     required this.modelId,
     required this.enabled,
+    this.inline = false,
   });
 
   /// The model whose reasoning is being chosen; empty when there is none yet.
@@ -27,6 +34,10 @@ class ComposerReasoningControl extends ConsumerWidget {
 
   /// False while a run is in flight: the chip stays readable but closed.
   final bool enabled;
+
+  /// Draws the selector without its own pill, for the model pill that carries
+  /// it behind a divider.
+  final bool inline;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,17 +50,19 @@ class ComposerReasoningControl extends ConsumerWidget {
         ref.watch(reasoningSettingsProvider).choiceFor(modelId) ??
         reasoning.defaultChoice;
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: ComposerReasoningPill(
-        reasoning: reasoning,
-        choice: choice,
-        enabled: enabled,
-        onSelected: (next) => unawaited(
-          ref.read(reasoningSettingsProvider.notifier).setChoice(modelId, next),
-        ),
+    final pill = ComposerReasoningPill(
+      reasoning: reasoning,
+      choice: choice,
+      enabled: enabled,
+      inline: inline,
+      onSelected: (next) => unawaited(
+        ref.read(reasoningSettingsProvider.notifier).setChoice(modelId, next),
       ),
     );
+
+    if (inline) return pill;
+
+    return Padding(padding: const EdgeInsets.only(left: 6), child: pill);
   }
 }
 
@@ -62,6 +75,7 @@ class ComposerReasoningPill extends StatelessWidget {
     required this.enabled,
     this.onSelected,
     this.tooltip = 'Reasoning',
+    this.inline = false,
   });
 
   /// What the model declares: which states exist and which one it starts in.
@@ -78,11 +92,15 @@ class ComposerReasoningPill extends StatelessWidget {
 
   final String tooltip;
 
+  /// No pill of its own: the model pill draws the surface and the divider.
+  final bool inline;
+
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<ReasoningChoice>(
       tooltip: tooltip,
       enabled: enabled,
+      padding: EdgeInsets.zero,
       onSelected: onSelected,
       itemBuilder: (context) => [
         for (final candidate in reasoning.choices)
@@ -104,53 +122,82 @@ class ComposerReasoningPill extends StatelessWidget {
             ),
           ),
       ],
-      child: _ChipBody(choice: choice),
+      child: _ChipBody(choice: choice, inline: inline),
     );
   }
 }
 
 /// The chip: same shape as the model pill, so the two read as one row of
-/// settings rather than two kinds of control.
+/// settings rather than two kinds of control. [inline] drops the surface for
+/// the merged pill, which draws one border around both selectors.
 class _ChipBody extends StatelessWidget {
-  const _ChipBody({required this.choice});
+  const _ChipBody({required this.choice, this.inline = false});
 
   final ReasoningChoice choice;
+  final bool inline;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // One icon for the setting, not for its value: the label already
-          // says which state is in force.
-          Icon(Icons.psychology_outlined, size: 16, color: colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(
+    final row = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // One icon for the setting, not for its value: the label already
+        // says which state is in force.
+        Icon(Icons.psychology_outlined, size: 16, color: colorScheme.primary),
+        const SizedBox(width: 6),
+        // A hard cap rather than a flex: the chip sits inside the model pill's
+        // row, where a nested Flexible is laid out against a width the flex
+        // algorithm never shrinks, and the label used to overflow it.
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 112),
+          child: Text(
             choice.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
-          const SizedBox(width: 2),
-          Icon(
-            Icons.expand_more_rounded,
-            size: 16,
-            color: colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 2),
+        Icon(
+          Icons.expand_more_rounded,
+          size: 16,
+          color: colorScheme.onSurfaceVariant,
+        ),
+      ],
+    );
+
+    if (!inline) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
-        ],
-      ),
+        ),
+        child: row,
+      );
+    }
+
+    // Inside the model pill this selector brings the divider that separates it
+    // from the model, so a model that declares no reasoning leaves no rule
+    // behind.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          key: reasoningDividerKey,
+          width: 1,
+          height: 16,
+          margin: const EdgeInsets.only(right: 8),
+          color: colorScheme.outlineVariant,
+        ),
+        row,
+      ],
     );
   }
 }

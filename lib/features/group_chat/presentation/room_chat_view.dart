@@ -260,10 +260,11 @@ class _RoomChatViewState extends ConsumerState<RoomChatView> {
                     notifier.updateChat(chat.copyWith(modelId: model.id)),
                   ),
                   onEmptyPressed: () => context.push(AppRoutes.modelSelection),
-                ),
-                reasoning: ComposerReasoningControl(
-                  modelId: answerModel?.id ?? '',
-                  enabled: !running,
+                  reasoning: ComposerReasoningControl(
+                    modelId: answerModel?.id ?? '',
+                    enabled: !running,
+                    inline: true,
+                  ),
                 ),
                 onSend: () => _send(_inputController.text),
                 onMicPressed: () => unawaited(

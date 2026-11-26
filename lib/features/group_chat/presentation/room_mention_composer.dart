@@ -71,7 +71,6 @@ class RoomMentionComposer extends StatelessWidget {
     required this.hintText,
     required this.onSend,
     this.leading,
-    this.reasoning,
     this.onMicPressed,
     this.micState = ComposerMicState.idle,
     this.commands = const [],
@@ -82,7 +81,6 @@ class RoomMentionComposer extends StatelessWidget {
   final String hintText;
   final Future<void> Function() onSend;
   final Widget? leading;
-  final Widget? reasoning;
   final VoidCallback? onMicPressed;
   final ComposerMicState micState;
   final List<ComposerCommand> commands;
@@ -95,7 +93,6 @@ class RoomMentionComposer extends StatelessWidget {
     hintText: hintText,
     onSend: onSend,
     leading: leading,
-    reasoning: reasoning,
     onMicPressed: onMicPressed,
     micState: micState,
     additionalQuery: (value) {

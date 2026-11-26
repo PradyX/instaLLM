@@ -37,7 +37,6 @@ class ChatComposer extends StatelessWidget {
     this.sendsOnEnter = true,
     this.header,
     this.leading,
-    this.reasoning,
     this.middle,
     this.onMicPressed,
     this.micState = ComposerMicState.idle,
@@ -65,13 +64,9 @@ class ChatComposer extends StatelessWidget {
   /// Extra rows above the field (home's generating row, draft preview).
   final Widget? header;
 
-  /// First action in the bottom row (home's model pill).
+  /// First action in the bottom row (home's model pill, which carries the
+  /// reasoning selector inside its own pill).
   final Widget? leading;
-
-  /// The reasoning chip, drawn beside [leading] and telling its own margins: it
-  /// draws nothing at all for a model that declares no reasoning, and the row
-  /// must not carry a gap for a control that is not there.
-  final Widget? reasoning;
 
   /// Right-aligned action next to mic/send (home's attach button).
   final Widget? middle;
@@ -169,14 +164,19 @@ class ChatComposer extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Row(
                 children: [
-                  if (leading case final Widget widget) widget,
-                  if (reasoning case final Widget widget) widget,
+                  // The pill takes whatever is left once the buttons are placed,
+                  // never the other way round: a long model name used to push
+                  // the attach and send buttons off a phone's screen.
                   Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: middle ?? const SizedBox(),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (leading case final Widget widget)
+                          Flexible(child: widget),
+                      ],
                     ),
                   ),
+                  if (middle case final Widget widget) widget,
                   const SizedBox(width: 4),
                   if (micHandler != null)
                     SizedBox.square(

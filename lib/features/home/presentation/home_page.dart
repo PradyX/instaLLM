@@ -1467,10 +1467,11 @@ class _HomePageState extends ConsumerState<HomePage> {
                   .read(modelSelectionControllerProvider.notifier)
                   .selectModel(next),
               onEmptyPressed: () => context.push(AppRoutes.modelSelection),
-            ),
-            reasoning: ComposerReasoningControl(
-              modelId: pillModel?.id ?? '',
-              enabled: !isGenerating,
+              reasoning: ComposerReasoningControl(
+                modelId: pillModel?.id ?? '',
+                enabled: !isGenerating,
+                inline: true,
+              ),
             ),
             middle: hasDownloadedModel
                 ? ComposerAttachButton(

@@ -75,8 +75,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// The variant the family ledger highlights, set when a row is opened.
   String? _focusedModelId;
 
-  /// The model whose page is open, if any; null shows the catalog list.
-  String? _detailModelId;
+  /// The family whose row has unfolded into its details, if any. One at a
+  /// time: an open row is the list's focus, and two open rows would make the
+  /// catalog twice as long as what it is showing.
+  String? _expandedFamilyKey;
 
   /// The parameter-size bucket the list is narrowed to, if any.
   _SizeBucket? _sizeBucket;
@@ -519,29 +521,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       );
     }
 
-    // The model whose page is open, and the family it belongs to. The page
-    // replaces the catalog instead of sitting beside it.
-    LlmModel? detailModel;
-    if (_detailModelId != null) {
-      for (final model in filteredModels) {
-        if (model.id == _detailModelId) {
-          detailModel = model;
-          break;
-        }
-      }
-    }
-    ModelFamily? detailFamily;
-    if (detailModel != null) {
-      for (final family in families) {
-        if (family.variants.any(
-          (variant) => variant.model.id == detailModel!.id,
-        )) {
-          detailFamily = family;
-          break;
-        }
-      }
-    }
-
     // A family's avatar and sub-line label prefer the model's own creator
     // (Qwen, not the community account that quantized it): this is also the
     // page's only automatic network habit. Only the very first time a name
@@ -609,20 +588,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth >= 760;
-
-          if (detailModel != null) {
-            return _buildDetailPane(
-              context,
-              state,
-              detailModel,
-              family: detailFamily,
-              wide: wide,
-              onBack: () => setState(() {
-                _detailModelId = null;
-                _expandedVariantId = null;
-              }),
-            );
-          }
 
           final list = _buildListPane(
             context,
@@ -1522,6 +1487,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
     final model = variant.model;
     final inUse = model.id == state.selectedModelId;
+    final expanded = _expandedFamilyKey == family.key;
     // The publisher reads as a fact about the file, so it sits in the meta
     // line; the title is then the repository name alone, which is what the
     // catalog row is actually pointing at.
@@ -1540,94 +1506,273 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     ].join(' · ');
     final fit = _rowFitLabel(context, variant, device);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          unawaited(_loadFitReport(model));
-          unawaited(_loadGgufMetadata(model));
-          setState(() {
-            _focusedModelId = model.id;
-            _detailModelId = model.id;
-          });
-        },
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: wide ? 24 : 16,
-            vertical: wide ? 12 : 9,
-          ),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _toggleFamilyDetails(family, model),
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: wide ? 24 : 16,
+                vertical: wide ? 12 : 9,
               ),
-            ),
-          ),
-          child: Row(
-            children: [
-              _buildFamilyMonogram(
-                context,
-                family,
-                publisher,
-                size: wide ? 38 : 34,
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+                  ),
+                ),
               ),
-              SizedBox(width: wide ? 14 : 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+              child: Row(
+                children: [
+                  _buildFamilyMonogram(
+                    context,
+                    family,
+                    publisher,
+                    size: wide ? 38 : 34,
+                  ),
+                  SizedBox(width: wide ? 14 : 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Flexible(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _monoTitle(context, wide: wide),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: _monoTitle(context, wide: wide),
+                              ),
+                            ),
+
+                            if (family.hasMissingFile) ...[
+                              const SizedBox(width: 6),
+                              Tooltip(
+                                message: 'File missing — download again',
+                                child: Icon(
+                                  Icons.report_gmailerrorred_rounded,
+                                  size: 15,
+                                  color: colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
-
-                        if (family.hasMissingFile) ...[
-                          const SizedBox(width: 6),
-                          Tooltip(
-                            message: 'File missing — download again',
-                            child: Icon(
-                              Icons.report_gmailerrorred_rounded,
-                              size: 15,
-                              color: colorScheme.error,
+                        if (fit != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            fit.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.labelSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: fit.color,
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildRowAction(context, model, inUse: inUse),
+                  const SizedBox(width: 8),
+                  _buildExpandButton(
+                    context,
+                    expanded: expanded,
+                    onTap: () => _toggleFamilyDetails(family, model),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (expanded)
+          _buildExpandedCard(context, state, model, family: family, wide: wide),
+      ],
+    );
+  }
+
+  /// Opens a row's details under it, or folds them away. The list stays where
+  /// it is, so comparing a model against its neighbours costs no navigation.
+  void _toggleFamilyDetails(ModelFamily family, LlmModel model) {
+    unawaited(_loadFitReport(model));
+    unawaited(_loadGgufMetadata(model));
+    setState(() {
+      _focusedModelId = model.id;
+      _expandedVariantId = null;
+      _expandedFamilyKey = _expandedFamilyKey == family.key ? null : family.key;
+    });
+  }
+
+  /// The chevron that unfolds a row. It sits beside the action so the two
+  /// read as a pair: what this row does, and what else there is to know.
+  Widget _buildExpandButton(
+    BuildContext context, {
+    required bool expanded,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: expanded ? 'Hide details' : 'Show details',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 34,
+          height: 40,
+          decoration: BoxDecoration(
+            border: Border.all(color: colorScheme.outlineVariant),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(
+            expanded
+                ? Icons.keyboard_arrow_up_rounded
+                : Icons.keyboard_arrow_down_rounded,
+            size: 20,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Everything about one model, unfolded under its row: the identity line,
+  /// the description, the family's variant ledger, the estimate for this
+  /// device, the file's facts and its actions. A family is always a ledger —
+  /// one row per variant with its context, size, fit on this device and
+  /// action, whether it holds one variant or several — and a row opens in
+  /// place to carry its own quantization, fit meter and file facts.
+  Widget _buildExpandedCard(
+    BuildContext context,
+    ModelSelectionState state,
+    LlmModel model, {
+    required ModelFamily family,
+    required bool wide,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isSelected = model.id == state.selectedModelId;
+
+    // The card is the details, so the estimate it shows is asked for on
+    // arrival rather than after a tap.
+    if (!_fitRequests.contains(model.id) &&
+        !_fitReports.containsKey(model.id)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(_loadFitReport(model));
+      });
+    }
+
+    final identity = <String>[
+      family.parameterRange,
+      model.promptFormatId,
+      model.isCustom ? 'Custom' : model.effectiveSource.label,
+    ].join(' · ');
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(wide ? 24 : 16, 2, wide ? 24 : 16, 14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerLow,
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+          ),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              identity,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              model.description,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (model.isCustom) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Custom',
+                    style: textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onTertiaryContainer,
                     ),
-                    if (fit != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        fit.text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: fit.color,
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              _buildRowAction(context, model, inUse: inUse),
             ],
-          ),
+            if (model.capabilities.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: model.capabilities
+                    .map(
+                      (capability) => _buildCapabilityBadge(
+                        context,
+                        capability,
+                        isSelected: false,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ],
+            const SizedBox(height: 18),
+            _buildVariantLedger(
+              context,
+              family,
+              selectedModelId: state.selectedModelId,
+            ),
+            const SizedBox(height: 20),
+            _buildDetailSection(
+              context,
+              'On this device',
+              _buildFitMeter(context, model),
+            ),
+            const SizedBox(height: 18),
+            _buildDetailSection(context, 'File', _buildFacts(context, model)),
+            const SizedBox(height: 14),
+            Divider(
+              height: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 12),
+            if (model.fileMissing) ...[
+              _buildMissingFileNotice(context, model),
+              const SizedBox(height: 12),
+            ],
+            _buildDetailActions(context, model, isSelected: isSelected),
+          ],
         ),
       ),
     );
@@ -1818,189 +1963,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           color: colorScheme.onSurface,
           fontSize: size * 0.4,
           fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
-  /// The right pane: everything about one model, including the quantization
-  /// it will download and what it costs this device. A family is always a
-  /// ledger — one row per variant with its context, size, fit on this device
-  /// and action, whether it holds one variant or several — and a row opens in
-  /// place to carry its own quantization, fit meter and file facts.
-  Widget _buildDetailPane(
-    BuildContext context,
-    ModelSelectionState state,
-    LlmModel model, {
-    required ModelFamily? family,
-    required bool wide,
-    VoidCallback? onBack,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final isSelected = model.id == state.selectedModelId;
-
-    // The pane is the details, so the estimate it shows is asked for on
-    // arrival rather than after a tap.
-    if (!_fitRequests.contains(model.id) &&
-        !_fitReports.containsKey(model.id)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) unawaited(_loadFitReport(model));
-      });
-    }
-
-    final identity = <String>[
-      family?.parameterRange ?? model.parameterSize,
-      model.promptFormatId,
-      model.isCustom ? 'Custom' : model.effectiveSource.label,
-    ].join(' · ');
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120),
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            wide ? 48 : 16,
-            wide ? 16 : 8,
-            wide ? 48 : 16,
-            28,
-          ),
-          children: [
-            if (onBack != null)
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: onBack,
-                    icon: Icon(Icons.arrow_back_rounded, size: wide ? 20 : 22),
-                    tooltip: 'Back to catalog',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 34,
-                      height: 34,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Catalog',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      model.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _monoTitle(context, wide: false),
-                    ),
-                  ),
-                ],
-              ),
-            Text(
-              family?.displayName ?? model.name,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.4,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              identity,
-              style: textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              model.description,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (model.isCustom) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.tertiaryContainer,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Custom',
-                    style: textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.onTertiaryContainer,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (model.capabilities.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: model.capabilities
-                    .map(
-                      (capability) => _buildCapabilityBadge(
-                        context,
-                        capability,
-                        isSelected: false,
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ],
-            if (family != null) ...[
-              const SizedBox(height: 20),
-              _buildVariantLedger(
-                context,
-                family,
-                selectedModelId: state.selectedModelId,
-              ),
-              const SizedBox(height: 26),
-              _buildDetailSection(
-                context,
-                'On this device',
-                _buildFitMeter(context, model),
-              ),
-              const SizedBox(height: 22),
-              _buildDetailSection(context, 'File', _buildFacts(context, model)),
-            ] else ...[
-              const SizedBox(height: 20),
-              _buildDetailSection(
-                context,
-                'Quantization',
-                _buildQuantizationChoice(context, model),
-              ),
-              const SizedBox(height: 18),
-              _buildDetailSection(
-                context,
-                'On this device',
-                _buildFitMeter(context, model),
-              ),
-              const SizedBox(height: 18),
-              _buildDetailSection(context, 'File', _buildFacts(context, model)),
-            ],
-            const SizedBox(height: 18),
-            Divider(
-              height: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 14),
-            if (model.fileMissing) ...[
-              _buildMissingFileNotice(context, model),
-              const SizedBox(height: 14),
-            ],
-            _buildDetailActions(context, model, isSelected: isSelected),
-          ],
         ),
       ),
     );

@@ -1852,49 +1852,37 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         // "Open" button there would be a no-op beside a row that already says
         // what the chat is running.
         if (inUse) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
+          return Tooltip(
+            message: 'In use',
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(
                 Icons.check_circle_rounded,
-                size: 16,
+                size: 20,
                 color: colorScheme.primary,
               ),
-              const SizedBox(width: 6),
-              Text(
-                'In use',
-                style: textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.primary,
-                ),
-              ),
-            ],
+            ),
           );
         }
 
-        // A row action is a quiet accent label and glyph, not a boxed button:
-        // every row carries one, and outlines on all of them make the list
-        // read as a wall of controls.
-        return TextButton.icon(
+        // A row action is a quiet accent glyph, not a boxed button: every row
+        // carries one, and a label on all of them turns a list of names into a
+        // list of buttons. The tooltip keeps the verb for the pointer and for
+        // screen readers.
+        return IconButton(
           onPressed: model.isDownloaded
               ? () => controller.selectModel(model)
               : () => _handleDownload(model),
-          style: TextButton.styleFrom(
-            foregroundColor: colorScheme.primary,
-            minimumSize: const Size(0, 40),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            visualDensity: VisualDensity.compact,
-            textStyle: textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          tooltip: model.isDownloaded ? 'Open' : 'Download',
+          visualDensity: VisualDensity.compact,
+          iconSize: 22,
+          color: colorScheme.primary,
           icon: Icon(
             model.isDownloaded
                 ? Icons.arrow_forward_rounded
                 : Icons.download_rounded,
-            size: 16,
           ),
-          label: Text(model.isDownloaded ? 'Open' : 'Download'),
         );
       },
     );

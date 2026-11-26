@@ -840,39 +840,39 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final child = SizedBox(
-      width: width,
-      height: 34,
-      child: Center(
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textTheme.labelMedium?.copyWith(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
+    // The chosen segment is a pill *inside* the track, not a slice of it: a
+    // full-height slice rounds its own corners against the track's, which
+    // leaves grey wedges that read as square cuts at the ends of the rail.
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        width: width,
+        height: 34,
+        child: Center(
+          child: Container(
+            height: 28,
+            margin: const EdgeInsets.symmetric(horizontal: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            alignment: Alignment.center,
+            decoration: selected
+                ? BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(7),
+                  )
+                : null,
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelMedium?.copyWith(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
-        ),
-      ),
-    );
-
-    return Material(
-      color: selected ? colorScheme.surface : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          height: 34,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: selected
-              ? BoxDecoration(
-                  border: Border.all(color: colorScheme.outlineVariant),
-                  borderRadius: BorderRadius.circular(9),
-                )
-              : null,
-          child: child,
         ),
       ),
     );

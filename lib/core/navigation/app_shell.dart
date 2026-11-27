@@ -1257,9 +1257,18 @@ class _NavigationTabs extends StatelessWidget {
           ])
             Expanded(
               child: Material(
-                color: tab == value
-                    ? appearanceSurfaceColor(context, colors.surface)
-                    : Colors.transparent,
+                // The selected tab takes the panel's own colour rather than the
+                // bare surface: on the glass panel a surface-coloured chip sat
+                // there as a block of pure white, while the panel around it kept
+                // the tint showing through.
+                color: tab != value
+                    ? Colors.transparent
+                    : usesTranslucentSurfaces(context)
+                    ? appearanceSurfaceColor(
+                        context,
+                        colors.surfaceContainerLow,
+                      )
+                    : colors.surface,
                 borderRadius: BorderRadius.circular(8),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(

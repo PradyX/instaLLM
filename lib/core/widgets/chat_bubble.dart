@@ -249,14 +249,14 @@ class _ChatBubbleState extends State<ChatBubble> {
           if (widget.onRegenerate != null ||
               widget.onReadAloud != null ||
               widget.extraActions.isNotEmpty)
-            // Glyphs only, with the label on the tooltip: outlined pills read
-            // as heavy furniture under a reply, and the two actions are
-            // recognisable at a glance.
+            // Icon buttons with the label on the tooltip: the words made the
+            // row read as furniture under a reply, while the outline keeps the
+            // controls legible without them.
             Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Wrap(
-                spacing: 2,
-                runSpacing: 2,
+                spacing: 6,
+                runSpacing: 6,
                 children: [
                   if (widget.onReadAloud != null)
                     _ReplyActionButton(
@@ -913,20 +913,36 @@ class _ReplyActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      icon: Icon(icon, size: 15),
-      iconSize: 15,
-      color: color,
-      visualDensity: VisualDensity.compact,
-      padding: const EdgeInsets.all(6),
-      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
-      style: IconButton.styleFrom(
-        highlightColor: color.withValues(alpha: 0.10),
-        hoverColor: color.withValues(alpha: 0.08),
-        focusColor: color.withValues(alpha: 0.10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    // Outlined and just off the bubble: a bare glyph under a reply was hard to
+    // read as a control, and the hairline plus one step of surface separates
+    // it from the bubble without drawing a second card.
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+      side: BorderSide(color: color.withValues(alpha: 0.26)),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Material(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.35),
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: shape,
+          child: Tooltip(
+            message: tooltip,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 32),
+              child: Center(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Icon(icon, size: 16, color: color),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

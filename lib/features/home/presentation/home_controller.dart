@@ -270,9 +270,9 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
         reservedOutputTokens: window.resolvedConfig.maxOutputTokens,
       );
 
-  // The tool contract is only sent to a model whose template can carry tool
-  // calls, so the projection charges for it exactly when a request would.
-  final toolContractIncluded = window.model.supportsToolCalling;
+  // Chat sends no tool contract, so the projection charges for none: what a
+  // request will cost is the persona, the memory facts and the messages.
+  const toolContractIncluded = false;
   final savedMemory = ref.watch(memoryProvider);
   final conversation = ref
       .watch(conversationControllerProvider)
@@ -309,19 +309,11 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
   } on FormatException {
     /* The send path reports an actionable selection error. */
   }
-  final projectedRegistry = ref
-      .watch(toolRegistryProvider)
-      .extendedWith(projectedSkills?.tools() ?? []);
   return projectConversationContext(
     messages: ref.watch(homeControllerProvider),
     systemPrompt: [
       withMemoryFacts(
-        composePersonaSystemPrompt(
-          persona: window.persona,
-          toolContract: toolContractIncluded
-              ? projectedRegistry.describeForPrompt()
-              : '',
-        ),
+        composePersonaSystemPrompt(persona: window.persona),
         facts,
       ),
       ...?projectedSkills?.sections,
@@ -409,14 +401,16 @@ class HomeController extends _$HomeController {
     return profiles.profileById(pinnedId) ?? profiles.activeProfile;
   }
 
-  /// System prompt for one request: the persona plus the contract of the tools
-  /// that actually run on this platform.
+  /// System prompt for one request: the persona, and nothing else.
   ///
-  /// A model that cannot call tools is not sent the contract at all. The
-  /// instructions cost roughly 500 tokens on macOS and 700 on Android, and a
-  /// model without a tool template cannot act on them — it would only pay for
-  /// text it was never trained to follow.
-  String _systemPromptFor(LlmModel model) {
+  /// The tool contract used to ride along here, and it was most of the prompt: a
+  /// contract for the 13 tools a phone advertises costs ~1,070 tokens, so a
+  /// two-message chat paid over a thousand tokens before the first word. A
+  /// small local model rarely turned that into a call, and the prompt cost was
+  /// paid on every request whether it did or not. Chat now sends only the
+  /// persona and the conversation itself; bots and agent runs, which exist to
+  /// use tools, still get their own contract.
+  String _systemPromptFor() {
     final memory = ref.read(memoryProvider.notifier);
     final facts = memory.promptFacts(
       scope: BotMemoryScope.global,
@@ -426,12 +420,7 @@ class HomeController extends _$HomeController {
           .conversationWorkspaces[_activeConversationId],
     );
     final base = withMemoryFacts(
-      composePersonaSystemPrompt(
-        persona: _activePersona,
-        toolContract: model.supportsToolCalling
-            ? _turnRegistry.describeForPrompt()
-            : '',
-      ),
+      composePersonaSystemPrompt(persona: _activePersona),
       facts,
     );
     return [
@@ -1079,7 +1068,7 @@ class HomeController extends _$HomeController {
           for (final message in state)
             if (message.id != aiMessageId) message,
         ],
-        systemPrompt: _systemPromptFor(selectedModel),
+        systemPrompt: _systemPromptFor(),
         policy: contextPolicy,
         documentContext: documentContext,
         memory: _conversationMemory,

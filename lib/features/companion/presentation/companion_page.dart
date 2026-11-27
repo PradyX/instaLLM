@@ -763,7 +763,7 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
             children: [
               _chip(theme.textTheme, colors),
               if (_open && model != null) ...[
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 // A long library scrolls inside the dock rather than growing
                 // it past the bottom of a short window.
                 ConstrainedBox(
@@ -793,39 +793,42 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
   }
 
   /// The model in use, and the one control that opens the list under it.
+  /// The model in use: one quiet row on the panel, centred as a group, and the
+  /// one control that opens the list under it.
+  ///
+  /// A row rather than a pill of its own, because a white pill inside the grey
+  /// panel read as a card inside a card and left the rest of the line empty.
+  /// The chevron travels with the name instead of standing at the edge.
   Widget _chip(TextTheme theme, ColorScheme colors) {
     final model = widget.selected;
     if (model == null) {
-      return Align(
-        alignment: Alignment.centerLeft,
+      return Center(
         child: TextButton(
           onPressed: widget.onOpenLibrary,
           child: const Text('Get a model'),
         ),
       );
     }
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Tooltip(
-        message: _open ? 'Close the model list' : 'Change the companion model',
-        child: Material(
-          color: colors.surface,
-          shape: const StadiumBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            key: const Key('companion-dock-model'),
-            onTap: widget.enabled ? _toggle : null,
+    return Column(
+      children: [
+        InkWell(
+          key: const Key('companion-dock-model'),
+          borderRadius: BorderRadius.circular(14),
+          onTap: widget.enabled ? _toggle : null,
+          child: Tooltip(
+            message: _open
+                ? 'Close the model list'
+                : 'Change the companion model',
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  LlmChipIcon(size: 16, color: colors.primary),
-                  const SizedBox(width: 7),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 210),
+                  LlmChipIcon(size: 15, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Flexible(
                     child: Text(
-                      '${model.name} · ${model.parameterSize}',
+                      model.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: theme.labelMedium?.copyWith(
@@ -833,7 +836,14 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 5),
+                  Text(
+                    model.parameterSize,
+                    style: theme.labelSmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
                   Icon(
                     _open
                         ? Icons.expand_less_rounded
@@ -846,7 +856,12 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
             ),
           ),
         ),
-      ),
+        Divider(
+          height: 1,
+          thickness: 1,
+          color: colors.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ],
     );
   }
 

@@ -1,6 +1,5 @@
 package com.prady.installm
 
-import android.app.assist.AssistStructure
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.ContentValues
@@ -14,6 +13,7 @@ import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.provider.Settings
 import java.io.File
+import com.prady.installm.assistant.AssistSession
 import com.prady.installm.tools.ToolExecutor
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -47,9 +47,6 @@ class MainActivity : FlutterActivity() {
     private val maxSharedAttachmentBytes = 32L * 1024 * 1024
     private val stagedShareLifetimeMillis = 24L * 60 * 60 * 1000
 
-    // How much of the screen an assistant launch may stage in the composer. A
-    // whole screen of text would dwarf the question the user is about to ask.
-    private val maxAssistTextChars = 1500
 
     // The manifest alias that makes InstaLLM appear in other apps' share sheets
     // and in link handling. It ships disabled: the user turns it on in Settings
@@ -326,6 +323,14 @@ class MainActivity : FlutterActivity() {
         return isShareTargetEnabled()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // The assistant's floating panel stays up until the chat it opened is
+        // actually on screen, so dismissing it can never take the launch with
+        // it.
+        AssistSession.hideActive()
+    }
+
     override fun onNewIntent(intent: Intent) {
         // Flutter hands a VIEW intent's data URI to the router as an in-app
         // route, and the app has no http(s) routes: a link that arrived while
@@ -354,13 +359,18 @@ class MainActivity : FlutterActivity() {
         processTextReadOnly = null
         if (intent == null) return null
 
-        // An assistant launch asks for the composer, and brings the text of the
-        // screen it was summoned from so the user can ask about it. The screen
-        // is optional: a launch with none still opens the chat.
+        // An assistant launch carries what the floating composer collected: the
+        // question, the screen's text, and a picture of it when the device
+        // offered one. Every part is optional — an empty send still opens the
+        // chat, which is what the summon alone asks for.
         if (intent.action == Intent.ACTION_ASSIST) {
+            val attachments = mutableListOf<Map<String, String>>()
+            assistScreenshotFrom(intent)?.let { attachments.add(it) }
             return mapOf(
-                "text" to assistTextFrom(intent),
-                "attachments" to emptyList<Map<String, String>>(),
+                "text" to intent.getStringExtra(EXTRA_ASSIST_QUERY)?.trim()?.ifEmpty { null },
+                "attachments" to attachments,
+                "screenText" to intent.getStringExtra(EXTRA_ASSIST_SCREEN_TEXT)?.trim()
+                    ?.ifEmpty { null },
                 "unreadable" to 0,
                 "assist" to true,
             )
@@ -394,40 +404,24 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * The text on the screen the assistant was summoned from, or null.
+     * The picture of the screen the session saved, described for the composer,
+     * or null when there is none.
      *
-     * This is the view text the platform captured for the assistant, not a
-     * picture: it is what lets a local, text-only model answer about what the
-     * user is looking at. It is bounded and de-duplicated, because a screen can
-     * hold far more text than a prompt should carry.
+     * Only a file the app itself wrote is accepted: the path arrives in an
+     * intent, so it is checked for being a real, non-empty file in our own
+     * storage rather than trusted to name anything.
      */
-    @Suppress("DEPRECATION")
-    private fun assistTextFrom(intent: Intent): String? {
-        val structure =
-            try {
-                intent.getParcelableExtra(EXTRA_ASSIST_STRUCTURE) as? AssistStructure
-            } catch (e: Exception) {
-                null
-            } ?: return null
-
-        val lines = mutableListOf<String>()
-        var budget = maxAssistTextChars
-        fun visit(node: AssistStructure.ViewNode?) {
-            if (node == null || budget <= 0) return
-            for (candidate in listOf(node.text, node.contentDescription)) {
-                val text = candidate?.toString()?.trim().orEmpty()
-                if (text.isEmpty() || lines.lastOrNull() == text) continue
-                val clipped = if (text.length > budget) text.take(budget) else text
-                lines.add(clipped)
-                budget -= clipped.length
-                if (budget <= 0) return
-            }
-            for (index in 0 until node.childCount) visit(node.getChildAt(index))
-        }
-        for (index in 0 until structure.windowNodeCount) {
-            visit(structure.getWindowNodeAt(index).rootViewNode)
-        }
-        return lines.joinToString("\n").trim().ifEmpty { null }
+    private fun assistScreenshotFrom(intent: Intent): Map<String, String>? {
+        val path = intent.getStringExtra(EXTRA_ASSIST_SCREENSHOT) ?: return null
+        val staged = File(path)
+        val owned = File(filesDir, stagedShareDirectoryName).absolutePath
+        if (staged.parentFile?.absolutePath != owned) return null
+        if (!staged.isFile || staged.length() <= 0L) return null
+        return mapOf(
+            "path" to staged.absolutePath,
+            "mimeType" to "image/png",
+            "name" to "screen.png",
+        )
     }
 
     /**
@@ -686,9 +680,10 @@ class MainActivity : FlutterActivity() {
     }
 
     companion object {
-        // The screen an assistant session read, handed to this activity in the
-        // intent that opens it. Intent.EXTRA_ASSIST_STRUCTURE is not public API,
-        // so the key is our own: both ends of this hand-off are in this app.
-        const val EXTRA_ASSIST_STRUCTURE = "com.prady.installm.extra.ASSIST_STRUCTURE"
+        // What the assistant's floating composer collected, handed to this
+        // activity in the intent that opens it.
+        const val EXTRA_ASSIST_QUERY = "com.prady.installm.extra.ASSIST_QUERY"
+        const val EXTRA_ASSIST_SCREEN_TEXT = "com.prady.installm.extra.ASSIST_SCREEN_TEXT"
+        const val EXTRA_ASSIST_SCREENSHOT = "com.prady.installm.extra.ASSIST_SCREENSHOT"
     }
 }

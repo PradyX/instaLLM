@@ -40,6 +40,7 @@ import 'package:installm/core/navigation/app_shell.dart';
 import 'package:installm/features/voice/application/tts_controller.dart';
 import 'package:installm/features/voice/application/voice_conversation_controller.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/share/application/assist_ask_provider.dart';
 import 'package:installm/features/share/application/assist_launch_provider.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/process_text_provider.dart';
@@ -93,6 +94,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   ProviderSubscription<String?>? _conversationSubscription;
   ProviderSubscription<List<SharedAttachment>>? _draftAttachmentsSubscription;
   ProviderSubscription<int>? _assistLaunchSubscription;
+  ProviderSubscription<int>? _assistAskSubscription;
 
   /// Reply currently being read aloud, so its own button can offer a stop.
   String? _readingMessageId;
@@ -143,6 +145,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _conversationSubscription?.close();
     _draftAttachmentsSubscription?.close();
     _assistLaunchSubscription?.close();
+    _assistAskSubscription?.close();
     _composerFocusNode.dispose();
     _messageController.dispose();
     _scrollController.dispose();
@@ -183,12 +186,18 @@ class _HomePageState extends ConsumerState<HomePage> {
     ) {
       if (next > 0) _focusComposer();
     });
+    // A question sent from the assistant's floating panel has already been
+    // asked, so the chat asks it once its draft is in the composer.
+    _assistAskSubscription = ref.listenManual(assistAskProvider, (_, next) {
+      if (next > 0) unawaited(_askFromAssistant());
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final pendingDraft = ref.read(composerDraftProvider);
       if (pendingDraft != null) _applyComposerDraft(pendingDraft);
       _consumeStagedAttachments();
       if (ref.read(assistLaunchProvider) > 0) _focusComposer();
+      if (ref.read(assistAskProvider) > 0) unawaited(_askFromAssistant());
     });
 
     // Reading a reply aloud follows the generation that produced it: the
@@ -281,6 +290,23 @@ class _HomePageState extends ConsumerState<HomePage> {
       selection: TextSelection.collapsed(offset: next.length),
     );
     _scheduleScrollToBottom(animated: true);
+  }
+
+  /// Sends a question the assistant's panel already asked.
+  ///
+  /// The panel opens the chat from nothing, so the model list can still be
+  /// loading when the question arrives, and a send at that moment would answer
+  /// "no model selected". The question waits for a downloaded model instead of
+  /// failing on a race the user cannot see.
+  Future<void> _askFromAssistant() async {
+    for (var attempt = 0; attempt < 50; attempt++) {
+      if (!mounted) return;
+      final model = ref.read(modelSelectionControllerProvider).selectedModel;
+      if (model != null && model.isDownloaded) break;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (!mounted) return;
+    await _sendMessage();
   }
 
   Future<void> _sendMessage() async {

@@ -45,6 +45,7 @@ class SharedPayload {
     this.attachments = const [],
     this.processTextReadOnly,
     this.assist = false,
+    this.screenText,
   });
 
   final String? text;
@@ -52,8 +53,14 @@ class SharedPayload {
 
   /// True when the device's assistant slot launched the app (Road Map 5 Phase
   /// 5.3). Such a launch asks for the composer, and brings the screen it was
-  /// summoned from as an attachment when the platform let it be captured.
+  /// summoned from — as a picture in [attachments] and as [screenText].
   final bool assist;
+
+  /// The text on the screen the assistant was summoned from, or null.
+  ///
+  /// It is the fallback for a model that cannot read the picture, so the two
+  /// describe the same screen and only one of them is ever used.
+  final String? screenText;
 
   /// True for a read-only selection, false when it can be replaced, null when
   /// this payload is not a text selection at all.
@@ -116,11 +123,15 @@ SharedPayload? sharedPayloadFromMap(Object? raw) {
   }
 
   final rawReadOnly = raw['processTextReadOnly'];
+  final rawScreenText = raw['screenText'];
   final payload = SharedPayload(
     text: text,
     attachments: attachments,
     processTextReadOnly: rawReadOnly is bool ? rawReadOnly : null,
     assist: raw['assist'] == true,
+    screenText: rawScreenText is String && rawScreenText.trim().isNotEmpty
+        ? rawScreenText.trim()
+        : null,
   );
   return payload.isEmpty ? null : payload;
 }

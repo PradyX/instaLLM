@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/features/home/application/reply_notice_service.dart';
 import 'package:installm/features/home/presentation/home_controller.dart';
+import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 import 'package:installm/features/reminders/application/scheduled_job_service.dart';
+import 'package:installm/features/share/application/assist_ask_provider.dart';
 import 'package:installm/features/share/application/assist_launch_provider.dart';
 import 'package:installm/features/share/application/draft_attachments_provider.dart';
 import 'package:installm/features/share/application/share_inbox.dart';
@@ -120,11 +122,25 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
 
   void _stage(SharedPayload payload) {
     if (!mounted) return;
-    final text = payload.text;
-    if (text != null) {
+    // A summon's screen is one thing described twice: a picture for a model
+    // that can read one, and the screen's text for a model that cannot.
+    // Sending both would ask about the same screen twice.
+    final screenText = payload.screenText;
+    final keepsPicture =
+        screenText != null && payload.images.isNotEmpty && _readsPictures();
+    final text = screenText != null && !keepsPicture
+        ? _withScreenText(payload.text, screenText)
+        : payload.text;
+    if (text != null && text.trim().isNotEmpty) {
       ref.read(composerDraftProvider.notifier).setDraft(text);
     }
-    ref.read(draftAttachmentsProvider.notifier).stage(payload.attachments);
+    ref
+        .read(draftAttachmentsProvider.notifier)
+        .stage(
+          screenText != null && !keepsPicture
+              ? const <SharedAttachment>[]
+              : payload.attachments,
+        );
     final readOnly = payload.processTextReadOnly;
     if (readOnly != null) {
       ref.read(processTextRequestProvider.notifier).begin(readOnly: readOnly);
@@ -133,8 +149,30 @@ class _ShareInboxBridgeState extends ConsumerState<_ShareInboxBridge> {
     // composer, which is empty until the user types.
     if (payload.assist) {
       ref.read(assistLaunchProvider.notifier).signal();
+      // A question typed in the assistant's float was already sent by the
+      // user; only a bare summon leaves the composer to them.
+      if (payload.text != null && payload.text!.trim().isNotEmpty) {
+        ref.read(assistAskProvider.notifier).signal();
+      }
     }
     ref.read(appRouterProvider).go(AppRoutes.home);
+  }
+
+  /// Whether the selected model can actually take a picture.
+  ///
+  /// An image attached to a text-only model is dropped by the composer, so
+  /// asking here is what decides between the picture and the screen's text.
+  bool _readsPictures() {
+    final model = ref.read(modelSelectionControllerProvider).selectedModel;
+    return model != null && model.isDownloaded && model.supportsVision;
+  }
+
+  /// The question, followed by what the screen says.
+  static String _withScreenText(String? question, String screenText) {
+    final asked = question?.trim() ?? '';
+    final screen = screenText.trim();
+    if (screen.isEmpty) return asked;
+    return asked.isEmpty ? 'Screen:\n$screen' : '$asked\n\nScreen:\n$screen';
   }
 
   @override

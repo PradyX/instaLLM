@@ -586,13 +586,24 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }
 
   /// The phone's title row. The search lives in its own row below it, so this
-  /// one only carries the page name and the add action.
+  /// one only carries the way back, the page name and the add action.
+  ///
+  /// The page builds its own headers instead of an [AppBar], so it has to
+  /// offer the back control an [AppBar] would: Models is pushed from chat and
+  /// settings, and on a narrow screen this row is the only way out.
   Widget _buildPhoneHeader(BuildContext context, ModelSelectionState state) {
     final textTheme = Theme.of(context).textTheme;
+    final canGoBack = ModalRoute.of(context)?.canPop ?? false;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      padding: EdgeInsets.fromLTRB(canGoBack ? 4 : 16, 4, 8, 4),
       child: Row(
         children: [
+          if (canGoBack)
+            IconButton(
+              onPressed: () => Navigator.maybePop(context),
+              icon: const Icon(Icons.arrow_back_rounded, size: 22),
+              tooltip: 'Back',
+            ),
           Text(
             'Models',
             style: textTheme.titleLarge?.copyWith(

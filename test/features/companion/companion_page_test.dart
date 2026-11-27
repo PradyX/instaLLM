@@ -610,7 +610,11 @@ void main() {
     final shortWindow = tester.getRect(orb);
     expect(shortWindow.top, greaterThanOrEqualTo(0));
     expect(shortWindow.bottom, lessThanOrEqualTo(560));
-    expect(shortWindow.width, closeTo(236, 1));
+    // The model control shares the column with the voice pill, so a window this
+    // short scales the orb down. It still has to stay square and whole instead
+    // of being clipped or squashed.
+    expect(shortWindow.width, closeTo(shortWindow.height, 1));
+    expect(shortWindow.width, greaterThan(120));
 
     final session = find.byKey(const Key('companion-session'));
     final history = tester.state<ScrollableState>(

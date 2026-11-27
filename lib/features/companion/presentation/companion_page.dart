@@ -93,9 +93,9 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
       section: AppSection.companion,
       child: Scaffold(
         appBar: AppBar(
-          // On a phone the actions leave the title about 100 dp; scaling it
-          // down when it does not fit keeps both lines readable instead of
-          // showing "Voice m…" next to the model pill.
+          // On a phone the settings action leaves the title about 100 dp;
+          // scaling it down when it does not fit keeps both lines readable
+          // instead of showing "Voice m…".
           title: FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -126,24 +126,10 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
           actions: [
             IconButton(
               tooltip: 'Companion settings',
-              icon: const Icon(Icons.tune_rounded),
+              icon: const Icon(Icons.settings_rounded),
               onPressed: () => context.push(AppRoutes.companionSettings),
             ),
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Center(
-                child: ComposerModelPill(
-                  models: models,
-                  selected: selected,
-                  enabled: !listening && !busy,
-                  tooltip: 'Companion model',
-                  onSelected: (model) => ref
-                      .read(modelSelectionControllerProvider.notifier)
-                      .selectModel(model),
-                  onEmptyPressed: () => context.push(AppRoutes.modelSelection),
-                ),
-              ),
-            ),
+            const SizedBox(width: 4),
           ],
         ),
         drawer: isWide
@@ -165,6 +151,22 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
                         exchanges: exchanges,
                       ),
                     ),
+                    // The model the session answers with belongs with the
+                    // control that starts it, not in the title bar above it.
+                    Center(
+                      child: ComposerModelPill(
+                        models: models,
+                        selected: selected,
+                        enabled: !listening && !busy,
+                        tooltip: 'Companion model',
+                        onSelected: (model) => ref
+                            .read(modelSelectionControllerProvider.notifier)
+                            .selectModel(model),
+                        onEmptyPressed: () =>
+                            context.push(AppRoutes.modelSelection),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     if (!settingsReady)
                       const _VoicePill(enabled: false)
                     else if (!companionSettings.enabled)

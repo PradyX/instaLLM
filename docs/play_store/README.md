@@ -206,7 +206,8 @@ Earlier checks, 14 November 2026, before the star and Play nudges were added:
 - `scripts/build_android_bundle.sh` deletes `app-release.aab` before running
   Gradle, so a failed build cannot leave a stale bundle behind (read from the
   script; the failing-signing run also wrote no bundle).
-- `flutter analyze` clean, 44/44 tests passing.
+- `flutter analyze` clean, 206/206 tests passing (44/44 at the time of the
+  `1.6.2+3` check).
 
 Not verified: the `.aab` itself was never installed; the emulator run used a
 separate release APK from the same source and signing config, so Play-split
@@ -313,7 +314,8 @@ notes (`release_notes.txt`), the support email (`info@prady.website`), the
 published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
 1.6.0 bundle on closed testing (Alpha), the `1.6.1+2` bundle released on Play,
 the `1.6.2+3` bundle built from this tree, the `1.7.0+4` bundle built from it
-afterwards, the `1.7.1+5` bundle released on GitHub as `v1.7.1`, and the `1.7.2+6` bundle released on GitHub as `v1.7.2` with every screenshot set
+afterwards, the `1.7.1+5` bundle released on GitHub as `v1.7.1`, and the
+`1.7.2+6` bundle released on GitHub as `v1.7.2` with every screenshot set
 refreshed: phone, 7-inch, 10-inch and desktop.
 
 1. Add an in-app way to report offensive AI output, or record why the

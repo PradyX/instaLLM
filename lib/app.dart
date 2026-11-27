@@ -37,33 +37,40 @@ class MyApp extends ConsumerWidget {
       glassOpacity: appearance.glassOpacity,
     );
 
-    return MaterialApp.router(
-      title: 'InstaLLM',
-      debugShowCheckedModeBanner: false,
-      theme: theme.light(),
-      darkTheme: theme.dark(),
-      themeMode: themeMode,
-      routerConfig: router,
-      // The system bars follow the app's own theme: dark icons on a light bar,
-      // light icons on a dark one. Left to the platform, an edge-to-edge nav
-      // bar keeps its white icons and Android lays a black scrim behind them,
-      // which is a black bar at the bottom of a cream screen.
-      builder: (context, child) {
-        final themed = Theme.of(context);
-        final dark = themed.brightness == Brightness.dark;
-        final icons = dark ? Brightness.light : Brightness.dark;
-        return AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: icons,
-            statusBarBrightness: dark ? Brightness.dark : Brightness.light,
-            systemNavigationBarColor: themed.scaffoldBackgroundColor,
-            systemNavigationBarDividerColor: Colors.transparent,
-            systemNavigationBarIconBrightness: icons,
-          ),
-          child: AppearanceBackground(child: _ShareInboxBridge(child: child!)),
-        );
-      },
+    // The inbox sits above MaterialApp, not in its builder: the builder runs
+    // again on every theme change, and a rebuild that swaps AppearanceBackground
+    // for another surface style recreates whatever is below it. A recreated
+    // bridge reads the launch payload a second time, which staged a selection
+    // in the composer twice.
+    return _ShareInboxBridge(
+      child: MaterialApp.router(
+        title: 'InstaLLM',
+        debugShowCheckedModeBanner: false,
+        theme: theme.light(),
+        darkTheme: theme.dark(),
+        themeMode: themeMode,
+        routerConfig: router,
+        // The system bars follow the app's own theme: dark icons on a light bar,
+        // light icons on a dark one. Left to the platform, an edge-to-edge nav
+        // bar keeps its white icons and Android lays a black scrim behind them,
+        // which is a black bar at the bottom of a cream screen.
+        builder: (context, child) {
+          final themed = Theme.of(context);
+          final dark = themed.brightness == Brightness.dark;
+          final icons = dark ? Brightness.light : Brightness.dark;
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle(
+              statusBarColor: Colors.transparent,
+              statusBarIconBrightness: icons,
+              statusBarBrightness: dark ? Brightness.dark : Brightness.light,
+              systemNavigationBarColor: themed.scaffoldBackgroundColor,
+              systemNavigationBarDividerColor: Colors.transparent,
+              systemNavigationBarIconBrightness: icons,
+            ),
+            child: AppearanceBackground(child: child!),
+          );
+        },
+      ),
     );
   }
 }

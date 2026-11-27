@@ -11,6 +11,7 @@ import android.os.Environment
 import android.os.StatFs
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.provider.Settings
 import java.io.File
 import com.prady.installm.tools.ToolExecutor
 import io.flutter.embedding.android.FlutterActivity
@@ -29,6 +30,11 @@ class MainActivity : FlutterActivity() {
     private val shareChannelName = "installm/share"
     private var shareChannel: MethodChannel? = null
     private var pendingSharedContent: Map<String, Any?>? = null
+
+    // The launch intent stays attached to the activity for its whole life, and
+    // it still carries the selection or share that started it. Reading it must
+    // therefore happen once: a second read would stage the same text again.
+    private var launchContentRead = false
 
     // A shared file arrives as a content:// URI that another app may revoke at
     // any moment, so it is copied into the app's own storage before it is
@@ -132,9 +138,17 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "getSharedContent" -> {
                     // Handed over at most once, so a stale share cannot reappear
-                    // the next time the app is opened from the launcher.
-                    val content = pendingSharedContent ?: sharedContentFrom(intent)
+                    // the next time the app is opened from the launcher, and a
+                    // selection cannot be staged twice (the launch intent keeps
+                    // its extras for as long as the activity lives).
+                    val content =
+                        pendingSharedContent ?: if (launchContentRead) {
+                            null
+                        } else {
+                            sharedContentFrom(intent)
+                        }
                     pendingSharedContent = null
+                    launchContentRead = true
                     result.success(if (isAllowed(content)) content else null)
                 }
 
@@ -405,34 +419,63 @@ class MainActivity : FlutterActivity() {
      * an editable request gets a result, and only once the app is finished.
      */
     /**
-     * Whether InstaLLM already holds the assistant role.
+     * The app the device sends its assistant button and gesture to.
      *
-     * The role only exists from Android 10 (API 29), which is above this app's
-     * minSdk 24, so anything older reports false and the settings row explains
-     * that the platform has no role to grant.
+     * This is the `voice_interaction_service` secure setting, which names the
+     * chosen app's VoiceInteractionService. Holding `ROLE_ASSISTANT` is not the
+     * same thing: the role only makes an app a candidate for the system prompt,
+     * which is why summoning the assistant still showed a chooser after the
+     * role was granted here.
+     */
+    private fun chosenAssistant(): ComponentName? {
+        val value = try {
+            Settings.Secure.getString(contentResolver, "voice_interaction_service")
+        } catch (e: Exception) {
+            null
+        }
+        if (value.isNullOrBlank()) return null
+        return ComponentName.unflattenFromString(value)
+    }
+
+    /**
+     * Whether InstaLLM is the device's assistant.
+     *
+     * The setting is what the assistant button follows, so it decides. Only
+     * when no assistant app is recorded at all does the generic role count;
+     * below Android 10 there is no role and the answer is false, which the
+     * settings row explains.
      */
     private fun isAssistantRoleHeld(): Boolean {
+        val chosen = chosenAssistant()
+        if (chosen != null) return chosen.packageName == packageName
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
         return try {
-            val manager = getSystemService(RoleManager::class.java)
-            manager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) ?: false
+            getSystemService(RoleManager::class.java)
+                ?.isRoleHeld(RoleManager.ROLE_ASSISTANT) ?: false
         } catch (e: Exception) {
             false
         }
     }
 
     /**
-     * Shows the system's "use as default assistant" prompt.
+     * Opens the system screen where the assistant app is chosen.
      *
-     * Returns false when the platform has no assistant role (below Android 10)
-     * or refuses it, so the caller can say something the user can act on
-     * instead of a dialog that never appears.
+     * Android has no per-app "become the assistant" dialog for a
+     * VoiceInteractionService, so the user picks InstaLLM in the platform's own
+     * Assist & voice input screen. The role prompt is kept as a fallback for a
+     * device that does not offer that screen.
      */
     private fun requestAssistantRole(): Boolean {
+        if (isAssistantRoleHeld()) return true
+        val chooseAssistant = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (packageManager.resolveActivity(chooseAssistant, 0) != null) {
+            startActivityForResult(chooseAssistant, ASSISTANT_ROLE_REQUEST)
+            return true
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
         val manager = getSystemService(RoleManager::class.java) ?: return false
         if (!manager.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) return false
-        if (manager.isRoleHeld(RoleManager.ROLE_ASSISTANT)) return true
         startActivityForResult(
             manager.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT),
             ASSISTANT_ROLE_REQUEST,

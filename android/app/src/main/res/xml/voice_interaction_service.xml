@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the assistant slot is allowed to do (Road Map 5 Phase 5.3). Assist is
+     on, so the button and gesture can open the chat; a keyguard launch is off,
+     because nothing here unlocks a locked device or answers without the user
+     typing. No recognition service is declared: this assistant never listens. -->
+<voice-interaction-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:sessionService="com.prady.installm.assistant.AssistSessionService"
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />

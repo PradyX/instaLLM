@@ -779,7 +779,9 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
                   ),
                 ),
                 if (reasoning != null && choice != null)
-                  _reasoningRow(reasoning, choice, theme.textTheme, colors),
+                  _reasoningRow(reasoning, choice, theme.textTheme, colors)
+                else
+                  _reasoningUnavailable(theme.textTheme, colors),
               ],
               const SizedBox(height: 10),
               widget.control,
@@ -792,13 +794,13 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
     );
   }
 
-  /// The model in use, and the one control that opens the list under it.
   /// The model in use: one quiet row on the panel, centred as a group, and the
   /// one control that opens the list under it.
   ///
   /// A row rather than a pill of its own, because a white pill inside the grey
   /// panel read as a card inside a card and left the rest of the line empty.
-  /// The chevron travels with the name instead of standing at the edge.
+  /// The chevron travels with the name instead of standing at the edge, and no
+  /// rule separates the row from the pill below it.
   Widget _chip(TextTheme theme, ColorScheme colors) {
     final model = widget.selected;
     if (model == null) {
@@ -809,59 +811,46 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
         ),
       );
     }
-    return Column(
-      children: [
-        InkWell(
-          key: const Key('companion-dock-model'),
-          borderRadius: BorderRadius.circular(14),
-          onTap: widget.enabled ? _toggle : null,
-          child: Tooltip(
-            message: _open
-                ? 'Close the model list'
-                : 'Change the companion model',
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  LlmChipIcon(size: 15, color: colors.primary),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      model.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+    return InkWell(
+      key: const Key('companion-dock-model'),
+      borderRadius: BorderRadius.circular(14),
+      onTap: widget.enabled ? _toggle : null,
+      child: Tooltip(
+        message: _open ? 'Close the model list' : 'Change the companion model',
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              LlmChipIcon(size: 15, color: colors.primary),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  model.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: 5),
-                  Text(
-                    model.parameterSize,
-                    style: theme.labelSmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Icon(
-                    _open
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    size: 16,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 5),
+              Text(
+                model.parameterSize,
+                style: theme.labelSmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 3),
+              Icon(
+                _open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                size: 16,
+                color: colors.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
-        Divider(
-          height: 1,
-          thickness: 1,
-          color: colors.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ],
+      ),
     );
   }
 
@@ -909,6 +898,36 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// What the thinking row says for a model that declares no thinking
+  /// template.
+  ///
+  /// The row keeps its place either way, so the dock does not change shape when
+  /// the choice of model changes, and a model that cannot think reads as a fact
+  /// about that model rather than as a control somebody forgot to render.
+  Widget _reasoningUnavailable(TextTheme theme, ColorScheme colors) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+      child: Row(
+        children: [
+          Text(
+            'Thinking',
+            style: theme.labelMedium?.copyWith(
+              color: colors.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Not supported',
+            style: theme.labelSmall?.copyWith(
+              color: colors.onSurfaceVariant.withValues(alpha: 0.8),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:installm/core/utils/llm_prompt_utils.dart';
 import 'package:installm/features/conversations/domain/message.dart';
 
 /// Placeholder text a turn can leave behind, which is never worth reading out.
@@ -22,7 +23,8 @@ bool isAssistantFailureReply(String text) =>
 /// The loop reads the message its own turn added, which is the last one in the
 /// chat: a placeholder, an empty message, a failure or a turn that added no
 /// assistant message at all means the loop should listen again rather than
-/// speak something the user has already seen.
+/// speak something the user has already seen. The model's thought block is
+/// dropped too — only the answer is ever said out loud.
 String? speakableAssistantReply(List<Message> messages) {
   if (messages.isEmpty) return null;
 
@@ -33,5 +35,7 @@ String? speakableAssistantReply(List<Message> messages) {
   if (text.isEmpty) return null;
   if (_unspokenTexts.contains(text)) return null;
   if (isAssistantFailureReply(text)) return null;
-  return text;
+
+  final spoken = spokenReplyText(text);
+  return spoken.isEmpty ? null : spoken;
 }

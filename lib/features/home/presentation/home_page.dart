@@ -23,6 +23,7 @@ import 'package:installm/features/conversations/domain/message_attachment.dart';
 import 'package:installm/features/group_chat/application/active_room.dart';
 import 'package:installm/features/group_chat/presentation/room_chat_view.dart';
 import 'package:installm/features/home/domain/attachment_history.dart';
+import 'package:installm/core/utils/llm_prompt_utils.dart';
 import 'package:installm/features/home/domain/readable_reply.dart';
 import 'package:installm/features/conversations/presentation/conversation_controller.dart';
 
@@ -645,12 +646,17 @@ class _HomePageState extends ConsumerState<HomePage> {
   /// Speaks one reply. Only one is read at a time, so starting another stops
   /// the first and the audio never overlaps.
   Future<void> _readReplyAloud(Message message) async {
+    // Only the answer is read out: a model's thought block is not part of what
+    // it told the user, and a reply that is still thinking has nothing to read.
+    final spoken = spokenReplyText(message.content);
+    if (spoken.isEmpty) return;
+
     final controller = ref.read(ttsControllerProvider.notifier);
     await controller.stop();
     if (!mounted) return;
 
     setState(() => _readingMessageId = message.id);
-    await controller.speak(message.content);
+    await controller.speak(spoken);
     if (mounted) setState(() => _readingMessageId = null);
   }
 

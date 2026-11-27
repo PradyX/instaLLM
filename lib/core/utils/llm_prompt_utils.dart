@@ -375,14 +375,36 @@ BuiltLlmPrompt _buildGemma3Prompt(
   );
 }
 
+/// A complete thought block, with or without the `>` a model may leave out.
+///
+/// Thinking templates wrap the thought in `<think>` and `</think>`, but the
+/// opening tag also arrives bare (`<think`) from models that repeat the
+/// template's prefill, and a run that was stopped mid-thought never closes the
+/// block at all. All of it is the model talking to itself, never the answer.
+final RegExp _thoughtBlock = RegExp(r'<think\s*>?[\s\S]*?</think\s*>?');
+
+/// A thought tag left over once its block is gone.
+final RegExp _strayThoughtTags = RegExp(r'</?think\s*>?');
+
+/// [raw] without its thought blocks; an unclosed thought ends the text.
+String _withoutThoughts(String raw) {
+  final closed = raw.replaceAll(_thoughtBlock, '');
+  final unclosed = closed.indexOf('<think');
+  return unclosed < 0 ? closed : closed.substring(0, unclosed);
+}
+
 String buildStreamingResponseText(String raw) {
   if (raw.isEmpty) return '';
 
-  final thinkStart = raw.indexOf('<think>');
+  final thinkStart = raw.indexOf('<think');
   if (thinkStart == -1) return raw;
 
-  final thinkContentStart = thinkStart + '<think>'.length;
-  final thinkEnd = raw.indexOf('</think>', thinkContentStart);
+  var thinkContentStart = thinkStart + '<think'.length;
+  if (thinkContentStart < raw.length && raw[thinkContentStart] == '>') {
+    thinkContentStart++;
+  }
+
+  final thinkEnd = raw.indexOf('</think', thinkContentStart);
 
   if (thinkEnd == -1) {
     final thinking = raw.substring(thinkContentStart).trimLeft();
@@ -391,8 +413,10 @@ String buildStreamingResponseText(String raw) {
   }
 
   final thinking = raw.substring(thinkContentStart, thinkEnd).trim();
-  final answerStart = thinkEnd + '</think>'.length;
-  final answer = raw.substring(answerStart).trimLeft();
+  final rawAnswer = raw.substring(thinkEnd + '</think'.length).trimLeft();
+  final answer = rawAnswer.startsWith('>')
+      ? rawAnswer.substring(1).trimLeft()
+      : rawAnswer;
 
   if (answer.isEmpty) {
     return thinking.isEmpty ? 'Thinking...' : 'Thinking...\n$thinking';
@@ -402,17 +426,62 @@ String buildStreamingResponseText(String raw) {
   return 'Thinking...\n$thinking\n\n$answer';
 }
 
+/// The answer in [raw]: the thought block and any stray tag removed.
 String buildFinalResponseText(String raw) {
-  final withoutThinking = raw.replaceAll(
-    RegExp(r'<think>[\s\S]*?</think>'),
-    '',
-  );
-  final normalized = withoutThinking.trim();
-  if (normalized.isNotEmpty) return normalized;
-
-  final fallback = raw
-      .replaceAll('<think>', '')
-      .replaceAll('</think>', '')
-      .trim();
-  return fallback.isEmpty ? 'No response generated.' : fallback;
+  final answer = _withoutThoughts(raw).replaceAll(_strayThoughtTags, '').trim();
+  return answer.isEmpty ? 'No response generated.' : answer;
 }
+
+/// What a voice should read from [text]: the answer, never the thought.
+///
+/// The chat shows `Thinking...` followed by the thought while a run is still
+/// going, so a reply captured mid-thought returns nothing rather than reading
+/// the model's notes aloud. A finished reply holds only its answer.
+String spokenReplyText(String text) {
+  final trimmed = text.trim();
+  if (trimmed.startsWith('Thinking...')) return '';
+  return _withoutThoughts(trimmed).replaceAll(_strayThoughtTags, '').trim();
+}
+
+/// [systemPrompt] with the device's current local date and time.
+///
+/// A local model has no clock of its own: nothing in a conversation tells it
+/// what day it is unless the prompt does, so every request carries the date the
+/// phone or computer reports. [now] is a seam for tests.
+String withCurrentDateTime(String systemPrompt, {DateTime? now}) {
+  final local = (now ?? DateTime.now()).toLocal();
+  final time =
+      '${local.hour.toString().padLeft(2, '0')}:'
+      '${local.minute.toString().padLeft(2, '0')}';
+  final stamp =
+      '${_weekdays[local.weekday - 1]}, ${local.day} '
+      '${_months[local.month - 1]} ${local.year} at $time';
+  final base = systemPrompt.trim();
+  final fact = 'Current date and time (device local time): $stamp.';
+  return base.isEmpty ? fact : '$base\n\n$fact';
+}
+
+const List<String> _weekdays = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const List<String> _months = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];

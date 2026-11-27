@@ -311,14 +311,16 @@ final homeContextProjectionProvider = Provider.autoDispose<ContextProjection?>((
   }
   return projectConversationContext(
     messages: ref.watch(homeControllerProvider),
-    systemPrompt: [
-      withMemoryFacts(
-        composePersonaSystemPrompt(persona: window.persona),
-        facts,
-      ),
-      ...?projectedSkills?.sections,
-      ...?projectedSkills?.resourceSections,
-    ].join('\n\n'),
+    systemPrompt: withCurrentDateTime(
+      [
+        withMemoryFacts(
+          composePersonaSystemPrompt(persona: window.persona),
+          facts,
+        ),
+        ...?projectedSkills?.sections,
+        ...?projectedSkills?.resourceSections,
+      ].join('\n\n'),
+    ),
     policy: policy,
     toolContractIncluded: toolContractIncluded,
     // A stored summary of older turns is sent with every request, exactly like
@@ -423,11 +425,15 @@ class HomeController extends _$HomeController {
       composePersonaSystemPrompt(persona: _activePersona),
       facts,
     );
-    return [
-      base,
-      ...?_turnSkills?.sections,
-      ...?_turnSkills?.resourceSections,
-    ].join('\n\n');
+    // A local model has no clock of its own, so a question about today's date
+    // can only be answered if the request carries it.
+    return withCurrentDateTime(
+      [
+        base,
+        ...?_turnSkills?.sections,
+        ...?_turnSkills?.resourceSections,
+      ].join('\n\n'),
+    );
   }
 
   Future<void> _prepareSavedMemory(String conversationId) async {

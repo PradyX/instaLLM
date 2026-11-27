@@ -105,7 +105,8 @@ class LocalCompanionTurnRunner implements CompanionTurnRunner {
 
     final prompt = buildModelChatPrompt(
       [LlmPromptMessage.user(transcript)],
-      systemPrompt: systemPrompt,
+      // A spoken turn can ask what day it is too, and the model has no clock.
+      systemPrompt: withCurrentDateTime(systemPrompt),
       promptFormatId: model.promptFormatId,
       assistantPrefill: assistantPrefill,
     );

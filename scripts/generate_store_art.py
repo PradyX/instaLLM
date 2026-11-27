@@ -307,7 +307,13 @@ PHONE = dict(
 
 # ------------------------------------------------------------------ landscape
 def landscape(w, h, chrome="android"):
-    """Text column left, card right, both sized from the canvas proportions."""
+    """Text column left, card right, both sized from the canvas proportions.
+
+    [chrome] is "android" or "macos" to reserve the platform bar's height above
+    the capture, or None when the capture is already edge-to-edge at the card's
+    own aspect — reserving a bar then would stretch the capture's first row,
+    which reads as a smear whenever that row carries the page's title.
+    """
     pad = int(round(0.045 * w))
     text_w = int(round(0.355 * w))
     gap = int(round(0.028 * w))
@@ -329,7 +335,9 @@ def landscape(w, h, chrome="android"):
         radius=int(round(0.012 * w)), shadow_blur=int(round(0.02 * w)),
         shadow_alpha=80,
         glow=(0.74, 0.14, 0.78, 0.42), center_text=True,
-        chrome=dict(
+        chrome=None
+        if chrome is None
+        else dict(
             kind=chrome,
             h=48 if chrome == "android" else int(round(0.026 * w)),
         ),
@@ -377,7 +385,7 @@ SETS = {
     ),
     "tablet_10inch": dict(
         size=(1920, 1080),
-        layout=landscape(1920, 1080),
+        layout=landscape(1920, 1080, chrome=None),
         src=SCRIPTS / "tablet_10inch",
         panels=[
             ("Your workspace, on this device.",

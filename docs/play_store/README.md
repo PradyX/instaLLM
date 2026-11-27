@@ -143,9 +143,12 @@ Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
   downsampled so type and corners stay crisp, and the capture is composited at
   native scale so it is never resampled twice. The captures are cropped to app
   content, so each card reserves the platform bar's real height as empty space
-  above the app: 24 dp for the phone cards, 48 px for the tablets and a
-  proportional title-bar height for the desktop cards. Drawn status icons and
-  traffic lights were tried and read badly at card scale, so the space is left
+  above the app: 24 dp for the phone cards and 48 px for the 7-inch cards. The
+  10-inch and desktop captures are already edge-to-edge at the card's own
+  aspect, so their layouts pass `chrome=None` and reserve no band; reserving
+  one there stretched the capture's first row into a smear across the page
+  title. Drawn status icons and traffic lights were tried and read badly at
+  card scale, so the space is left
   empty and filled from the capture's own top edge, which keeps a drawer scrim
   or a sidebar seam running upward instead of stopping at the card edge. The
   script only needs Pillow and the fonts already on macOS.
@@ -157,28 +160,31 @@ Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
   colour and scaled to exact 16:9, because this tablet's app bar now starts
   directly under the bar and the artwork's chrome strip stretches the capture's
   first row.
-- **The 10-inch and desktop sets are still the 17 November 2026 captures.** They
-  were taken from a macOS window driven by hand, and this pass could not
-  re-create them: the window can be sized through System Events, but the app's
-  Flutter content exposes no accessibility tree, so navigation inside it would
-  need synthetic clicks, which this repository's agent rules forbid. Everything
-  below that describes those two sets therefore refers to the `1.7.1` UI.
-- Tablet and desktop sets, captured on 17 November 2026 in light theme with the
-  solid surface style: `screens/tablet_7inch/` was 2048x1152 (16:9) from the
-  TrebleDroid Android 13 tablet at 2048x1200, cropped by 48 px of status bar and
-  64 px of gesture bar and scaled to exact 16:9 — two shots, home then settings,
-  because that tablet has no model installed and cannot show a conversation;
-  `screens/tablet_10inch/` is 1920x1080 and `screens/desktop/` is 2560x1440,
-  both from the macOS app window resized to 960x540 pt and 1280x720 pt, with the
-  title bar and the window's rounded corners cropped off. Order for both
-  macOS sets: 1 chat, 2 home, 3 models, 4 settings.
+- The 10-inch set was retaken on 27 November 2026 from `1.7.2+6` on the same
+  TrebleDroid Android 13 tablet at 1920x1200: 1 chat (the offline `LFM2 · 350M`
+  reply), 2 the empty composer with its suggestion cards, 3 the models catalog
+  with its filter column reading **This device**, 4 settings. Its 42 px status
+  bar and 24 px gesture bar are cropped off and the remaining 1920x1134 is
+  scaled to exact 16:9, so the app bar keeps its title; cropping a full 120 px
+  to reach 1080 without a scale would cut the title off, which an earlier pass
+  did.
+- The desktop set is 2560x1440 from `1.7.2+6` as well, but not from the window:
+  `integration_test/store_screenshots_test.dart` drives the real app through
+  its own widget tree and rasterises the root repaint boundary at 2x, which is
+  the 2560x1440 the Retina window produced without any window chrome, and needs
+  no accessibility tree and no synthetic clicks. It uses the app's own data —
+  its conversations, its installed models, its appearance — and only overrides
+  the theme mode to light so the four sets agree.
+  `scripts/capture_desktop_screenshots.sh` runs it and re-renders the artwork.
+- Order for both large sets: 1 chat, 2 home, 3 models, 4 settings. Both carry
+  the `1.7.2` UI; no `1.7.1` capture is used anywhere now.
 - `description.txt` holds the short (66/80) and full (1540/4000) listing copy
   as plain blocks, and names the banner and logo files at the top.
 - Store artwork replaced on 17 November 2026: the feature graphic is the
   deep-green banner (cream wordmark, launcher tile, the app's orb rings) and the
   icon is the launcher tile full bleed, so the listing matches what installed
   users see.
-- `flutter analyze` clean, 44/44 tests passing.
+- `flutter analyze` clean, 206/206 tests passing.
 
 Earlier checks, 14 November 2026, before the star and Play nudges were added:
 
@@ -307,9 +313,8 @@ notes (`release_notes.txt`), the support email (`info@prady.website`), the
 published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
 1.6.0 bundle on closed testing (Alpha), the `1.6.1+2` bundle released on Play,
 the `1.6.2+3` bundle built from this tree, the `1.7.0+4` bundle built from it
-afterwards, the `1.7.1+5` bundle released on GitHub as `v1.7.1`, and the
-`1.7.2+6` bundle released on GitHub as `v1.7.2` with refreshed phone and
-7-inch screenshots.
+afterwards, the `1.7.1+5` bundle released on GitHub as `v1.7.1`, and the `1.7.2+6` bundle released on GitHub as `v1.7.2` with every screenshot set
+refreshed: phone, 7-inch, 10-inch and desktop.
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the production review.

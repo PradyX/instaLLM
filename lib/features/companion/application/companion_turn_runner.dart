@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:installm/core/inference/inference_engine.dart';
 import 'package:installm/core/services/service_providers.dart';
+import 'package:installm/core/settings/reasoning_settings_provider.dart';
 import 'package:installm/core/utils/llm_prompt_utils.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
 
@@ -60,8 +61,7 @@ class LocalCompanionTurnRunner implements CompanionTurnRunner {
     final model = ref.read(selectedChatModelProvider);
     if (model == null) {
       throw const CompanionTurnException(
-        'Choose a model with the pill at the top of this page, then speak '
-        'again.',
+        'Choose a model with the chip above the voice pill, then speak again.',
       );
     }
 
@@ -92,10 +92,22 @@ class LocalCompanionTurnRunner implements CompanionTurnRunner {
       ),
     );
 
+    // The thinking switch in the model menu has to reach the prompt, or the
+    // page would offer a choice the answer never takes.
+    final reasoning = await ref
+        .read(modelReasoningServiceProvider)
+        .resolve(model);
+    final assistantPrefill =
+        reasoning?.prefillFor(
+          ref.read(reasoningSettingsProvider).choiceFor(model.id),
+        ) ??
+        '';
+
     final prompt = buildModelChatPrompt(
       [LlmPromptMessage.user(transcript)],
       systemPrompt: systemPrompt,
       promptFormatId: model.promptFormatId,
+      assistantPrefill: assistantPrefill,
     );
     final stopToken = modelStopToken(model.promptFormatId);
     final buffer = StringBuffer();

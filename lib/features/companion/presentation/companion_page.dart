@@ -88,6 +88,19 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
     final companion = ref.watch(companionSettingsProvider);
     final settingsReady = companion.isReady;
     final companionSettings = companion.settings;
+    final colors = Theme.of(context).colorScheme;
+    // Inside the dock the pill is the brighter surface, so the control that
+    // listens reads as the one thing to press.
+    final pillFill = colors.surface;
+    final Widget voiceControl = !settingsReady
+        ? _VoicePill(enabled: false, fill: pillFill)
+        : !companionSettings.enabled
+        ? _CompanionOffCard(
+            onEnable: () =>
+                ref.read(companionSettingsProvider.notifier).setEnabled(true),
+            onSettings: () => context.push(AppRoutes.companionSettings),
+          )
+        : _VoicePill(enabled: true, fill: pillFill);
 
     return AppShell(
       section: AppSection.companion,
@@ -151,36 +164,45 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
                         exchanges: exchanges,
                       ),
                     ),
-                    // The model the session answers with belongs with the
-                    // control that starts it, not in the title bar above it.
-                    Center(
-                      child: ComposerModelPill(
-                        models: models,
-                        selected: selected,
-                        enabled: !listening && !busy,
-                        tooltip: 'Companion model',
-                        onSelected: (model) => ref
-                            .read(modelSelectionControllerProvider.notifier)
-                            .selectModel(model),
-                        onEmptyPressed: () =>
-                            context.push(AppRoutes.modelSelection),
+                    // The dock: everything that starts a session sits on one
+                    // surface — the model, the pill, and what the pill will
+                    // do — instead of three pieces floating apart.
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(
+                          color: colors.outlineVariant.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: ComposerModelControl(
+                                models: models,
+                                selected: selected,
+                                enabled: !listening && !busy,
+                                tooltip: 'Companion model',
+                                onSelected: (model) => ref
+                                    .read(
+                                      modelSelectionControllerProvider.notifier,
+                                    )
+                                    .selectModel(model),
+                                onEmptyPressed: () =>
+                                    context.push(AppRoutes.modelSelection),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            voiceControl,
+                            const SizedBox(height: 9),
+                            _StatusLine(message: message, isError: isError),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    if (!settingsReady)
-                      const _VoicePill(enabled: false)
-                    else if (!companionSettings.enabled)
-                      _CompanionOffCard(
-                        onEnable: () => ref
-                            .read(companionSettingsProvider.notifier)
-                            .setEnabled(true),
-                        onSettings: () =>
-                            context.push(AppRoutes.companionSettings),
-                      )
-                    else
-                      const _VoicePill(enabled: true),
-                    const SizedBox(height: 10),
-                    _StatusLine(message: message, isError: isError),
                   ],
                 ),
               ),
@@ -678,10 +700,14 @@ class _ExchangeLines extends StatelessWidget {
 
 /// The whole control: live input bars, the state, and start/stop.
 class _VoicePill extends ConsumerWidget {
-  const _VoicePill({required this.enabled});
+  const _VoicePill({required this.enabled, this.fill});
 
   /// False while the settings are still loading or the Companion is off.
   final bool enabled;
+
+  /// Surface behind the pill; the dock gives it the brighter one so the pill
+  /// stands out from the panel holding it.
+  final Color? fill;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -710,7 +736,7 @@ class _VoicePill extends ConsumerWidget {
           ? 'Stop the Companion'
           : 'Talk to the Companion',
       child: Material(
-        color: colors.surfaceContainerHigh,
+        color: fill ?? colors.surfaceContainerHigh,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),

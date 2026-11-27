@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
@@ -23,6 +25,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Choices offered when the user taps "Add Model".
 enum _AddModelAction { importFile, huggingFaceRepo, directUrl }
+
+/// Apple's desktops are the only platform that says "unified" about its RAM.
+bool get _isAppleDesktop => defaultTargetPlatform == TargetPlatform.macOS;
 
 /// The parameter-size buckets the filter rail offers. Sizes are compared in
 /// billions of parameters, the same number the families sort by.
@@ -1050,7 +1055,9 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           Divider(height: 1, color: colorScheme.outlineVariant),
           const SizedBox(height: 16),
           Text(
-            'This Mac',
+            // The wide layout's filter column is the same panel on a desktop and
+            // a tablet; naming a Mac there told an Android tablet it was one.
+            _isAppleDesktop ? 'This Mac' : 'This device',
             style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           Row(
@@ -1073,7 +1080,8 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           if (deviceMemory != null) ...[
             const SizedBox(height: 4),
             Text(
-              '${_formatBytes(deviceMemory)} unified memory',
+              '${_formatBytes(deviceMemory)} '
+              '${_isAppleDesktop ? 'unified memory' : 'memory'}',
               style: textTheme.labelSmall?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

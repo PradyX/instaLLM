@@ -779,9 +779,7 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
                   ),
                 ),
                 if (reasoning != null && choice != null)
-                  _reasoningRow(reasoning, choice, theme.textTheme, colors)
-                else
-                  _reasoningUnavailable(theme.textTheme, colors),
+                  _reasoningRow(reasoning, choice, theme.textTheme, colors),
               ],
               const SizedBox(height: 10),
               widget.control,
@@ -898,36 +896,6 @@ class _VoiceDockState extends ConsumerState<_VoiceDock> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// What the thinking row says for a model that declares no thinking
-  /// template.
-  ///
-  /// The row keeps its place either way, so the dock does not change shape when
-  /// the choice of model changes, and a model that cannot think reads as a fact
-  /// about that model rather than as a control somebody forgot to render.
-  Widget _reasoningUnavailable(TextTheme theme, ColorScheme colors) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-      child: Row(
-        children: [
-          Text(
-            'Thinking',
-            style: theme.labelMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            'Not supported',
-            style: theme.labelSmall?.copyWith(
-              color: colors.onSurfaceVariant.withValues(alpha: 0.8),
-            ),
-          ),
-        ],
       ),
     );
   }

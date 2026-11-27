@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -6,10 +7,15 @@ import 'package:go_router/go_router.dart';
 import 'package:installm/core/navigation/app_router.dart';
 import 'package:installm/core/navigation/app_shell.dart';
 import 'package:installm/core/services/reduce_motion.dart';
-import 'package:installm/core/widgets/composer_model_pill.dart';
+import 'package:installm/core/settings/reasoning_settings_provider.dart';
+import 'package:installm/core/widgets/gear_icon.dart';
+import 'package:installm/core/widgets/llm_chip_icon.dart';
 import 'package:installm/features/companion/application/companion_controller.dart';
 import 'package:installm/features/companion/application/companion_settings_controller.dart';
+import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_reasoning.dart';
 import 'package:installm/features/model_selection/presentation/chat_models_provider.dart';
+import 'package:installm/features/model_selection/presentation/model_reasoning_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
 
 /// The Companion: a voice surface, not a chat.
@@ -139,7 +145,7 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
           actions: [
             IconButton(
               tooltip: 'Companion settings',
-              icon: const Icon(Icons.settings_rounded),
+              icon: const GearIcon(),
               onPressed: () => context.push(AppRoutes.companionSettings),
             ),
             const SizedBox(width: 4),
@@ -166,42 +172,21 @@ class _CompanionPageState extends ConsumerState<CompanionPage>
                     ),
                     // The dock: everything that starts a session sits on one
                     // surface — the model, the pill, and what the pill will
-                    // do — instead of three pieces floating apart.
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(
-                          color: colors.outlineVariant.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: ComposerModelControl(
-                                models: models,
-                                selected: selected,
-                                enabled: !listening && !busy,
-                                tooltip: 'Companion model',
-                                onSelected: (model) => ref
-                                    .read(
-                                      modelSelectionControllerProvider.notifier,
-                                    )
-                                    .selectModel(model),
-                                onEmptyPressed: () =>
-                                    context.push(AppRoutes.modelSelection),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            voiceControl,
-                            const SizedBox(height: 9),
-                            _StatusLine(message: message, isError: isError),
-                          ],
-                        ),
-                      ),
+                    // do — instead of three pieces floating apart. Tapping the
+                    // model chip grows that surface in place; nothing floats
+                    // over the page, so the orb simply gives up the room.
+                    _VoiceDock(
+                      models: models,
+                      selected: selected,
+                      enabled: !listening && !busy,
+                      onSelected: (model) => ref
+                          .read(modelSelectionControllerProvider.notifier)
+                          .selectModel(model),
+                      onOpenLibrary: () =>
+                          context.push(AppRoutes.modelSelection),
+                      control: voiceControl,
+                      message: message,
+                      isError: isError,
                     ),
                   ],
                 ),
@@ -692,6 +677,315 @@ class _ExchangeLines extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The bottom panel: the model chip, the voice pill, and what the pill will
+/// do.
+///
+/// The chip grows this same surface instead of floating a menu over the page:
+/// the dock gets taller, the stage above it gives up the room, and the pill
+/// stays where the thumb expects it. Nothing overlaps, so a glance keeps the
+/// whole page legible while the models are open.
+class _VoiceDock extends ConsumerStatefulWidget {
+  const _VoiceDock({
+    required this.models,
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+    required this.onOpenLibrary,
+    required this.control,
+    required this.message,
+    required this.isError,
+  });
+
+  final List<LlmModel> models;
+  final LlmModel? selected;
+
+  /// False while a turn runs: the chip and the rows stop responding, but they
+  /// still read as they are.
+  final bool enabled;
+
+  final ValueChanged<LlmModel> onSelected;
+  final VoidCallback onOpenLibrary;
+
+  /// The pill, or the card that switches the Companion on.
+  final Widget control;
+  final String? message;
+  final bool isError;
+
+  @override
+  ConsumerState<_VoiceDock> createState() => _VoiceDockState();
+}
+
+class _VoiceDockState extends ConsumerState<_VoiceDock> {
+  bool _open = false;
+
+  void _toggle() {
+    if (!widget.enabled) return;
+    setState(() => _open = !_open);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final model = widget.selected;
+    final modelId = model?.id ?? '';
+    // The reasoning a model declares lives in its installed file and the pick
+    // lives in settings, so the row can only offer what the model can do.
+    final reasoning = model == null
+        ? null
+        : ref.watch(modelReasoningProvider(modelId)).value;
+    final choice = reasoning == null
+        ? null
+        : ref.watch(reasoningSettingsProvider).choiceFor(modelId) ??
+              reasoning.defaultChoice;
+    // A growing panel is motion, so the accessibility setting can stop it.
+    final still = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: AnimatedSize(
+          duration: still ? Duration.zero : const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.bottomCenter,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _chip(theme.textTheme, colors),
+              if (_open && model != null) ...[
+                const SizedBox(height: 2),
+                // A long library scrolls inside the dock rather than growing
+                // it past the bottom of a short window.
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 208),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final option in widget.models)
+                          _row(option, model, theme.textTheme, colors),
+                      ],
+                    ),
+                  ),
+                ),
+                if (reasoning != null && choice != null)
+                  _reasoningRow(reasoning, choice, theme.textTheme, colors),
+              ],
+              const SizedBox(height: 10),
+              widget.control,
+              const SizedBox(height: 9),
+              _StatusLine(message: widget.message, isError: widget.isError),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The model in use, and the one control that opens the list under it.
+  Widget _chip(TextTheme theme, ColorScheme colors) {
+    final model = widget.selected;
+    if (model == null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: widget.onOpenLibrary,
+          child: const Text('Get a model'),
+        ),
+      );
+    }
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Tooltip(
+        message: _open ? 'Close the model list' : 'Change the companion model',
+        child: Material(
+          color: colors.surface,
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            key: const Key('companion-dock-model'),
+            onTap: widget.enabled ? _toggle : null,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  LlmChipIcon(size: 16, color: colors.primary),
+                  const SizedBox(width: 7),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 210),
+                    child: Text(
+                      '${model.name} · ${model.parameterSize}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(
+                    _open
+                        ? Icons.expand_less_rounded
+                        : Icons.expand_more_rounded,
+                    size: 16,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _row(
+    LlmModel option,
+    LlmModel current,
+    TextTheme theme,
+    ColorScheme colors,
+  ) {
+    final selected = option.id == current.id;
+    return InkWell(
+      key: ValueKey('companion-model-${option.id}'),
+      borderRadius: BorderRadius.circular(14),
+      onTap: widget.enabled
+          ? () {
+              widget.onSelected(option);
+              setState(() => _open = false);
+            }
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 11),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              child: selected
+                  ? Icon(Icons.check_rounded, size: 16, color: colors.primary)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                option.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.labelLarge?.copyWith(
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              option.parameterSize,
+              style: theme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The thinking state for the model in use: two segments, one tap, and the
+  /// value visible without opening anything else.
+  Widget _reasoningRow(
+    ModelReasoning reasoning,
+    ReasoningChoice choice,
+    TextTheme theme,
+    ColorScheme colors,
+  ) {
+    final options = reasoning.choices.toList()
+      ..sort(
+        (a, b) => (a == ReasoningChoice.thinkingOff ? 0 : 1).compareTo(
+          b == ReasoningChoice.thinkingOff ? 0 : 1,
+        ),
+      );
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        children: [
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              'Thinking',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.labelMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Both segments stay whole; where large text would not fit, the
+          // control scales down instead of clipping a state's name.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 200),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final option in options)
+                      InkWell(
+                        key: ValueKey('companion-reasoning-${option.id}'),
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: widget.enabled
+                            ? () => unawaited(
+                                ref
+                                    .read(reasoningSettingsProvider.notifier)
+                                    .setChoice(
+                                      widget.selected?.id ?? '',
+                                      option,
+                                    ),
+                              )
+                            : null,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 11,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: option == choice
+                                ? colors.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            option.label,
+                            style: theme.labelSmall?.copyWith(
+                              color: option == choice
+                                  ? colors.onPrimary
+                                  : colors.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

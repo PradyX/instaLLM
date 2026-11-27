@@ -23,13 +23,13 @@ still signs every release, and a lost upload key needs a Play Console reset.
 
 ## 2. Version
 
-`pubspec.yaml` holds `version: 1.7.1+5`. Play's highest version code is `3`
-(`1.6.2`) and it rejects a repeated one, so every upload bumps the number
-after `+`; the bundles built since then carry codes `4` (`1.7.0`) and `5`
-(`1.7.1`):
+`pubspec.yaml` holds `version: 1.7.2+6`. Play's highest version code is `5`
+(`1.7.1`) and it rejects a repeated one, so every upload bumps the number
+after `+`; the bundles built since then carry codes `3` (`1.6.2`), `4`
+(`1.7.0`), `5` (`1.7.1`) and `6` (`1.7.2`):
 
 ```yaml
-version: 1.7.1+5
+version: 1.7.2+6
 ```
 
 The name before `+` is what users see; the number after `+` is `versionCode`.
@@ -38,11 +38,23 @@ release from the next, so bump both.
 
 ## 3. Verified in this repository
 
-Checked on 26 November 2026 against the working tree that carries `1.7.1+5`
-(and on 23 November 2026 against `main` at `a8d69ad` for the earlier entry),
-built with `scripts/build_android_bundle.sh`:
+Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
+(and on 26 November 2026 against the tree that carried `1.7.1+5`), built with
+`scripts/build_android_bundle.sh`:
 
 - Bundles built from this repository, all signed with the same upload key:
+  - `1.7.2+6` (versionCode 6), built on 27 November 2026 from `f024095`,
+    142 MB on disk (148,825,843 bytes; 143 MB as Gradle reports it), SHA-256
+    `4215c2ed3822ab063a3b74801e187f7008e65684a36efa13cd2a3aabfa6ed93b`,
+    `scripts/build_android_bundle.sh` exited 0 and `jarsigner -verify` prints
+    `jar verified.`; the sideload APK of the same build reports
+    `versionCode='6' versionName='1.7.2'`, `minSdkVersion 24`,
+    `targetSdkVersion 36` through `aapt2 dump badging`. This is the bundle
+    attached to GitHub release `v1.7.2`, with that APK, the macOS DMG (built
+    `1.7.2`/`6`) and the Linux archive. It carries the Hugging Face-style
+    model catalog, the single model/thinking pill, the voice dock and the
+    brain-in-chip model mark, and it fixes a tablet's filter column naming a
+    Mac.
   - `1.7.1+5` (versionCode 5), built on 26 November 2026 from `e994625`,
     142 MB on disk (148.6 MB as Gradle reports it), SHA-256
     `2e17131b50a004cdc66cd76da95c8f65737375a02f5a030aa5aed08994d4fffa`,
@@ -113,12 +125,16 @@ built with `scripts/build_android_bundle.sh`:
   outside the launcher tile, with an 18 px clear margin; keeping the alpha is
   what stops the tile's antialiased edge from turning into a black band and
   green specks, which an RGB flatten produced, and
-  `feature_graphic_1024x500.png` is 1024x500 with no alpha channel. Phone
+  `feature_graphic_1024x500.png` is 1024x500 with no alpha channel.   Phone
   screenshots `screens/1.png` to `screens/6.png` are each 1080x2160 — 2:1, the
-  widest aspect Play accepts — retaken on 17 November 2026 on a OnePlus 7T
-  (HD1901, Android 12) in light theme, from a 1080x2400 capture with the status
-  and navigation bars cropped out. Order: 1 chat, 2 drawer, 3 models,
-  4 settings, 5 new chat, 6 voice mode.
+  widest aspect Play accepts — retaken on 27 November 2026 from `1.7.2+6` on a
+  OnePlus 7T (HD1901, Android 12), from a 1080x2400 capture with the status bar
+  and navigation bar cropped out (top 80 px, bottom 160 px). The phone draws a
+  three-pixel capture frame at the screen edge, so the first four columns at
+  each side are cloned inward before the crop. Order: 1 chat (a reply the
+  installed `LFM2 · 1.2B` wrote offline), 2 drawer, 3 models, 4 settings,
+  5 new chat, 6 voice mode. The theme is the phone's own: light, translucent
+  surface, Blue accent.
 - Framed art: `screens/framed/<device>/` holds the same captures as store
   artwork, rendered by `scripts/generate_store_art.py` at the store's exact
   sizes. Each panel carries the launcher tile and wordmark top-left, a
@@ -133,8 +149,22 @@ built with `scripts/build_android_bundle.sh`:
   empty and filled from the capture's own top edge, which keeps a drawer scrim
   or a sidebar seam running upward instead of stopping at the card edge. The
   script only needs Pillow and the fonts already on macOS.
+- The 7-inch set was retaken on 27 November 2026 from `1.7.2+6` on the same
+  TrebleDroid Android 13 tablet, forced to 2048x1200 at density 320: two shots,
+  the catalog with its filter column reading **This device** and settings. The
+  tablet has no model installed, so it still has no conversation to show. The
+  capture is cut at the status bar, given a 48 px band of the app's own page
+  colour and scaled to exact 16:9, because this tablet's app bar now starts
+  directly under the bar and the artwork's chrome strip stretches the capture's
+  first row.
+- **The 10-inch and desktop sets are still the 17 November 2026 captures.** They
+  were taken from a macOS window driven by hand, and this pass could not
+  re-create them: the window can be sized through System Events, but the app's
+  Flutter content exposes no accessibility tree, so navigation inside it would
+  need synthetic clicks, which this repository's agent rules forbid. Everything
+  below that describes those two sets therefore refers to the `1.7.1` UI.
 - Tablet and desktop sets, captured on 17 November 2026 in light theme with the
-  solid surface style: `screens/tablet_7inch/` is 2048x1152 (16:9) from the
+  solid surface style: `screens/tablet_7inch/` was 2048x1152 (16:9) from the
   TrebleDroid Android 13 tablet at 2048x1200, cropped by 48 px of status bar and
   64 px of gesture bar and scaled to exact 16:9 — two shots, home then settings,
   because that tablet has no model installed and cannot show a conversation;
@@ -238,8 +268,8 @@ Play review sheet cannot be observed until an install comes from Play.
    first and install from the Play link to confirm the bundle installs and the
    review prompt path resolves, then promote to production.
    - Release notes ("What's new in this release"): `release_notes.txt`, one
-     bullet per user-visible change for 1.7.1 — a 301/500-character block with
-     a 133-character variant below it, each heading carrying its own count.
+     bullet per user-visible change for 1.7.2 — a 320/500-character block with
+     a 154-character variant below it, each heading carrying its own count.
 5. **Promote Alpha to production** — a closed-testing release moves to
    production without rebuilding. Open **Test and release → Testing → Closed
    testing → Alpha → Releases**, open the release to publish and use **Promote
@@ -277,11 +307,13 @@ notes (`release_notes.txt`), the support email (`info@prady.website`), the
 published privacy policy URL (`https://prady.website/privacy/insta-llm/`), the
 1.6.0 bundle on closed testing (Alpha), the `1.6.1+2` bundle released on Play,
 the `1.6.2+3` bundle built from this tree, the `1.7.0+4` bundle built from it
-afterwards and the `1.7.1+5` bundle released on GitHub as `v1.7.1`.
+afterwards, the `1.7.1+5` bundle released on GitHub as `v1.7.1`, and the
+`1.7.2+6` bundle released on GitHub as `v1.7.2` with refreshed phone and
+7-inch screenshots.
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the production review.
-2. Upload the `1.7.1+5` bundle, then promote it to production (section 4,
+2. Upload the `1.7.2+6` bundle, then promote it to production (section 4,
    steps 4 and 5). Once that build is on a testing track, install it from the
    Play link and confirm the update prompt appears on the next launch against
    an even newer build.

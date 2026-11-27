@@ -2,12 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [1.7.2] - 2026-11-27
+
+### Added
+
+- **Liquid AI LFM2 and OpenBMB MiniCPM3 join the model catalog**: `LFM2 · 350M` (229 MB), `LFM2 · 1.2B` (731 MB) and `MiniCPM3 · 4B` (2.47 GB), all `Q4_K_M`, each with the file its repository actually serves.
+  - Every entry was probed before it shipped: the served byte count, the GGUF header's own architecture (`lfm2`, `lfm2`, `minicpm3`), its chat template and context window — then loaded and made to generate on the pinned `b11819` engine, still through the app's own `llama.framework`.
+  - No capability is claimed for the three, because their files declare none. Liquid AI **LFM3** and MiniCPM4 stay out until the runtime moves: LFM3 support landed upstream in `b11938`, after the pin.
+- **A question about what is on screen gets a floating composer** (`2fd0413`, `f4fd5c2`, `9f2bbed`): the assistant gesture opens the chat with the screen in the composer, and selecting text elsewhere can be answered in place.
+  - InstaLLM registers as a real assistant app, and a selection is no longer sent twice when the composer already holds it.
+- **Model fit exists on Android at all** (`c1f400f`): the device profile reads `/proc/meminfo` instead of the platform figures it could not see there.
 
 ### Changed
 
 - **The composer's model and thinking controls are one pill**: the pill reads `Qwen3.5 · 0.8B · off` with a single chevron, and the menu behind it lists every model and, under one divider, that model's thinking states as two segments.
   - The second chip is gone: `composer_reasoning_pill.dart` folded into `ComposerModelControl`, which reads the model's declared reasoning and the stored choice and hands plain values to the pill, so the widget stays testable without Riverpod.
+  - The states are named **Off** and **On** and sit at the menu's right edge, and a model that declares no reasoning has no thinking row at all (`ac6ac18`, `48ae1e6`).
+- **The model catalog is a Hugging Face-style list with its own pages** (`1f21a14`, `2bc308e`, `6ba913e`, `95ea99f`, `4805f92`, `5bc22da`, `606785a`, `f734441`, `c949404`, `3484403`, `d77f18b`, `a58ec6b`): one row per file in a family, unfolded in place for what the row cannot say, with the publisher and file size leading the facts line and the model in use marked by a filled circle rather than an Open button.
+  - A row's action is its glyph or a quiet accent label, a variant downloads from its own ledger row, and a tap selects an installed row but only unfolds a catalog one.
+  - The filter rails keep their ends and nest the chosen segment, and the narrow Models header keeps its way back (`2a0455c`, `f752cf2`, `eb1f4ae`, `3e28cee`).
+- **Voice mode's controls are one dock** (`a78f79b`, `9674699`, `6a32c35`, `5319e18`, `d2999c4`): the voice pill, its gear and the chat's own model menu sit together, and the model list expands in place instead of floating a menu, with the model row centred and no card around it.
+- **The local model is marked by a brain inside a chip** (`c661dec`): `LlmChipIcon` draws the die, its eight pins and a brain in a nested scaled canvas, so the mark reads at 18 px in the composer and 26 px in the drawer.
+- **A reply's Read aloud and Regenerate are outlined raised buttons** (`e824c58`, `b489d10`), hand-built from `Material` and `InkWell` because `IconButton` has no elevation, at 36×32 with the label left on the tooltip.
+- **Reading a reply aloud speaks only the answer, and the prompt carries today's date** (`f819558`): thought blocks are stripped before synthesis and the system prompt states the date, so "today" is not the model's guess.
+- **The tool contract only reaches models that can call tools** (`7b1eef8`): `supportsToolCalling` reads the model's own chat template, so a text-only model stops paying for instructions it cannot follow.
+- **Qwen rows download from Qwen's own GGUF releases** (`da940b1`): the catalog names the repository each Qwen file is actually served from instead of a mirror.
+- **The system bars follow the app theme** (`065cd61`), and the sidebar selects the active tab with the accent instead of a white chip (`64d1424`, `9549f67`, `01f830a`, `08c6678`, `805044b`).
+
+### Fixed
+
+- **A non-GGUF download such as a Whisper model is no longer refused** (`48b4e97`): the GGUF magic check applies only to files the catalog declares as GGUF.
+- **A phone's fit column shows one short word** (`b71e810`) instead of a badge clipped by the row.
+
+## [Unreleased]
+
+### Changed
+
 - **Every dependency is on its newest release, including four major migrations**: riverpod 2.6 → 3.4, go_router 13.2 → 18.1, freezed 2.5 → 4.0 and sherpa_onnx 1.13 → 2.0, among 83 upgraded packages.
   - Every controller moved off riverpod 2's `StateNotifier`/`StateProvider` onto `Notifier`, with `ref.mounted` and `ref.onDispose` replacing `mounted` and `dispose()`.
   - Riverpod 3's ten-attempt retry is switched off at the root `ProviderScope`, so a store that cannot open reports its error at once.
@@ -17,9 +47,6 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **Liquid AI LFM2 and OpenBMB MiniCPM3 join the model catalog**: `LFM2 · 350M` (229 MB), `LFM2 · 1.2B` (731 MB) and `MiniCPM3 · 4B` (2.47 GB), all `Q4_K_M`, each with the file its repository actually serves.
-  - Every entry was probed before it shipped: the served byte count, the GGUF header's own architecture (`lfm2`, `lfm2`, `minicpm3`), its chat template and context window — then loaded and made to generate on the pinned `b11819` engine, still through the app's own `llama.framework`.
-  - No capability is claimed for the three, because their files declare none. Liquid AI **LFM3** and MiniCPM4 stay out until the runtime moves: LFM3 support landed upstream in `b11938`, after the pin.
 - **Road Map 2 complete: local agentic workspace (all phases, user-end testing left)**: InstaLLM is a project workspace, not just a chat runtime.
   - *Phase 2.0 workspaces*: a workspace links bots, chats, skills, MCP servers, boards, a vault folder and a repo path, and bots only see assigned workspaces.
   - *Phase 2.1 context intelligence*: a stored compaction policy, a live inspector, per-conversation checkpoints and message pins that survive windowing.

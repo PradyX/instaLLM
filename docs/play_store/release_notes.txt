@@ -6,16 +6,17 @@
 - Play allows 500 characters per language; each heading counts its own block.
 - One bullet per user-visible change, one line each, newest version only.
 
-## Long block — versionName 1.7.1 · versionCode 5 · 301/500 characters
+## Long block — versionName 1.7.2 · versionCode 6 · 320/500 characters
 
-What's new in 1.7.1
+What's new in 1.7.2
 
-• Star or sponsor InstaLLM from the sidebar
-• The star reminder is asked once; dismissing it ends it for good
-• A model download starts on the first tap of its Download button
-• Play updates are offered on launch
-• Resumed model downloads finish cleanly and progress stops at 100%
+• Models are a Hugging Face-style list that unfolds in place
+• The model and thinking controls are one pill
+• Voice mode keeps its controls in one dock
+• Replies are read aloud without the thinking text
+• Read aloud and Regenerate are outlined buttons
+• Liquid AI LFM2 and MiniCPM3 join the catalog
 
-## Shorter variant — 133/500 characters
+## Shorter variant — 154/500 characters
 
-• 1.7.1: star or sponsor InstaLLM from the sidebar, a model download starts on the first tap, and Play updates are offered on launch.
+• 1.7.2: models are a Hugging Face-style list, the model and thinking controls are one pill, and replies are read aloud without the thinking text.

@@ -306,22 +306,29 @@ class LlmModel {
           'https://huggingface.co/ggml-org/bge-small-en-v1.5-Q8_0-GGUF/resolve/main/bge-small-en-v1.5-q8_0.gguf',
       localFileName: 'bge-small-en-v1.5-q8_0.gguf',
     ),
+    // Qwen publishes its own GGUF releases, and they lead every community
+    // re-quantization in the catalog: the row then downloads from the company
+    // that trained the model, shows its publisher, and keeps the vendor's
+    // file name. A size Qwen has not released as a single-file quantization
+    // (Qwen 2.5 7B splits its Q4_K_M into two parts this app cannot join, and
+    // Qwen 3 0.6B/1.7B ship only Q8_0 — twice the download for the sizes that
+    // are meant for small devices) keeps the community file.
     LlmModel(
       id: 'qwen-2.5-0.5b',
       name: 'Qwen 2.5',
       parameterSize: '0.5B',
-      description: 'Smallest Qwen model, extremely fast.',
+      description: 'Official Qwen 2.5 0.5B release, extremely fast.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
       id: 'qwen-2.5-coder-0.5b',
       name: 'Qwen 2.5 Coder',
       parameterSize: '0.5B',
-      description: 'Tiny model specialized for coding tasks.',
+      description: 'Official Qwen 2.5 Coder 0.5B release, for tiny code tasks.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-0.5B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-Coder-0.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-0.5b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-coder-0.5b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
@@ -373,9 +380,9 @@ class LlmModel {
       id: 'qwen-2.5-1.5b',
       name: 'Qwen 2.5',
       parameterSize: '1.5B',
-      description: 'Balanced Qwen model with multilingual support.',
+      description: 'Official Qwen 2.5 1.5B release, balanced and multilingual.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-1.5b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
@@ -409,9 +416,10 @@ class LlmModel {
       id: 'qwen2.5-coder-1.5b',
       name: 'Qwen Coder 2.5',
       parameterSize: '1.5B',
-      description: 'Coding-focused Qwen model for better code generation.',
+      description:
+          'Official Qwen 2.5 Coder 1.5B release, for better code generation.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-1.5B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-coder-1.5b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
@@ -465,18 +473,20 @@ class LlmModel {
       id: 'qwen2.5-coder-3b',
       name: 'Qwen Coder 2.5',
       parameterSize: '3B',
-      description: 'Larger coder model for stronger coding quality.',
+      description:
+          'Official Qwen 2.5 Coder 3B release, stronger coding quality.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/qwen2.5-coder-3b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-coder-3b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
       id: 'qwen-2.5-3b',
       name: 'Qwen 2.5',
       parameterSize: '3B',
-      description: 'Mid-size Qwen variant for stronger quality.',
+      description:
+          'Official Qwen 2.5 3B release, a mid-size step up in quality.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-3B-Instruct-GGUF/resolve/main/Qwen2.5-3B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-3b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
@@ -501,9 +511,9 @@ class LlmModel {
       id: 'qwen-3-4b',
       name: 'Qwen 3 (Thinking)',
       parameterSize: '4B',
-      description: 'Larger Qwen 3 reasoning model with better output quality.',
+      description: 'Official Qwen 3 4B release, with better output quality.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf',
       localFileName: 'qwen3-4b-q4_k_m.gguf',
     ),
     LlmModel(
@@ -552,9 +562,10 @@ class LlmModel {
       id: 'qwen2.5-coder-7b',
       name: 'Qwen Coder 2.5',
       parameterSize: '7B',
-      description: 'Stronger coding model for longer and more accurate code.',
+      description:
+          'Official Qwen 2.5 Coder 7B release, for longer, more accurate code.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf',
       localFileName: 'qwen2.5-coder-7b-instruct-q4_k_m.gguf',
     ),
     LlmModel(
@@ -570,9 +581,10 @@ class LlmModel {
       id: 'qwen-3-8b',
       name: 'Qwen 3 (Thinking)',
       parameterSize: '8B',
-      description: 'Large Qwen 3 model for stronger reasoning and depth.',
+      description:
+          'Official Qwen 3 8B release, for stronger reasoning and depth.',
       downloadUrl:
-          'https://huggingface.co/bartowski/Qwen_Qwen3-8B-GGUF/resolve/main/Qwen_Qwen3-8B-Q4_K_M.gguf',
+          'https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf',
       localFileName: 'qwen3-8b-q4_k_m.gguf',
     ),
     LlmModel(

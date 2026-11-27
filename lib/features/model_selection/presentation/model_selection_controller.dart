@@ -11,6 +11,7 @@ import 'package:installm/core/services/storage_info_service.dart';
 import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
+import 'package:installm/features/model_selection/domain/model_catalog_merge.dart';
 import 'package:installm/features/model_selection/domain/model_import.dart';
 import 'package:installm/features/model_selection/domain/model_install_state.dart';
 import 'package:installm/features/model_selection/presentation/download_progress_provider.dart';
@@ -211,28 +212,11 @@ class ModelSelectionController extends _$ModelSelectionController {
     required List<LlmModel> discoveredModels,
     required List<LlmModel> customModels,
   }) {
-    final seen = <String>{};
-    final merged = <LlmModel>[];
-
-    // Static models first (highest priority).
-    for (final model in staticModels) {
-      final key = model.localFileName ?? model.id;
-      if (seen.add(key)) merged.add(model);
-    }
-
-    // Discovered models (skip if same file already present).
-    for (final model in discoveredModels) {
-      final key = model.localFileName ?? model.id;
-      if (seen.add(key)) merged.add(model);
-    }
-
-    // Custom models (always included, user-added).
-    for (final model in customModels) {
-      final key = model.localFileName ?? model.id;
-      if (seen.add(key)) merged.add(model);
-    }
-
-    return merged;
+    return mergeModelSources(
+      catalogModels: staticModels,
+      discoveredModels: discoveredModels,
+      customModels: customModels,
+    );
   }
 
   void selectModel(LlmModel model) {

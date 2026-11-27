@@ -159,6 +159,30 @@ void main() {
     });
   });
 
+  test('the Qwen catalog downloads from Qwen\'s own GGUF releases', () {
+    // Every size Qwen publishes as a single-file quantization points at the
+    // company's repository, so a row named Qwen downloads Qwen's weights
+    // rather than a community account's re-quantization of them.
+    const officialModels = {
+      'qwen-2.5-0.5b',
+      'qwen-2.5-1.5b',
+      'qwen-2.5-3b',
+      'qwen-2.5-coder-0.5b',
+      'qwen2.5-coder-1.5b',
+      'qwen2.5-coder-3b',
+      'qwen2.5-coder-7b',
+      'qwen-3-4b',
+      'qwen-3-8b',
+    };
+    for (final id in officialModels) {
+      expect(
+        _byId(id).downloadUrl,
+        startsWith('https://huggingface.co/Qwen/'),
+        reason: id,
+      );
+    }
+  });
+
   test('every catalog entry is a distinct downloadable gguf', () {
     final ids = <String>{};
     for (final model in LlmModel.availableModels) {

@@ -51,7 +51,8 @@ class SharedPayload {
   final List<SharedAttachment> attachments;
 
   /// True when the device's assistant slot launched the app (Road Map 5 Phase
-  /// 5.3). Such a launch carries nothing: it only asks for the composer.
+  /// 5.3). Such a launch asks for the composer, and brings the screen it was
+  /// summoned from as an attachment when the platform let it be captured.
   final bool assist;
 
   /// True for a read-only selection, false when it can be replaced, null when

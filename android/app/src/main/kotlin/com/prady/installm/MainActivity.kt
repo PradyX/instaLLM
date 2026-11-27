@@ -1,5 +1,6 @@
 package com.prady.installm
 
+import android.app.assist.AssistStructure
 import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.ContentValues
@@ -45,6 +46,10 @@ class MainActivity : FlutterActivity() {
     private val maxSharedAttachments = 4
     private val maxSharedAttachmentBytes = 32L * 1024 * 1024
     private val stagedShareLifetimeMillis = 24L * 60 * 60 * 1000
+
+    // How much of the screen an assistant launch may stage in the composer. A
+    // whole screen of text would dwarf the question the user is about to ask.
+    private val maxAssistTextChars = 1500
 
     // The manifest alias that makes InstaLLM appear in other apps' share sheets
     // and in link handling. It ships disabled: the user turns it on in Settings
@@ -349,11 +354,12 @@ class MainActivity : FlutterActivity() {
         processTextReadOnly = null
         if (intent == null) return null
 
-        // The assistant launch carries no content: it only asks for the
-        // composer, so the payload says so and stages nothing.
+        // An assistant launch asks for the composer, and brings the text of the
+        // screen it was summoned from so the user can ask about it. The screen
+        // is optional: a launch with none still opens the chat.
         if (intent.action == Intent.ACTION_ASSIST) {
             return mapOf(
-                "text" to null,
+                "text" to assistTextFrom(intent),
                 "attachments" to emptyList<Map<String, String>>(),
                 "unreadable" to 0,
                 "assist" to true,
@@ -385,6 +391,43 @@ class MainActivity : FlutterActivity() {
             "attachments" to attachments,
             "unreadable" to unreadable,
         )
+    }
+
+    /**
+     * The text on the screen the assistant was summoned from, or null.
+     *
+     * This is the view text the platform captured for the assistant, not a
+     * picture: it is what lets a local, text-only model answer about what the
+     * user is looking at. It is bounded and de-duplicated, because a screen can
+     * hold far more text than a prompt should carry.
+     */
+    @Suppress("DEPRECATION")
+    private fun assistTextFrom(intent: Intent): String? {
+        val structure =
+            try {
+                intent.getParcelableExtra(EXTRA_ASSIST_STRUCTURE) as? AssistStructure
+            } catch (e: Exception) {
+                null
+            } ?: return null
+
+        val lines = mutableListOf<String>()
+        var budget = maxAssistTextChars
+        fun visit(node: AssistStructure.ViewNode?) {
+            if (node == null || budget <= 0) return
+            for (candidate in listOf(node.text, node.contentDescription)) {
+                val text = candidate?.toString()?.trim().orEmpty()
+                if (text.isEmpty() || lines.lastOrNull() == text) continue
+                val clipped = if (text.length > budget) text.take(budget) else text
+                lines.add(clipped)
+                budget -= clipped.length
+                if (budget <= 0) return
+            }
+            for (index in 0 until node.childCount) visit(node.getChildAt(index))
+        }
+        for (index in 0 until structure.windowNodeCount) {
+            visit(structure.getWindowNodeAt(index).rootViewNode)
+        }
+        return lines.joinToString("\n").trim().ifEmpty { null }
     }
 
     /**
@@ -640,5 +683,12 @@ class MainActivity : FlutterActivity() {
         directory.listFiles()?.forEach { file ->
             if (file.isFile && file.lastModified() < cutoff) file.delete()
         }
+    }
+
+    companion object {
+        // The screen an assistant session read, handed to this activity in the
+        // intent that opens it. Intent.EXTRA_ASSIST_STRUCTURE is not public API,
+        // so the key is our own: both ends of this hand-off are in this app.
+        const val EXTRA_ASSIST_STRUCTURE = "com.prady.installm.extra.ASSIST_STRUCTURE"
     }
 }

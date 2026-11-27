@@ -146,6 +146,17 @@
             android:name=".assistant.AssistSessionService"
             android:exported="true"
             android:permission="android.permission.BIND_VOICE_INTERACTION"/>
+        <!-- Named by voice_interaction_service.xml because the platform expects
+             an assistant to describe how it takes speech. It refuses every
+             request: nothing here records audio. -->
+        <service
+            android:name=".assistant.AssistRecognitionService"
+            android:exported="true"
+            android:permission="android.permission.BIND_SPEECH_RECOGNITION_SERVICE">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService"/>
+            </intent-filter>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

@@ -10,38 +10,62 @@ SHORT DESCRIPTION (66/80 characters)
 ------------------------------------------------
 Private AI that runs entirely on your phone. No cloud, no account.
 
-FULL DESCRIPTION (1540/4000 characters)
+FULL DESCRIPTION (3457/4000 characters)
 ------------------------------------------------
-InstaLLM runs language models on your device. Your prompts, chats and files stay
-in the app's private storage; nothing is sent to a server to generate a reply,
-and the app keeps working with the network off once a model is installed.
+InstaLLM runs AI models on your own device. Nothing you type is sent anywhere to get a reply: the model runs on your phone, its file stays in the app's private storage, and everything keeps working with the network off once a model is installed. No account, no sign-in, no subscription.
 
-BRING YOUR OWN MODEL
-Import a GGUF model from storage or download one you pick from Hugging Face.
-The model list shows size, quantisation and whether a vision projector is
-available, so you can match a model to your phone's memory.
+CHAT
+• Streaming replies you can stop at any moment
+• Create, rename, search, pin and delete conversations
+• Switch models mid-conversation without losing the history
+• Every reply records which model wrote it, with speed and token stats
+• Regenerate a reply, or edit your prompt and send it again
+• Context readout above the composer, with a note when older turns are trimmed
+• Markdown and code blocks with one-tap copy
+• Personas: reusable system prompts chosen per conversation
+• Memory: facts you choose to remember, in a chat or a whole workspace
+• Read aloud and Regenerate on every reply
 
-CHAT THAT STAYS LOCAL
-Streaming replies, stop at any time, multiple chats with search, pin and
-rename, per-model memory and personas. Switching models keeps the conversation
-history and records which model wrote each reply.
+MODELS
+• Import a GGUF model from storage, paste a direct link, or download from Hugging Face
+• Built-in catalog: Qwen, Qwen Coder, Llama 3.2, SmolLM2, Gemma, Phi, TinyLlama, LFM2, MiniCPM3
+• Resumable downloads with pause, progress and a notification when one finishes
+• Each entry shows size, quantisation and vision support, plus a fit estimate for this device's memory
+• Search and filter by parameter size, with the model in use marked in the list
+• One row per file, unfolded in place for architecture, context window and chat template
 
-VOICE, VISION AND READING
-Dictate with your microphone, have replies read aloud, and attach a photo to a
-vision model. Speech is transcribed on the device; images are downscaled and
-their metadata stripped before they reach the model.
+VOICE AND VISION
+• Voice mode with its own dock: dictate, hear replies read aloud, pick the voice
+• Offline speech-to-text with Whisper models, or the device's own recogniser
+• Attach a photo to a vision model, or reuse an image already in the chat
+• Images are downscaled and re-encoded without EXIF or GPS before they reach the model
 
-BENCHMARKS YOU CONTROL
-Run the same prompt across your installed models and compare measured speed on
-your own hardware. Results stay on the phone.
+KNOWLEDGE ON THE DEVICE
+• Attach files to a chat, or index documents into knowledge collections
+• Chunking, weights, reranking and a retrieval preview you can tune
+• Read ICS calendars and mbox inboxes locally, with no account and no sync
+• Scheduled tasks and reminders that fire offline
 
 WORKSPACES, BOTS AND ROOMS
-Organise chats into workspaces, create bots with their own instructions, and
-use rooms for group conversations between bots. Everything is stored locally.
+• Workspaces link bots, chats and skills to one project
+• Bots with their own instructions, model, skills and workspaces, including Researcher, Planner, Coder and Tester
+• Rooms for group conversations between bots, routed by @mention
+• Skills: reusable procedures a bot loads when it needs them
+• MCP servers, so a bot can call external tools under per-tool permissions
+• Hooks: rules that refuse a tool call or ask you first
+• Hand text, a link, an image or a PDF in from another app; it waits in the composer until you press send
+• Set InstaLLM as the default assistant, or ask about what is on screen from the assistant gesture
 
-PRIVATE BY DESIGN
-No account, no analytics, no advertising, no telemetry. The only network
-requests are a model download you start and an API endpoint you configure
-yourself. Delete chats, models and attachments from inside the app.
+CONTROL
+• Inference profiles bundle context size, threads, GPU offload and sampling per model
+• A context budget, so long chats still fit the model you are running
+• Benchmark: run one prompt across installed models and compare measured speed on this hardware
+• Light, dark or system appearance with accent colour and contrast options
+• Image size and metadata controls for attachments
 
-InstaLLM is open source under the GNU GPL v3.
+YOUR DATA
+• No account, no analytics, no advertising, no telemetry
+• Back up chats, personas, profiles, settings and benchmarks to one file, and restore it
+• Delete chats, models and attachments from inside the app
+• Network use stays off until you enable it per workspace; the only other request is a download you start
+• Open source under the GNU GPL v3

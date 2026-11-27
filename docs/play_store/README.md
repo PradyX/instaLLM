@@ -178,7 +178,7 @@ Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
   `scripts/capture_desktop_screenshots.sh` runs it and re-renders the artwork.
 - Order for both large sets: 1 chat, 2 home, 3 models, 4 settings. Both carry
   the `1.7.2` UI; no `1.7.1` capture is used anywhere now.
-- `description.txt` holds the short (66/80) and full (1540/4000) listing copy
+- `description.txt` holds the short (66/80) and full (3457/4000) listing copy
   as plain blocks, and names the banner and logo files at the top.
 - Store artwork replaced on 17 November 2026: the feature graphic is the
   deep-green banner (cream wordmark, launcher tile, the app's orb rings) and the

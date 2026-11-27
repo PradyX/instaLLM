@@ -1257,18 +1257,13 @@ class _NavigationTabs extends StatelessWidget {
           ])
             Expanded(
               child: Material(
-                // The selected tab takes the panel's own colour rather than the
-                // bare surface: on the glass panel a surface-coloured chip sat
-                // there as a block of pure white, while the panel around it kept
-                // the tint showing through.
-                color: tab != value
-                    ? Colors.transparent
-                    : usesTranslucentSurfaces(context)
-                    ? appearanceSurfaceColor(
-                        context,
-                        colors.surfaceContainerLow,
-                      )
-                    : colors.surface,
+                // The selected tab is a wash of the accent rather than a light
+                // chip: every near-white fill (surface, then the panel colour)
+                // still read as a white block on the glass panel, where
+                // everything else shows the tint behind it.
+                color: tab == value
+                    ? colors.primary.withValues(alpha: 0.16)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
@@ -1279,7 +1274,7 @@ class _NavigationTabs extends StatelessWidget {
                       style: textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: tab == value
-                            ? colors.onSurface
+                            ? colors.primary
                             : colors.onSurfaceVariant,
                       ),
                     ),

@@ -84,9 +84,7 @@ class _ChatBubbleState extends State<ChatBubble> {
     final actionForeground = isUser
         ? colorScheme.onPrimary
         : colorScheme.primary;
-    final actionBorder = isUser
-        ? colorScheme.onPrimary.withValues(alpha: 0.45)
-        : colorScheme.outline;
+
     final hasCodeFences = !isUser && text.contains('```');
     final isLongMessage =
         !hasCodeFences &&
@@ -251,58 +249,41 @@ class _ChatBubbleState extends State<ChatBubble> {
           if (widget.onRegenerate != null ||
               widget.onReadAloud != null ||
               widget.extraActions.isNotEmpty)
+            // Glyphs only, with the label on the tooltip: outlined pills read
+            // as heavy furniture under a reply, and the two actions are
+            // recognisable at a glance.
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: 6),
               child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+                spacing: 2,
+                runSpacing: 2,
                 children: [
                   if (widget.onReadAloud != null)
-                    OutlinedButton.icon(
+                    _ReplyActionButton(
+                      icon: widget.isReading
+                          ? Icons.stop_circle_outlined
+                          : Icons.volume_up_outlined,
+                      tooltip: widget.isReading ? 'Stop reading' : 'Read aloud',
                       onPressed: widget.onReadAloud,
-                      icon: Icon(
-                        widget.isReading
-                            ? Icons.stop_circle_outlined
-                            : Icons.volume_up_outlined,
-                        size: 16,
-                      ),
-                      label: Text(
-                        widget.isReading ? 'Stop reading' : 'Read aloud',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: actionForeground,
-                        side: BorderSide(color: actionBorder),
-                      ),
+                      color: actionForeground,
                     ),
                   // Pausing only exists while something is being read, so the
                   // row never offers a control that would do nothing.
                   if (widget.isReading && widget.onPauseReading != null)
-                    OutlinedButton.icon(
+                    _ReplyActionButton(
+                      icon: widget.isPaused
+                          ? Icons.play_arrow_rounded
+                          : Icons.pause_circle_outline,
+                      tooltip: widget.isPaused ? 'Resume' : 'Pause',
                       onPressed: widget.onPauseReading,
-                      icon: Icon(
-                        widget.isPaused
-                            ? Icons.play_arrow_rounded
-                            : Icons.pause_circle_outline,
-                        size: 16,
-                      ),
-                      label: Text(widget.isPaused ? 'Resume' : 'Pause'),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: actionForeground,
-                        side: BorderSide(color: actionBorder),
-                      ),
+                      color: actionForeground,
                     ),
                   if (widget.onRegenerate != null)
-                    OutlinedButton.icon(
+                    _ReplyActionButton(
+                      icon: Icons.refresh_rounded,
+                      tooltip: 'Regenerate',
                       onPressed: widget.onRegenerate,
-                      icon: const Icon(Icons.refresh_rounded, size: 16),
-                      label: const Text('Regenerate'),
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        foregroundColor: actionForeground,
-                        side: BorderSide(color: actionBorder),
-                      ),
+                      color: actionForeground,
                     ),
                   ...widget.extraActions,
                 ],
@@ -908,6 +889,44 @@ class _MessageWebSources extends StatelessWidget {
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One glyph of the reply's action row.
+///
+/// A 15px icon in a 30px hit area, tinted only while the pointer is over it or
+/// the finger is down, so a reply carries no furniture of its own.
+class _ReplyActionButton extends StatelessWidget {
+  const _ReplyActionButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15),
+      iconSize: 15,
+      color: color,
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.all(6),
+      constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+      style: IconButton.styleFrom(
+        highlightColor: color.withValues(alpha: 0.10),
+        hoverColor: color.withValues(alpha: 0.08),
+        focusColor: color.withValues(alpha: 0.10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

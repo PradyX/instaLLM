@@ -1246,7 +1246,11 @@ class _NavigationTabs extends StatelessWidget {
       height: 36,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: appearanceSurfaceColor(context, colors.surfaceContainerHigh),
+        // A wash of the foreground, not a surface colour: every surface step
+        // from surface to surfaceContainerHighest is light enough to read as a
+        // white plate here, while a wash simply darkens whatever panel it sits
+        // on (and lightens it in the dark theme).
+        color: colors.onSurface.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(

@@ -1208,22 +1208,17 @@ class _NavigationTabsHeader extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    // On the glass panel the rail behind this header is already one layer of
-    // [background]; painting another full-strength layer on top of it came out
-    // as an opaque, whiter band across the panel. The pinned bar is a blur with
-    // a light tint instead, so it hides rows scrolling under it and still
-    // carries the panel's colour.
-    return FrostedPanel(
-      child: ColoredBox(
-        color: usesTranslucentSurfaces(context)
-            ? background.withValues(alpha: 0.35)
-            : background,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-          child: child,
-        ),
-      ),
+    final padded = Padding(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+      child: child,
     );
+    if (!usesTranslucentSurfaces(context)) {
+      return ColoredBox(color: background, child: padded);
+    }
+    // Nothing but a blur on the glass panel. Any tint painted here is a second
+    // layer over the panel's own, and two light layers stack into the pale band
+    // that ran down the sidebar beside the tabs.
+    return FrostedPanel(child: padded);
   }
 
   @override

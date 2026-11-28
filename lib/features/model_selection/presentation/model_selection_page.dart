@@ -1191,7 +1191,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton(
-              onPressed: () => _showStorageSheet(context, state),
+              onPressed: () => _showStorageSheet(context),
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
@@ -1350,7 +1350,7 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                 ),
               ),
               TextButton(
-                onPressed: () => _showStorageSheet(context, state),
+                onPressed: () => _showStorageSheet(context),
                 style: TextButton.styleFrom(
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -1365,81 +1365,16 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     );
   }
 
-  /// What the disk holds: the installed models and what each one costs. The
-  /// sheet is read-only — deleting stays where it was, on the model's page.
-  void _showStorageSheet(BuildContext context, ModelSelectionState state) {
-    final installed = state.models
-        .where((model) => model.isDownloaded)
-        .toList(growable: false);
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
+  /// What the disk holds: every installed model with the space it takes, and a
+  /// delete action for each. Deleting asks first, with the same confirmation
+  /// the model rows use.
+  void _showStorageSheet(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Storage',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                state.freeStorageBytes == null ||
-                        state.totalStorageBytes == null
-                    ? '${installed.length} models installed'
-                    : '${installed.length} models installed · '
-                          '${_formatBytes(state.freeStorageBytes!)} free of '
-                          '${_formatBytes(state.totalStorageBytes!)}',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (installed.isEmpty)
-                Text(
-                  'No models are installed yet.',
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                )
-              else
-                for (final model in installed)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 7),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            model.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodyMedium,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          switch (model.ggufMetadata?.fileSizeBytes) {
-                            final bytes? => _formatBytes(bytes),
-                            _ => model.parameterSize,
-                          },
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-            ],
-          ),
-        ),
+      isScrollControlled: true,
+      builder: (sheetContext) => _StorageSheet(
+        onDelete: (model) => _showDeleteConfirmation(context, model),
       ),
     );
   }
@@ -3320,6 +3255,158 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The storage sheet: the installed models, the space each takes on disk, and
+/// a way to delete it. It follows the catalog while it is open, so a model
+/// removed here leaves the list without reopening the sheet.
+class _StorageSheet extends ConsumerStatefulWidget {
+  const _StorageSheet({required this.onDelete});
+
+  /// Asks for confirmation and deletes; owned by the page so the wording stays
+  /// in one place.
+  final void Function(LlmModel model) onDelete;
+
+  @override
+  ConsumerState<_StorageSheet> createState() => _StorageSheetState();
+}
+
+class _StorageSheetState extends ConsumerState<_StorageSheet> {
+  /// One measurement per model, kept so a rebuild does not read the files
+  /// again.
+  final Map<String, Future<int>> _sizes = {};
+
+  Future<int> _sizeOf(LlmModel model) {
+    return _sizes.putIfAbsent(
+      model.id,
+      () => ref.read(modelStorageServiceProvider).modelSizeOnDisk(model),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(modelSelectionControllerProvider);
+    final installed = state.models
+        .where((model) => model.isDownloaded)
+        .toList(growable: false);
+    final free = state.freeStorageBytes;
+    final total = state.totalStorageBytes;
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Storage',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                [
+                  installed.length == 1
+                      ? '1 model installed'
+                      : '${installed.length} models installed',
+                  if (free != null && total != null)
+                    '${_formatBytes(free)} free of ${_formatBytes(total)}',
+                ].join(' · '),
+                style: textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (installed.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No models are installed yet.',
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              else
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: installed.length,
+                    itemBuilder: (context, index) => _buildRow(
+                      context,
+                      installed[index],
+                      colorScheme,
+                      textTheme,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context,
+    LlmModel model,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              model.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodyMedium,
+            ),
+          ),
+          const SizedBox(width: 12),
+          FutureBuilder<int>(
+            future: _sizeOf(model),
+            builder: (context, snapshot) {
+              final bytes = snapshot.data;
+              final label = snapshot.hasError || bytes == 0
+                  ? '—'
+                  : bytes == null
+                  ? '…'
+                  : _formatBytes(bytes);
+              return Text(
+                label,
+                style: textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            onPressed: () {
+              // Measured again if the deletion does not go through.
+              _sizes.remove(model.id);
+              widget.onDelete(model);
+            },
+            icon: const Icon(Icons.delete_outline, size: 20),
+            tooltip: 'Delete ${model.name}',
+            color: colorScheme.error,
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),

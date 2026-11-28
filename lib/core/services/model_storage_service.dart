@@ -649,6 +649,26 @@ class ModelStorageService {
     }
   }
 
+  /// Bytes [model] currently takes on disk: its main file and, when it has
+  /// one, its vision projector. Files that are missing or unreadable count as
+  /// zero, so a broken reference cannot fail the whole measurement.
+  Future<int> modelSizeOnDisk(LlmModel model) async {
+    var total = 0;
+    for (final path in [
+      await resolveModelPath(model),
+      await resolveMmprojPath(model),
+    ]) {
+      if (path == null || path.trim().isEmpty) continue;
+      try {
+        final file = File(path);
+        if (await file.exists()) total += await file.length();
+      } catch (_) {
+        // A protected or removed location is reported as no space used.
+      }
+    }
+    return total;
+  }
+
   Future<void> deleteModel(String fileName) async {
     final dir = await getModelDir();
     final file = File(p.join(dir, fileName));

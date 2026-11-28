@@ -253,7 +253,11 @@ class ModelSelectionController extends _$ModelSelectionController {
     final request = ++_catalogRequest;
     state = state.copyWith(isLoadingModels: replace, isLoadingMore: !replace);
 
-    final page = await _discoveryService.load(query: query, cursor: cursor);
+    final page = await _discoveryService.load(
+      query: query,
+      cursor: cursor,
+      parameterRange: _parameterRange,
+    );
     if (!ref.mounted || request != _catalogRequest) return;
 
     // A failed page is not the end of the list: keep the cursor it came from
@@ -332,6 +336,25 @@ class ModelSelectionController extends _$ModelSelectionController {
 
   /// Reads the first page again, for a retry or a manual refresh.
   Future<void> refreshCatalog() async {
+    _searchDebounce?.cancel();
+    await _loadCatalogPage(
+      query: state.searchQuery.trim(),
+      cursor: null,
+      replace: true,
+    );
+  }
+
+  /// The `num_parameters` range the catalog is read with, if any.
+  String? _parameterRange;
+
+  /// Narrows the catalog to a parameter range on Hugging Face's side.
+  ///
+  /// Filtering the page already on screen only ever finds the models that the
+  /// download order happened to include. Asking for the range instead makes
+  /// every page a page of models that size.
+  Future<void> setParameterRange(String? range) async {
+    if (_parameterRange == range) return;
+    _parameterRange = range;
     _searchDebounce?.cancel();
     await _loadCatalogPage(
       query: state.searchQuery.trim(),

@@ -32,14 +32,17 @@ bool get _isAppleDesktop => defaultTargetPlatform == TargetPlatform.macOS;
 /// The parameter-size buckets the filter rail offers. Sizes are compared in
 /// billions of parameters, the same number the families sort by.
 enum _SizeBucket {
-  under1('<1B'),
-  upTo3('1–3B'),
-  upTo8('3–8B'),
-  over8('8B+');
+  under1('<1B', 'min:0,max:1B'),
+  upTo3('1–3B', 'min:1B,max:3B'),
+  upTo8('3–8B', 'min:3B,max:8B'),
+  over8('8B+', 'min:8B');
 
-  const _SizeBucket(this.label);
+  const _SizeBucket(this.label, this.parameterRange);
 
   final String label;
+
+  /// The same bucket as a `num_parameters` range for Hugging Face.
+  final String parameterRange;
 
   bool contains(double parameters) => switch (this) {
     _SizeBucket.under1 => parameters < 1,
@@ -87,15 +90,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
 
   /// The parameter-size bucket the list is narrowed to, if any.
   _SizeBucket? _sizeBucket;
-
-  /// Pages read while a size bucket has fewer matches than a screenful.
-  ///
-  /// A bucket only sees the pages already read, and the catalog starts with
-  /// the most downloaded models, which are rarely the smallest. Bounded, so
-  /// choosing a bucket cannot walk the whole catalog on its own.
-  static const _sizeLookPageLimit = 8;
-  static const _sizeLookMatchTarget = 12;
-  int _sizeLookPages = 0;
 
   /// Whether the list hides models whose file is not expected to run here.
   /// Off by default: a catalog that hides entries before the user asks is a
@@ -479,30 +473,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         .where((family) => !family.hasInstalled)
         .toList(growable: false);
 
-    // A size bucket with a handful of matches is usually a bucket whose models
-    // sit deeper in the catalog, not a bucket with nothing in it. Reading a
-    // few more pages keeps "Best fit · <1B" from showing the two models that
-    // happened to be on the first page; the limits above stop the walking, and
-    // the empty state offers the same step by hand after it.
-    final sizeMatches = installedFamilies.length + catalogFamilies.length;
-    if (_sizeBucket != null &&
-        sizeMatches < _sizeLookMatchTarget &&
-        state.hasMoreModels &&
-        !state.isLoadingMore &&
-        !state.isLoadingModels &&
-        _sizeLookPages < _sizeLookPageLimit) {
-      _sizeLookPages++;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          unawaited(
-            ref
-                .read(modelSelectionControllerProvider.notifier)
-                .loadMoreModels(),
-          );
-        }
-      });
-    }
-
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: LayoutBuilder(
@@ -856,10 +826,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       context,
                       label: bucket.label,
                       selected: _sizeBucket == bucket,
-                      onTap: () => setState(() {
-                        _sizeBucket = _sizeBucket == bucket ? null : bucket;
-                        _sizeLookPages = 0;
-                      }),
+                      onTap: () {
+                        final next = _sizeBucket == bucket ? null : bucket;
+                        setState(() => _sizeBucket = next);
+                        unawaited(
+                          ref
+                              .read(modelSelectionControllerProvider.notifier)
+                              .setParameterRange(next?.parameterRange),
+                        );
+                      },
                     ),
                   ),
               ],
@@ -1094,9 +1069,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                   context,
                   label: bucket.label,
                   selected: _sizeBucket == bucket,
-                  onTap: () => setState(
-                    () => _sizeBucket = _sizeBucket == bucket ? null : bucket,
-                  ),
+                  onTap: () {
+                    final next = _sizeBucket == bucket ? null : bucket;
+                    setState(() => _sizeBucket = next);
+                    unawaited(
+                      ref
+                          .read(modelSelectionControllerProvider.notifier)
+                          .setParameterRange(next?.parameterRange),
+                    );
+                  },
                 ),
             ],
           ),
@@ -2755,32 +2736,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final sizeBucket = _sizeBucket;
-    if (sizeBucket != null &&
-        state.hasMoreModels &&
-        (state.isLoadingMore || _sizeLookPages < _sizeLookPageLimit)) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
-        child: Column(
-          children: [
-            const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Looking further down the catalog for ${sizeBucket.label} models…',
-              textAlign: TextAlign.center,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     final hasSearch = state.searchQuery.trim().isNotEmpty;
     final hasFilters =
         state.selectedCapabilityFilters.isNotEmpty ||
@@ -2849,20 +2804,6 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                         },
                         child: const Text('Clear Search'),
                       ),
-                    if (sizeBucket != null && state.hasMoreModels)
-                      FilledButton.tonal(
-                        onPressed: () {
-                          // The automatic pages are spent; this buys the same
-                          // number again before the next stop.
-                          setState(() => _sizeLookPages = 0);
-                          unawaited(
-                            ref
-                                .read(modelSelectionControllerProvider.notifier)
-                                .loadMoreModels(),
-                          );
-                        },
-                        child: const Text('Load more models'),
-                      ),
                     if (hasFilters)
                       FilledButton.tonal(
                         onPressed: () {
@@ -2870,12 +2811,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                           // here, so clearing filters has to reset them too.
                           setState(() {
                             _sizeBucket = null;
-                            _sizeLookPages = 0;
                             _onlyWhatFits = false;
                           });
-                          ref
-                              .read(modelSelectionControllerProvider.notifier)
-                              .clearFilters();
+                          final controller = ref.read(
+                            modelSelectionControllerProvider.notifier,
+                          );
+                          unawaited(controller.setParameterRange(null));
+                          controller.clearFilters();
                         },
                         child: const Text('Clear Filters'),
                       ),

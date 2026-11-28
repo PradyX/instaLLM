@@ -221,6 +221,19 @@ void main() {
     expect(sent, 'abc==');
   });
 
+  test('a parameter range is asked for on Hugging Face', () async {
+    final fake = _service({
+      'a/Alpha-GGUF': _repo(id: 'a/Alpha-GGUF', downloads: 100),
+    });
+
+    await fake.service.load(parameterRange: 'min:0,max:1B');
+
+    final sent = fake.adapter.requests
+        .firstWhere((request) => request.path == '/api/models')
+        .queryParameters;
+    expect(sent['num_parameters'], 'min:0,max:1B');
+  });
+
   test('a size is readable from a name on its own', () {
     expect(
       HuggingFaceModelDiscoveryService.parameterSizeIn(

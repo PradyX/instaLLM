@@ -117,9 +117,14 @@ class HuggingFaceModelDiscoveryService {
   ///
   /// Search results are not cached: they are an answer to what the user typed,
   /// and the default list is what a launch without a network should show.
+  ///
+  /// [parameterRange] is a `num_parameters` range such as `min:0,max:1B`, read
+  /// by Hugging Face itself. Paging a range gives a page full of models that
+  /// size instead of hoping the download order happens to reach them.
   Future<HuggingFaceModelCatalog> load({
     String query = '',
     String? cursor,
+    String? parameterRange,
   }) async {
     final trimmedQuery = query.trim();
     try {
@@ -133,6 +138,7 @@ class HuggingFaceModelDiscoveryService {
           pipeline: pipeline,
           query: trimmedQuery,
           cursor: _cursorFor(cursor, pipeline),
+          parameterRange: parameterRange,
         );
         if (page.failed) failedPipelines++;
         nextCursors[pipeline] = page.nextCursor;
@@ -162,7 +168,9 @@ class HuggingFaceModelDiscoveryService {
         hasMore: nextCursors.values.any((value) => value != null),
       );
 
-      if (trimmedQuery.isEmpty) {
+      // A filtered page is not the catalog: caching it would leave the next
+      // launch showing one bucket as if it were everything.
+      if (trimmedQuery.isEmpty && parameterRange == null) {
         await _cachePage(catalog, replace: cursor == null);
       }
       return catalog;
@@ -181,6 +189,7 @@ class HuggingFaceModelDiscoveryService {
     required String pipeline,
     required String query,
     required String? cursor,
+    String? parameterRange,
   }) async {
     final models = <_RawHfModel>[];
     String? nextCursor;
@@ -194,6 +203,9 @@ class HuggingFaceModelDiscoveryService {
         'pipeline_tag': pipeline,
       };
       if (query.isNotEmpty) queryParams['search'] = query;
+      if (parameterRange != null) {
+        queryParams['num_parameters'] = parameterRange;
+      }
       if (cursor != null && cursor.isNotEmpty) queryParams['cursor'] = cursor;
 
       final response = await _dio.get(

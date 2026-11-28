@@ -260,13 +260,22 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
     if (!ref.mounted || request != _catalogRequest) return;
 
-    // A failed page is not the end of the list: keep the cursor it came from
-    // and say what happened, instead of a Load more that will never return.
-    if (page.failed && !replace) {
+    // A failed page is not an empty one: keep whatever is on screen and say
+    // what happened, instead of replacing the list with nothing or ending it.
+    if (page.failed) {
       state = state.copyWith(
+        isLoadingModels: false,
         isLoadingMore: false,
-        error:
-            'Could not read more models. Check the connection and try again.',
+        error: page.rateLimited
+            ? 'Hugging Face is limiting requests just now. Try again in a '
+                  'minute.'
+            : replace
+            ? (_discoveredModels.isEmpty
+                  ? 'Could not reach Hugging Face. Check the connection and '
+                        'retry.'
+                  : 'Could not read Hugging Face just now. Try again.')
+            : 'Could not read more models. Check the connection and try '
+                  'again.',
       );
       return;
     }
@@ -277,7 +286,10 @@ class ModelSelectionController extends _$ModelSelectionController {
       state = state.copyWith(
         isLoadingModels: false,
         isLoadingMore: false,
-        error: _discoveredModels.isEmpty
+        error: page.rateLimited
+            ? 'Hugging Face is limiting requests just now. Try again in a '
+                  'minute.'
+            : _discoveredModels.isEmpty
             ? 'Could not reach Hugging Face. Check the connection and retry.'
             : null,
       );

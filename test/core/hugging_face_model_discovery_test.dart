@@ -64,6 +64,12 @@ class _FakeHuggingFace implements HttpClientAdapter {
     'downloads': repo['downloads'],
     'pipeline_tag': repo['pipeline_tag'],
     'tags': repo['tags'],
+    if (repo['_siblings'] != null)
+      'siblings': [
+        for (final file in repo['_siblings'] as List<String>)
+          {'rfilename': file},
+      ],
+    if (repo['_gguf'] != null) 'gguf': repo['_gguf'],
   };
 
   static Map<String, dynamic> _detail(Map<String, dynamic> repo) => {
@@ -220,6 +226,29 @@ void main() {
         .queryParameters['cursor'];
     expect(sent, 'abc==');
   });
+
+  test(
+    'a page carries its files and GGUF header without extra calls',
+    () async {
+      final fake = _service({
+        'a/Alpha-GGUF': {
+          ..._repo(id: 'a/Alpha-GGUF', downloads: 100),
+          '_siblings': ['Alpha-Q4_K_M.gguf', 'Alpha-F16.gguf'],
+          '_gguf': {'architecture': 'gemma3', 'total': 123456},
+        },
+      });
+
+      final page = await fake.service.load();
+
+      // One page per pipeline, and no per-model detail request.
+      expect(
+        fake.adapter.requests.map((request) => request.path),
+        everyElement('/api/models'),
+      );
+      expect(page.models.single.promptFormatId, 'gemma3');
+      expect(page.models.single.downloadUrl, contains('Alpha-Q4_K_M.gguf'));
+    },
+  );
 
   test('a parameter range is asked for on Hugging Face', () async {
     final fake = _service({

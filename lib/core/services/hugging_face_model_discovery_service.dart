@@ -16,6 +16,7 @@ class HuggingFaceModelCatalog {
     required this.nextCursor,
     required this.hasMore,
     this.failed = false,
+    this.rateLimited = false,
   });
 
   final List<LlmModel> models;
@@ -25,6 +26,10 @@ class HuggingFaceModelCatalog {
   /// True when the read failed, so an empty page is not mistaken for the end
   /// of the catalog.
   final bool failed;
+
+  /// True when the failure was Hugging Face refusing to serve more for a
+  /// while, which is worth saying plainly instead of "check the connection".
+  final bool rateLimited;
 
   static const empty = HuggingFaceModelCatalog(
     models: [],
@@ -39,6 +44,16 @@ class HuggingFaceModelCatalog {
     nextCursor: null,
     hasMore: true,
     failed: true,
+  );
+
+  /// A page refused because the request limit was reached. It is still a
+  /// failure rather than the end of the list.
+  static const rateLimitedPage = HuggingFaceModelCatalog(
+    models: [],
+    nextCursor: null,
+    hasMore: true,
+    failed: true,
+    rateLimited: true,
   );
 }
 
@@ -56,7 +71,9 @@ class HuggingFaceModelCatalog {
 /// network still shows the last catalog. Pages loaded past the first are cached
 /// too, together with the cursor that continues from them.
 class HuggingFaceModelDiscoveryService {
-  static const _cacheKey = 'hf_discovered_models_cache_v1';
+  // v2: pages now carry their files and GGUF headers, so a cached page from
+  // v1 has neither and its cursor belongs to a different request.
+  static const _cacheKey = 'hf_discovered_models_cache_v2';
   static const _cacheTtl = Duration(days: 7);
 
   /// Repositories read per pipeline per page. Two pipelines are read, so one
@@ -133,6 +150,7 @@ class HuggingFaceModelDiscoveryService {
       final nextCursors = <String, String?>{};
 
       var failedPipelines = 0;
+      var rateLimited = false;
       for (final pipeline in _allowedPipelines) {
         final page = await _fetchPage(
           pipeline: pipeline,
@@ -141,6 +159,7 @@ class HuggingFaceModelDiscoveryService {
           parameterRange: parameterRange,
         );
         if (page.failed) failedPipelines++;
+        if (page.rateLimited) rateLimited = true;
         nextCursors[pipeline] = page.nextCursor;
         for (final model in page.models) {
           if (seen.add(model.repoId)) raw.add(model);
@@ -148,6 +167,7 @@ class HuggingFaceModelDiscoveryService {
       }
 
       if (raw.isEmpty) {
+        if (rateLimited) return HuggingFaceModelCatalog.rateLimitedPage;
         return failedPipelines == _allowedPipelines.length
             ? HuggingFaceModelCatalog.failedPage
             : HuggingFaceModelCatalog.empty;
@@ -184,7 +204,14 @@ class HuggingFaceModelDiscoveryService {
   // API calls
   // ---------------------------------------------------------------------------
 
-  Future<({List<_RawHfModel> models, String? nextCursor, bool failed})>
+  Future<
+    ({
+      List<_RawHfModel> models,
+      String? nextCursor,
+      bool failed,
+      bool rateLimited,
+    })
+  >
   _fetchPage({
     required String pipeline,
     required String query,
@@ -194,6 +221,7 @@ class HuggingFaceModelDiscoveryService {
     final models = <_RawHfModel>[];
     String? nextCursor;
     var failed = false;
+    var rateLimited = false;
     try {
       final queryParams = <String, dynamic>{
         'filter': 'gguf',
@@ -201,6 +229,10 @@ class HuggingFaceModelDiscoveryService {
         'direction': '-1',
         'limit': _perPipelineLimit,
         'pipeline_tag': pipeline,
+        // The file list and the GGUF header arrive with the page, so reading
+        // fifty models costs two requests instead of fifty-two. Hugging Face
+        // rate-limited the old per-model reads as soon as a few pages loaded.
+        'expand[]': ['tags', 'siblings', 'gguf'],
       };
       if (query.isNotEmpty) queryParams['search'] = query;
       if (parameterRange != null) {
@@ -219,7 +251,7 @@ class HuggingFaceModelDiscoveryService {
         for (final item in data) {
           final map = item is Map ? Map<String, dynamic>.from(item) : null;
           if (map == null) continue;
-          final raw = _RawHfModel.fromListJson(map);
+          final raw = _RawHfModel.fromListJson(map, pipeline: pipeline);
           if (raw.repoId.isNotEmpty &&
               _allowedPipelines.contains(raw.pipelineTag)) {
             models.add(raw);
@@ -228,11 +260,17 @@ class HuggingFaceModelDiscoveryService {
       }
     } catch (error) {
       failed = true;
+      rateLimited = error is DioException && error.response?.statusCode == 429;
       // A wrong cursor answers 400 and would otherwise look like the end of
       // the list.
       debugPrint('Catalog page failed for $pipeline: $error');
     }
-    return (models: models, nextCursor: nextCursor, failed: failed);
+    return (
+      models: models,
+      nextCursor: nextCursor,
+      failed: failed,
+      rateLimited: rateLimited,
+    );
   }
 
   /// The `cursor` of the `rel="next"` link Hugging Face returns, if any.
@@ -287,6 +325,15 @@ class HuggingFaceModelDiscoveryService {
   }
 
   Future<LlmModel?> _resolveModelDetail(_RawHfModel raw) async {
+    // The page already carries what the detail endpoint would answer.
+    if (raw.siblings.isNotEmpty) {
+      return _parseModelFromDetail(raw, {
+        'siblings': [
+          for (final file in raw.siblings) {'rfilename': file},
+        ],
+        'gguf': raw.gguf,
+      });
+    }
     try {
       final response = await _dio.get('/api/models/${raw.repoId}');
       final data = response.data;
@@ -663,14 +710,27 @@ class _RawHfModel {
   final Set<String> tags;
   final int downloads;
 
+  /// Files in the repository, when the page was read with `expand[]=siblings`.
+  final List<String> siblings;
+
+  /// The repository's GGUF header, when the page asked for it.
+  final Map<String, dynamic>? gguf;
+
   const _RawHfModel({
     required this.repoId,
     required this.pipelineTag,
     required this.tags,
     required this.downloads,
+    this.siblings = const [],
+    this.gguf,
   });
 
-  factory _RawHfModel.fromListJson(Map<String, dynamic> json) {
+  /// [pipeline] is the pipeline the page was read for: an expanded page
+  /// leaves `pipeline_tag` out of each item.
+  factory _RawHfModel.fromListJson(
+    Map<String, dynamic> json, {
+    required String pipeline,
+  }) {
     final tags = <String>{};
     final rawTags = json['tags'];
     if (rawTags is List) {
@@ -681,9 +741,21 @@ class _RawHfModel {
       }
     }
 
+    final siblings = <String>[];
+    final rawSiblings = json['siblings'];
+    if (rawSiblings is List) {
+      for (final sibling in rawSiblings) {
+        final name = sibling is Map ? sibling['rfilename'] : null;
+        if (name is String && name.trim().isNotEmpty) siblings.add(name);
+      }
+    }
+    final rawGguf = json['gguf'];
+
     return _RawHfModel(
       repoId: (json['id'] ?? json['modelId'] ?? '').toString(),
-      pipelineTag: (json['pipeline_tag'] ?? '').toString(),
+      pipelineTag: (json['pipeline_tag'] ?? pipeline).toString(),
+      siblings: siblings,
+      gguf: rawGguf is Map ? Map<String, dynamic>.from(rawGguf) : null,
       tags: tags,
       downloads: (json['downloads'] as int?) ?? 0,
     );

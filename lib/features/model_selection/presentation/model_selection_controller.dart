@@ -12,6 +12,7 @@ import 'package:installm/core/services/storage_info_service.dart';
 import 'package:installm/core/storage/catalog_cache.dart';
 import 'package:installm/core/storage/catalog_database.dart';
 import 'package:installm/features/model_selection/data/gguf_reader.dart';
+import 'package:installm/features/model_selection/data/installed_model_metadata.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
 import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -174,28 +175,30 @@ class ModelSelectionController extends _$ModelSelectionController {
     final modelsWithCachedCapabilities = await _applyCachedCapabilities(
       updatedModels,
     );
+    // A catalog record describes a repository, not the file that was installed.
+    // The file's own header carries the chat template, and the template is what
+    // says a model can be asked for tool calls.
+    final describedModels = await InstalledModelMetadata(
+      storage: _storageService,
+    ).describe(modelsWithCachedCapabilities);
 
     // The user's last choice wins over anything the app would pick itself,
     // as long as that model is still installed.
     String? newSelectedId = state.selectedModelId ?? storedSelectedId;
     if (newSelectedId != null &&
-        !modelsWithCachedCapabilities.any(
-          (m) => m.id == newSelectedId && m.isDownloaded,
-        )) {
+        !describedModels.any((m) => m.id == newSelectedId && m.isDownloaded)) {
       newSelectedId = null;
     }
     if (newSelectedId == null) {
       try {
-        newSelectedId = modelsWithCachedCapabilities
-            .firstWhere((m) => m.isDownloaded)
-            .id;
+        newSelectedId = describedModels.firstWhere((m) => m.isDownloaded).id;
       } catch (_) {
         newSelectedId = null;
       }
     }
 
     state = state.copyWith(
-      models: modelsWithCachedCapabilities,
+      models: describedModels,
       selectedModelId: newSelectedId,
       hasMoreModels: cachedCatalog?.hasMore ?? false,
       // With nothing cached the screen waits for the first page instead of
@@ -204,7 +207,7 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
     await _refreshStorageInfo();
     _refreshInBackground(
-      () => _refreshModelCapabilities(modelsWithCachedCapabilities),
+      () => _refreshModelCapabilities(describedModels),
       'capability',
     );
     _refreshInBackground(_refreshDiscoveredModels, 'discovery');
@@ -613,10 +616,20 @@ class ModelSelectionController extends _$ModelSelectionController {
       _progress.clear(model.id);
 
       final isDownloaded = await _isModelBundleDownloaded(model);
+      // The header of the file just installed, so the turn that follows the
+      // download already knows what the model can do.
+      final metadata = isDownloaded
+          ? await InstalledModelMetadata(
+              storage: _storageService,
+            ).read(withVerifiedInstall(model, filePresent: true))
+          : null;
       final updatedModels = state.models
           .map(
             (m) => m.id == model.id
-                ? withVerifiedInstall(m, filePresent: isDownloaded)
+                ? withVerifiedInstall(
+                    m,
+                    filePresent: isDownloaded,
+                  ).copyWith(ggufMetadata: metadata ?? m.ggufMetadata)
                 : m,
           )
           .toList();

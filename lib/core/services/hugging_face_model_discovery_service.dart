@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:installm/core/services/hugging_face_auth_service.dart';
 import 'package:installm/core/storage/catalog_cache.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/storage/secure_storage.dart';
@@ -98,20 +99,29 @@ class HuggingFaceModelDiscoveryService {
     'Q8_0.gguf',
   ];
 
-  HuggingFaceModelDiscoveryService({Dio? dio, CatalogCache? cache})
-    : _dio =
-          dio ??
-          Dio(
-            BaseOptions(
-              baseUrl: 'https://huggingface.co',
-              connectTimeout: const Duration(seconds: 20),
-              receiveTimeout: const Duration(seconds: 20),
-              headers: const {'Accept': 'application/json'},
-            ),
-          ),
-      _cache = cache;
+  HuggingFaceModelDiscoveryService({
+    Dio? dio,
+    CatalogCache? cache,
+    HuggingFaceAuthService? auth,
+  }) : _dio =
+           dio ??
+           Dio(
+             BaseOptions(
+               baseUrl: 'https://huggingface.co',
+               connectTimeout: const Duration(seconds: 20),
+               receiveTimeout: const Duration(seconds: 20),
+               headers: const {'Accept': 'application/json'},
+             ),
+           ),
+       _cache = cache,
+       _auth = auth ?? HuggingFaceAuthService.instance {
+    // A saved token raises the anonymous rate limit this service runs into.
+    _dio.interceptors.add(_auth.requestInterceptor);
+  }
 
   final Dio _dio;
+
+  final HuggingFaceAuthService _auth;
 
   /// Where read pages are kept. Null keeps the service stateless, which is what
   /// the tests that only exercise Hugging Face pass.

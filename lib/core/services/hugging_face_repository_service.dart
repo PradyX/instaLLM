@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:installm/core/services/hugging_face_auth_service.dart';
 import 'package:installm/core/utils/logger.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 
@@ -79,7 +80,7 @@ class HuggingFaceRepository {
 /// Lists GGUF files of a Hugging Face repository so the user can pick a
 /// quantization and download it through the existing resumable pipeline.
 class HuggingFaceRepositoryService {
-  HuggingFaceRepositoryService({Dio? dio})
+  HuggingFaceRepositoryService({Dio? dio, HuggingFaceAuthService? auth})
     : _dio =
           dio ??
           Dio(
@@ -89,9 +90,14 @@ class HuggingFaceRepositoryService {
               receiveTimeout: const Duration(seconds: 20),
               headers: const {'Accept': 'application/json'},
             ),
-          );
+          ),
+      _auth = auth ?? HuggingFaceAuthService.instance {
+    _dio.interceptors.add(_auth.requestInterceptor);
+  }
 
   final Dio _dio;
+
+  final HuggingFaceAuthService _auth;
 
   /// Quantizations in the order the app prefers them (best for devices first).
   static const List<String> preferredQuantOrder = [

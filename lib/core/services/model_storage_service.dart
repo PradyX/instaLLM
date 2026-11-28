@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:installm/core/services/hugging_face_auth_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:installm/features/model_selection/domain/llm_model.dart';
@@ -57,8 +58,16 @@ class ChunkState {
 }
 
 class ModelStorageService {
-  ModelStorageService({AppStorageService? appStorage})
-    : _appStorage = appStorage ?? AppStorageService();
+  ModelStorageService({
+    AppStorageService? appStorage,
+    HuggingFaceAuthService? auth,
+  }) : _appStorage = appStorage ?? AppStorageService() {
+    // Downloads carry the saved token when there is one, which is what lifts
+    // Hugging Face's anonymous rate limit.
+    _dio.interceptors.add(
+      (auth ?? HuggingFaceAuthService.instance).requestInterceptor,
+    );
+  }
 
   /// How long one chunk stream may go without data before it is treated as
   /// stalled. The download is resumable, so failing loudly beats waiting.

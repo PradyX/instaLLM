@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:installm/core/services/hugging_face_auth_service.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -8,17 +9,24 @@ class HuggingFaceModelCapabilityService {
   static const _cacheKey = 'hf_model_capabilities_cache_v1';
   static const _cacheTtl = Duration(days: 7);
 
-  HuggingFaceModelCapabilityService()
-    : _dio = Dio(
-        BaseOptions(
-          baseUrl: 'https://huggingface.co',
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
-          headers: const {'Accept': 'application/json'},
-        ),
-      );
+  HuggingFaceModelCapabilityService({Dio? dio, HuggingFaceAuthService? auth})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: 'https://huggingface.co',
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+              headers: const {'Accept': 'application/json'},
+            ),
+          ),
+      _auth = auth ?? HuggingFaceAuthService.instance {
+    _dio.interceptors.add(_auth.requestInterceptor);
+  }
 
   final Dio _dio;
+
+  final HuggingFaceAuthService _auth;
 
   bool canResolveFromUrl(String? downloadUrl) {
     return _extractRepoFromUrl(downloadUrl) != null;

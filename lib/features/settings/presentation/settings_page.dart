@@ -12,6 +12,7 @@ import 'package:installm/core/services/attachment_image_service.dart';
 import 'package:installm/features/share/application/assistant_role_provider.dart';
 import 'package:installm/features/share/application/share_target_provider.dart';
 import 'package:installm/features/settings/presentation/appearance_settings_section.dart';
+import 'package:installm/features/settings/presentation/hugging_face_token_section.dart';
 import 'package:installm/features/context/application/context_budget_controller.dart';
 import 'package:installm/features/conversations/domain/context_policy.dart'
     show formatTokens;
@@ -141,6 +142,16 @@ class SettingsPage extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: 24),
+          Text(
+            'Models',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const HuggingFaceTokenSection(),
           if (defaultTargetPlatform == TargetPlatform.android) ...[
             const SizedBox(height: 24),
             Text(

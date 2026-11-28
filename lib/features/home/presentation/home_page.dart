@@ -1154,11 +1154,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Without a model there is nothing to chat with yet: keep the onboarding
     // path to model selection instead of the greeting.
     if (!hasDownloadedModel) {
+      // Scrollable like the greeting: with the keyboard up this column is
+      // taller than the room left for it, and a plain Column overflowed.
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 80,

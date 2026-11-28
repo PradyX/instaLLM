@@ -503,29 +503,34 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             );
           }
 
-          return Column(
-            children: [
-              _buildToolbar(
-                context,
-                state,
-                modelCount: selectableModels.length,
-                installedCount: installedFamilies.length,
-              ),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildFilterRail(
-                      context,
-                      state,
-                      visibleCapabilities: visibleCapabilities,
-                      capabilityCounts: capabilityCounts,
-                    ),
-                    Expanded(child: list),
-                  ],
+          // The wide layout draws its own toolbar instead of an AppBar, and
+          // the page is edge to edge, so it has to keep the system bars out of
+          // its own way here. The phone layout does the same around its header.
+          return SafeArea(
+            child: Column(
+              children: [
+                _buildToolbar(
+                  context,
+                  state,
+                  modelCount: selectableModels.length,
+                  installedCount: installedFamilies.length,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFilterRail(
+                        context,
+                        state,
+                        visibleCapabilities: visibleCapabilities,
+                        capabilityCounts: capabilityCounts,
+                      ),
+                      Expanded(child: list),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -542,8 +547,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    // Models is pushed from chat and settings. The wide layout has no AppBar
+    // and its drawer belongs to the shell, so without this control a tablet
+    // could leave the page only with the system back gesture.
+    final canGoBack = ModalRoute.of(context)?.canPop ?? false;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
+      padding: EdgeInsets.fromLTRB(canGoBack ? 12 : 24, 10, 24, 10),
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -554,6 +563,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       ),
       child: Row(
         children: [
+          if (canGoBack)
+            IconButton(
+              onPressed: () => Navigator.maybePop(context),
+              icon: const Icon(Icons.arrow_back_rounded, size: 22),
+              tooltip: 'Back',
+              visualDensity: VisualDensity.compact,
+            ),
           Text(
             'Models',
             style: textTheme.titleLarge?.copyWith(

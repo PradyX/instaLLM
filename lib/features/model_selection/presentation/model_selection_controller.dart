@@ -256,6 +256,17 @@ class ModelSelectionController extends _$ModelSelectionController {
     final page = await _discoveryService.load(query: query, cursor: cursor);
     if (!ref.mounted || request != _catalogRequest) return;
 
+    // A failed page is not the end of the list: keep the cursor it came from
+    // and say what happened, instead of a Load more that will never return.
+    if (page.failed && !replace) {
+      state = state.copyWith(
+        isLoadingMore: false,
+        error:
+            'Could not read more models. Check the connection and try again.',
+      );
+      return;
+    }
+
     // An empty answer to the default list is a failed read, not an empty
     // Hugging Face: that list always has something. Keep what is on screen.
     if (replace && query.isEmpty && page.models.isEmpty) {

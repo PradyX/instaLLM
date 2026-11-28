@@ -88,12 +88,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// The parameter-size bucket the list is narrowed to, if any.
   _SizeBucket? _sizeBucket;
 
-  /// Pages read while a size bucket matches nothing yet.
+  /// Pages read while a size bucket has fewer matches than a screenful.
   ///
   /// A bucket only sees the pages already read, and the catalog starts with
-  /// the most downloaded models, which are rarely the smallest. Bound, so
+  /// the most downloaded models, which are rarely the smallest. Bounded, so
   /// choosing a bucket cannot walk the whole catalog on its own.
-  static const _sizeLookPageLimit = 4;
+  static const _sizeLookPageLimit = 8;
+  static const _sizeLookMatchTarget = 12;
   int _sizeLookPages = 0;
 
   /// Whether the list hides models whose file is not expected to run here.
@@ -478,13 +479,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         .where((family) => !family.hasInstalled)
         .toList(growable: false);
 
-    // A size bucket that matches nothing yet is usually a bucket whose models
-    // sit deeper in the catalog, not an empty bucket. Reading a few more pages
-    // keeps "Best fit · <1B" from looking broken; the limit above stops the
-    // walking, and the empty state offers the same step by hand after it.
+    // A size bucket with a handful of matches is usually a bucket whose models
+    // sit deeper in the catalog, not a bucket with nothing in it. Reading a
+    // few more pages keeps "Best fit · <1B" from showing the two models that
+    // happened to be on the first page; the limits above stop the walking, and
+    // the empty state offers the same step by hand after it.
+    final sizeMatches = installedFamilies.length + catalogFamilies.length;
     if (_sizeBucket != null &&
-        installedFamilies.isEmpty &&
-        catalogFamilies.isEmpty &&
+        sizeMatches < _sizeLookMatchTarget &&
         state.hasMoreModels &&
         !state.isLoadingMore &&
         !state.isLoadingModels &&

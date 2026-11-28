@@ -203,6 +203,24 @@ void main() {
     },
   );
 
+  test('a cursor is read from its link, not in its URL spelling', () async {
+    final fake = _service(
+      {'a/Alpha-GGUF': _repo(id: 'a/Alpha-GGUF', downloads: 100)},
+      nextCursorByPipeline: {'text-generation': 'abc%3D%3D'},
+    );
+
+    final first = await fake.service.load();
+    fake.adapter.requests.clear();
+    await fake.service.load(cursor: first.nextCursor);
+
+    // A `%3D` carried into the next request would go out as `%253D` and
+    // Hugging Face answers 400, which used to end the list after one page.
+    final sent = fake.adapter.requests
+        .firstWhere((request) => request.path == '/api/models')
+        .queryParameters['cursor'];
+    expect(sent, 'abc==');
+  });
+
   test('a size is readable from a name on its own', () {
     expect(
       HuggingFaceModelDiscoveryService.parameterSizeIn(

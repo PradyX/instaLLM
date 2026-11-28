@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -14,16 +15,30 @@ class HuggingFaceModelCatalog {
     required this.models,
     required this.nextCursor,
     required this.hasMore,
+    this.failed = false,
   });
 
   final List<LlmModel> models;
   final String? nextCursor;
   final bool hasMore;
 
+  /// True when the read failed, so an empty page is not mistaken for the end
+  /// of the catalog.
+  final bool failed;
+
   static const empty = HuggingFaceModelCatalog(
     models: [],
     nextCursor: null,
     hasMore: false,
+  );
+
+  /// A page that could not be read. It still has more to offer, so the caller
+  /// keeps its cursor instead of ending the list.
+  static const failedPage = HuggingFaceModelCatalog(
+    models: [],
+    nextCursor: null,
+    hasMore: true,
+    failed: true,
   );
 }
 
@@ -112,19 +127,25 @@ class HuggingFaceModelDiscoveryService {
       final seen = <String>{};
       final nextCursors = <String, String?>{};
 
+      var failedPipelines = 0;
       for (final pipeline in _allowedPipelines) {
         final page = await _fetchPage(
           pipeline: pipeline,
           query: trimmedQuery,
           cursor: _cursorFor(cursor, pipeline),
         );
+        if (page.failed) failedPipelines++;
         nextCursors[pipeline] = page.nextCursor;
         for (final model in page.models) {
           if (seen.add(model.repoId)) raw.add(model);
         }
       }
 
-      if (raw.isEmpty) return HuggingFaceModelCatalog.empty;
+      if (raw.isEmpty) {
+        return failedPipelines == _allowedPipelines.length
+            ? HuggingFaceModelCatalog.failedPage
+            : HuggingFaceModelCatalog.empty;
+      }
       raw.sort((a, b) => b.downloads.compareTo(a.downloads));
 
       final discovered = <LlmModel>[];
@@ -145,8 +166,9 @@ class HuggingFaceModelDiscoveryService {
         await _cachePage(catalog, replace: cursor == null);
       }
       return catalog;
-    } catch (_) {
-      return HuggingFaceModelCatalog.empty;
+    } catch (error) {
+      debugPrint('Catalog read failed: $error');
+      return HuggingFaceModelCatalog.failedPage;
     }
   }
 
@@ -154,13 +176,15 @@ class HuggingFaceModelDiscoveryService {
   // API calls
   // ---------------------------------------------------------------------------
 
-  Future<({List<_RawHfModel> models, String? nextCursor})> _fetchPage({
+  Future<({List<_RawHfModel> models, String? nextCursor, bool failed})>
+  _fetchPage({
     required String pipeline,
     required String query,
     required String? cursor,
   }) async {
     final models = <_RawHfModel>[];
     String? nextCursor;
+    var failed = false;
     try {
       final queryParams = <String, dynamic>{
         'filter': 'gguf',
@@ -190,10 +214,13 @@ class HuggingFaceModelDiscoveryService {
           }
         }
       }
-    } catch (_) {
-      // One pipeline failing still leaves the other one's page.
+    } catch (error) {
+      failed = true;
+      // A wrong cursor answers 400 and would otherwise look like the end of
+      // the list.
+      debugPrint('Catalog page failed for $pipeline: $error');
     }
-    return (models: models, nextCursor: nextCursor);
+    return (models: models, nextCursor: nextCursor, failed: failed);
   }
 
   /// The `cursor` of the `rel="next"` link Hugging Face returns, if any.
@@ -204,7 +231,21 @@ class HuggingFaceModelDiscoveryService {
     if (link == null || link.isEmpty) return null;
     final next = RegExp(r'<([^>]+)>;\s*rel="next"').firstMatch(link)?.group(1);
     if (next == null) return null;
-    return RegExp(r'[?&]cursor=([^&]+)').firstMatch(next)?.group(1);
+    final cursor = RegExp(r'[?&]cursor=([^&]+)').firstMatch(next)?.group(1);
+    if (cursor == null) return null;
+    // The link carries the cursor already percent-encoded, and Dio encodes the
+    // value again when it builds the next request: a `%3D` would go out as
+    // `%253D` and Hugging Face answers 400. Decode once here so every caller
+    // holds the cursor itself, not its URL spelling.
+    return _decodeCursor(cursor);
+  }
+
+  static String? _decodeCursor(String cursor) {
+    try {
+      return Uri.decodeComponent(cursor);
+    } on FormatException {
+      return cursor;
+    }
   }
 
   /// The cursor this pipeline had reached, from the combined cursor.
@@ -214,8 +255,9 @@ class HuggingFaceModelDiscoveryService {
       final separator = part.indexOf('|');
       if (separator <= 0) continue;
       if (part.substring(0, separator) == pipeline) {
-        final cursor = part.substring(separator + 1);
-        return cursor.isEmpty ? null : cursor;
+        // Cursors cached by an earlier build were stored in their URL spelling.
+        final cursor = _decodeCursor(part.substring(separator + 1));
+        return cursor == null || cursor.isEmpty ? null : cursor;
       }
     }
     return null;

@@ -128,6 +128,119 @@ void main() {
     expect(merged.map((model) => model.id), ['qwen-3-4b', 'hfrepo-qwen-q8']);
   });
 
+  test('republished copies of one discovered model collapse to one entry', () {
+    // Discovery names a record after its repository without the publisher, so
+    // five publishers of the same model arrive with one name and one size. The
+    // list shows name and size, so five rows read as five duplicates.
+    final catalog = _model(
+      id: 'qwen-2.5-0.5b',
+      name: 'Qwen 2.5',
+      repository: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
+      fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      size: '0.5B',
+    );
+    LlmModel published(String publisher) => _model(
+      id: 'hf-${publisher.toLowerCase()}-qwen25',
+      name: 'Qwen2.5 0.5B Instruct',
+      repository: '$publisher/Qwen2.5-0.5B-Instruct-GGUF',
+      fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      size: '898M',
+    );
+
+    final merged = mergeModelSources(
+      catalogModels: [catalog],
+      discoveredModels: [
+        published('bartowski'),
+        published('lmstudio-community'),
+        published('ThomasBaruzier'),
+        published('Qwen'),
+        published('second-state'),
+      ],
+      customModels: const [],
+    );
+
+    expect(merged, hasLength(1));
+    expect(merged.single.id, 'qwen-2.5-0.5b');
+  });
+
+  test('a discovered copy of a file the catalog ships is dropped', () {
+    // The community publisher is a different repository, but it serves the one
+    // file the catalog already offers, so it would be a second row with the same
+    // name and the same size and no way to tell them apart.
+    final catalog = _model(
+      id: 'qwen-2.5-0.5b',
+      name: 'Qwen 2.5',
+      repository: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF',
+      fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      size: '0.5B',
+    );
+
+    final merged = mergeModelSources(
+      catalogModels: [catalog],
+      discoveredModels: [
+        _model(
+          id: 'hf-bartowski-qwen',
+          name: 'Qwen2.5 0.5B Instruct',
+          repository: 'bartowski/Qwen2.5-0.5B-Instruct-GGUF',
+          fileName: 'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+          size: '898M',
+        ),
+      ],
+      customModels: const [],
+    );
+
+    expect(merged.map((model) => model.id), ['qwen-2.5-0.5b']);
+  });
+
+  test('a discovered model no catalog entry links to keeps one publisher', () {
+    LlmModel published(String publisher, {bool downloaded = false}) => _model(
+      id: 'hf-${publisher.toLowerCase()}-tiny',
+      name: 'Tiny Model',
+      repository: '$publisher/Tiny-GGUF',
+      fileName: 'tiny-q4_k_m.gguf',
+      size: '1B',
+      downloaded: downloaded,
+    );
+
+    final merged = mergeModelSources(
+      catalogModels: const [],
+      discoveredModels: [
+        published('first'),
+        published('second'),
+        published('third', downloaded: true),
+      ],
+      customModels: const [],
+    );
+
+    // The installed copy stands for the model when nothing is official.
+    expect(merged.map((model) => model.id), ['hf-third-tiny']);
+  });
+
+  test('a name and a size that differ are different models', () {
+    final merged = mergeModelSources(
+      catalogModels: const [],
+      discoveredModels: [
+        _model(
+          id: 'small',
+          name: 'Qwen2.5 0.5B Instruct',
+          repository: 'a/Qwen2.5-0.5B-Instruct-GGUF',
+          fileName: 'small-q4_k_m.gguf',
+          size: '898M',
+        ),
+        _model(
+          id: 'large',
+          name: 'Qwen2.5 0.5B Instruct',
+          repository: 'b/Qwen2.5-0.5B-Instruct-GGUF',
+          fileName: 'large-q4_k_m.gguf',
+          size: '1.5B',
+        ),
+      ],
+      customModels: const [],
+    );
+
+    expect(merged.map((model) => model.id), ['small', 'large']);
+  });
+
   test('the catalog leads, then discovery, then what the user added', () {
     final merged = mergeModelSources(
       catalogModels: [

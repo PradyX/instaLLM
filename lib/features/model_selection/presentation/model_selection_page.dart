@@ -2488,13 +2488,50 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       ('ID', model.id),
     ];
 
-    return Wrap(
-      spacing: 24,
-      runSpacing: 14,
-      children: [
-        for (final (label, value) in facts)
-          SizedBox(width: 220, child: _buildDetailRow(context, label, value)),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 20.0;
+        // Low enough that a window of about 400 dp holds two columns, high
+        // enough that a phone's own width stays one readable column.
+        const minimumCell = 170.0;
+        final available = constraints.maxWidth;
+
+        // The cells share the width they are given instead of sitting at a
+        // fixed 220 dp. A pane between about 460 and 700 dp fitted one cell per
+        // line and left half of every line empty, which is what made this
+        // section twice as tall as the room it had.
+        if (!available.isFinite) {
+          return Wrap(
+            spacing: 24,
+            runSpacing: 12,
+            children: [
+              for (final (label, value) in facts)
+                SizedBox(
+                  width: 220,
+                  child: _buildDetailRow(context, label, value),
+                ),
+            ],
+          );
+        }
+
+        final columns = ((available + spacing) / (minimumCell + spacing))
+            .floor()
+            .clamp(1, 3)
+            .toInt();
+        final cellWidth = (available - spacing * (columns - 1)) / columns;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: 12,
+          children: [
+            for (final (label, value) in facts)
+              SizedBox(
+                width: cellWidth,
+                child: _buildDetailRow(context, label, value),
+              ),
+          ],
+        );
+      },
     );
   }
 

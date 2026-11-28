@@ -25,6 +25,13 @@ import 'package:installm/features/model_selection/domain/llm_model.dart';
 /// An installed record wins over an uninstalled one for the same file, for the
 /// same reason [ModelFamilies] keeps the installed variant: dropping the record
 /// of a file that is already on disk would present that file as not installed.
+///
+/// Discovery is different from an addition the user made, so it is collapsed
+/// first: several publishers ship a model under their own repository, which
+/// makes one model appear five times in a list that shows a name and a size and
+/// nothing else. A discovered record whose file the catalog already offers is
+/// dropped, because the app then points at the publisher it calls official, and
+/// the rest collapse to one record per model.
 List<LlmModel> mergeModelSources({
   required List<LlmModel> catalogModels,
   required List<LlmModel> discoveredModels,
@@ -49,7 +56,7 @@ List<LlmModel> mergeModelSources({
   for (final model in catalogModels) {
     add(model);
   }
-  for (final model in discoveredModels) {
+  for (final model in _oneRecordPerModel(discoveredModels, catalogModels)) {
     add(model);
   }
   for (final model in customModels) {
@@ -57,6 +64,62 @@ List<LlmModel> mergeModelSources({
   }
 
   return [for (final key in order) kept[key]!];
+}
+
+/// One record per discovered model, whatever the number of publishers.
+///
+/// A publisher the catalog does not ship is still a republishing of a model the
+/// app already offers when it serves the same file: `qwen2.5-0.5b-instruct-q4_k_m.gguf`
+/// is that model whichever repository hosts it, so the catalog's own record
+/// stands for it and the discovered copy adds nothing but a second row with the
+/// same name.
+///
+/// What is left is collapsed too, because discovery derives a name from the
+/// repository without the publisher: `bartowski/...` and `lmstudio-community/...`
+/// both arrive as `Qwen2.5 0.5B Instruct`. Two records are the same model when
+/// they carry that name and the same parameter size. The installed copy stands
+/// for it, and failing that the first, which is the most downloaded because
+/// discovery asks for the popular ones first.
+List<LlmModel> _oneRecordPerModel(
+  List<LlmModel> discovered,
+  List<LlmModel> catalog,
+) {
+  if (discovered.isEmpty) return discovered;
+
+  final catalogFiles = <String>{
+    for (final model in catalog)
+      if (model.localFileName?.trim().toLowerCase() case final file
+          when file != null && file.isNotEmpty)
+        file,
+  };
+  final candidates = [
+    for (final model in discovered)
+      if (!catalogFiles.contains(model.localFileName?.trim().toLowerCase()))
+        model,
+  ];
+  if (candidates.length < 2) return candidates;
+
+  final kept = <String, LlmModel>{};
+  final order = <String>[];
+  for (final model in candidates) {
+    final key = _modelKey(model);
+    final existing = kept[key];
+    if (existing == null) {
+      kept[key] = model;
+      order.add(key);
+      continue;
+    }
+    if (model.isDownloaded && !existing.isDownloaded) {
+      kept[key] = model;
+    }
+  }
+  return [for (final key in order) kept[key]!];
+}
+
+/// The identity a model is recognised by on screen: its name and its size.
+String _modelKey(LlmModel model) {
+  final name = model.name.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  return '$name|${model.parameterSize.trim().toLowerCase()}';
 }
 
 /// What identifies one downloadable entry: the publisher's repository and the

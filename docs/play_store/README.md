@@ -1,7 +1,8 @@
 # Google Play release
 
-Everything needed to build and publish InstaLLM on Google Play. The bundle is
-built locally; the Play Console steps are manual.
+Everything needed to build InstaLLM's Google Play bundle on this machine. The
+script produces and checks the `.aab` and stops there: nothing in this
+repository uploads it, so the path below is the whole of its output.
 
 ## 1. Build the signed bundle
 
@@ -11,7 +12,8 @@ scripts/build_android_bundle.sh
 
 Output: `build/app/outputs/bundle/release/app-release.aab`, signed with the key
 `android/key.properties` points at. The script prints the bundle size, the
-`pubspec.yaml` version and its SHA-256.
+`pubspec.yaml` version and its SHA-256, and nothing else happens to the file:
+no script or step here uploads it.
 
 Both `android/key.properties` and the keystore are gitignored and live outside
 the repository. A release build without them stops in Gradle with a message
@@ -49,11 +51,11 @@ Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
     `scripts/build_android_bundle.sh` exited 0 and `jarsigner -verify` prints
     `jar verified.`; the sideload APK of the same build reports
     `versionCode='6' versionName='1.7.2'`, `minSdkVersion 24`,
-    `targetSdkVersion 36` through `aapt2 dump badging`. This is the bundle
-    attached to GitHub release `v1.7.2`, with that APK, the macOS DMG (built
-    `1.7.2`/`6`) and the Linux archive. It carries the Hugging Face-style
-    model catalog, the single model/thinking pill, the voice dock and the
-    brain-in-chip model mark, and it fixes a tablet's filter column naming a
+    `targetSdkVersion 36` through `aapt2 dump badging`. It is the newest bundle
+    on this machine; GitHub release `v1.7.2` carries that APK, the macOS DMG
+    (`1.7.2`/`6`) and the Linux archive, not this file. It carries the Hugging
+    Face-style model catalog, the single model/thinking pill, the voice dock and
+    the brain-in-chip model mark, and it fixes a tablet's filter column naming a
     Mac.
   - `1.7.1+5` (versionCode 5), built on 26 November 2026 from `e994625`,
     142 MB on disk (148.6 MB as Gradle reports it), SHA-256
@@ -61,9 +63,8 @@ Checked on 27 November 2026 against the working tree that carries `1.7.2+6`
     `scripts/build_android_bundle.sh` exited 0, `jarsigner -verify` prints
     `jar verified.`, and the manifest reports `versionCode="5"`,
     `versionName="1.7.1"`, `minSdkVersion 24`, `targetSdkVersion 36` (read back
-    from the sideload APK of the same build with `aapt2 dump badging`). This is
-    the bundle attached to GitHub release `v1.7.1`, along with that APK, the
-    macOS DMG and the Linux archive.
+    from the sideload APK of the same build with `aapt2 dump badging`). GitHub
+    release `v1.7.1` carries that APK, the macOS DMG and the Linux archive.
   - `1.7.0+4` (versionCode 4), built on 25 November 2026 from this tree,
     148,554,338 bytes (148.6 MB as Gradle reports it), SHA-256
     `0af47d0ca30e67fac33dbe3a990472c0aeb0d00e695d5878e59e46afddeb93ed`,
@@ -271,9 +272,10 @@ Play review sheet cannot be observed until an install comes from Play.
    `screens/desktop/`, so the plain screens are still there for reference and
    the artwork can be regenerated after a UI change.
    - Category: Tools. Tags: local AI, offline, privacy.
-4. **Release**: enable Play App Signing, upload the `.aab` to internal testing
-   first and install from the Play link to confirm the bundle installs and the
-   review prompt path resolves, then promote to production.
+4. **Release**: the bundle Play Console takes is
+   `build/app/outputs/bundle/release/app-release.aab`. Building and checking that
+   file is all this repository does; the console work, including enabling Play
+   App Signing, happens outside these steps.
    - Release notes ("What's new in this release"): `release_notes.txt`, one
      bullet per user-visible change for 1.7.2 — a 320/500-character block with
      a 154-character variant below it, each heading carrying its own count.
@@ -320,10 +322,9 @@ refreshed: phone, 7-inch, 10-inch and desktop.
 
 1. Add an in-app way to report offensive AI output, or record why the
    AI-generated content policy does not apply, before the production review.
-2. Upload the `1.7.2+6` bundle, then promote it to production (section 4,
-   steps 4 and 5). Once that build is on a testing track, install it from the
-   Play link and confirm the update prompt appears on the next launch against
-   an even newer build.
+2. Promote `1.7.2+6` to production (section 4, steps 4 and 5). Once that build
+   is on a testing track, install it from the Play link and confirm the update
+   prompt appears on the next launch against an even newer build.
 
 The model ledger's fit column reads "Fit on this device" ("Fit" on a phone
 width), so the Android and Linux screenshots no longer show macOS wording; the

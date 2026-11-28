@@ -4,7 +4,16 @@
 
 # InstaLLM
 
-[Source repository](https://github.com/PradyX/instaLLM) · Private AI. Fully on-device.
+<p align="center">
+  <strong>Private AI. Fully on-device.</strong>
+</p>
+
+<p align="center">
+  <a href="https://play.google.com/store/apps/details?id=com.prady.installm"><img src="assets/badges/google-play.png" alt="Get it on Google Play" height="60"></a>&nbsp;&nbsp;
+  <a href="https://github.com/PradyX/instaLLM/releases/latest"><img src="assets/badges/github-android.svg" alt="Download the Android APK from GitHub Releases" height="60"></a>&nbsp;&nbsp;
+  <a href="https://github.com/PradyX/instaLLM/releases/latest"><img src="assets/badges/github-macos.svg" alt="Download the macOS build from GitHub Releases" height="60"></a>&nbsp;&nbsp;
+  <a href="https://github.com/PradyX/instaLLM/releases/latest"><img src="assets/badges/github-linux.svg" alt="Download the Linux build from GitHub Releases" height="60"></a>
+</p>
 
 InstaLLM is a **privacy-first local AI assistant that runs entirely on your device**.
 It enables **on-device Local Language Model (LLM) inference using GGUF models** with `llama_cpp_dart`, allowing you to chat with AI **without sending your data to external servers**.

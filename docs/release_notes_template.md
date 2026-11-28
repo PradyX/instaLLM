@@ -21,7 +21,6 @@ Version <version> (versionCode <code>).
 ## Android
 
 - `InstaLLM-<version>-android.apk` — versionCode <code>, versionName <version>, minSdk <n>, targetSdk <n>; sideload to install.
-- `InstaLLM-<version>-android.aab` — signed bundle for Google Play upload only; Android cannot install it directly.
 
 ## macOS
 
@@ -31,10 +30,9 @@ Version <version> (versionCode <code>).
 ## Linux
 
 - `InstaLLM-<version>-linux-x64.tar.gz` — unpack and run `installm-linux-x64/installm`; needs GTK 3 and `libsecret-1-0`.
-- <build host and what was not launched there>
 
 ## Checksums and build
 
-- `SHA256SUMS.txt` covers all four artifacts.
+- `SHA256SUMS.txt` covers every artifact here; the Play bundle is uploaded to Play Console and is not attached.
 - Built from `<commit>`, tagged `v<version>`.
 ```

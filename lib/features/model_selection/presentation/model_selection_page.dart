@@ -20,11 +20,12 @@ import 'package:installm/features/model_selection/presentation/download_progress
 import 'package:installm/features/model_selection/presentation/hugging_face_repository_dialog.dart';
 import 'package:installm/features/model_selection/presentation/model_import_dialog.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_controller.dart';
+import 'package:installm/features/settings/presentation/hugging_face_token_dialog.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Choices offered when the user taps "Add Model".
-enum _AddModelAction { importFile, huggingFaceRepo, directUrl }
+enum _AddModelAction { importFile, huggingFaceRepo, directUrl, token }
 
 /// Apple's desktops are the only platform that says "unified" about its RAM.
 bool get _isAppleDesktop => defaultTargetPlatform == TargetPlatform.macOS;
@@ -3050,6 +3051,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               onTap: () =>
                   Navigator.of(sheetContext).pop(_AddModelAction.directUrl),
             ),
+            ListTile(
+              leading: const Icon(Icons.vpn_key_outlined),
+              title: const Text('Add a Hugging Face token'),
+              subtitle: const Text(
+                'Higher download limits; sent only to huggingface.co',
+              ),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_AddModelAction.token),
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -3065,6 +3075,19 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         await showHuggingFaceRepositoryDialog(context, controller);
       case _AddModelAction.directUrl:
         await _showAddModelDialog(context);
+      case _AddModelAction.token:
+        final change = await showHuggingFaceTokenDialog(context);
+        if (!mounted || change == HuggingFaceTokenChange.none) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              change == HuggingFaceTokenChange.saved
+                  ? 'Token saved. The catalog and downloads will use it.'
+                  : 'Token removed. Downloads are anonymous again.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
     }
   }
 

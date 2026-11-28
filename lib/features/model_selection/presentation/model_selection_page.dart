@@ -330,8 +330,21 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final sortedModels = [...selectableModels]
       ..sort(_compareModelsPrioritizingInstalled);
     final capabilityCounts = _buildCapabilityCounts(selectableModels);
+    // The three chat filters stay put even when the page in hand has no model
+    // carrying them. Deriving them only from the counts made the whole filter
+    // row vanish whenever the catalog was briefly small or filtered.
+    const alwaysShown = {
+      ModelCapability.vision,
+      ModelCapability.tools,
+      ModelCapability.thinking,
+    };
     final visibleCapabilities = ModelCapability.values
-        .where((capability) => (capabilityCounts[capability] ?? 0) > 0)
+        .where(
+          (capability) =>
+              alwaysShown.contains(capability) ||
+              (capabilityCounts[capability] ?? 0) > 0 ||
+              state.selectedCapabilityFilters.contains(capability),
+        )
         .toList(growable: false);
     final filteredModels = sortedModels
         .where((model) {
@@ -591,6 +604,13 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           SizedBox(width: 250, child: _buildSearchField(context, state)),
           const SizedBox(width: 10),
           _buildSortButton(context, state, iconOnly: false),
+          if (_hasActiveFilters(state)) ...[
+            const SizedBox(width: 4),
+            TextButton(
+              onPressed: _resetFilters,
+              child: const Text('Clear filters'),
+            ),
+          ],
           const SizedBox(width: 10),
           FilledButton.icon(
             onPressed: _showAddModelSheet,
@@ -636,6 +656,15 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
             ),
           ),
           const Spacer(),
+          if (_hasActiveFilters(state))
+            TextButton(
+              onPressed: _resetFilters,
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              child: const Text('Clear'),
+            ),
           IconButton(
             onPressed: _showAddModelSheet,
             icon: const Icon(Icons.add_rounded, size: 22),
@@ -643,6 +672,27 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Whether anything narrows the list right now, which is when the Clear
+  /// control has something to do.
+  bool _hasActiveFilters(ModelSelectionState state) =>
+      state.searchQuery.trim().isNotEmpty ||
+      state.selectedCapabilityFilters.isNotEmpty ||
+      !state.sortByFit ||
+      _sizeBucket != null ||
+      _onlyWhatFits;
+
+  void _resetFilters() {
+    _searchController.clear();
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _sizeBucket = null;
+      _onlyWhatFits = false;
+    });
+    unawaited(
+      ref.read(modelSelectionControllerProvider.notifier).resetCatalog(),
     );
   }
 

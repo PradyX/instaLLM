@@ -375,6 +375,22 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
   }
 
+  /// Puts the catalog back to the unfiltered first page.
+  ///
+  /// Search, capability filters, sort and the parameter range all narrow what
+  /// Hugging Face returns, so one control clears all of them and reads the
+  /// default list again.
+  Future<void> resetCatalog() async {
+    _searchDebounce?.cancel();
+    _parameterRange = null;
+    state = state.copyWith(
+      searchQuery: '',
+      selectedCapabilityFilters: <ModelCapability>{},
+      sortByFit: true,
+    );
+    await _loadCatalogPage(query: '', cursor: null, replace: true);
+  }
+
   /// Asks Hugging Face for [query] once the typing settles.
   ///
   /// The list is not just what the app knows: a model it has never seen is a

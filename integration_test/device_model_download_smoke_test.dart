@@ -10,13 +10,16 @@ import 'package:installm/features/model_selection/presentation/model_selection_c
 import 'package:installm/features/model_selection/presentation/model_selection_page.dart';
 import 'package:integration_test/integration_test.dart';
 
-/// Downloads one small catalog model through the model page itself, on a real
-/// device, with the real network and the real model directory.
+/// Downloads one small model through the model page itself, on a real device,
+/// with the real network and the real model directory.
 ///
 /// Unit tests cover the download service against fakes. What they cannot cover
 /// is whether the redesigned page still wires its Download button to that
 /// service on this platform, whether the file really lands in the app's model
 /// folder, and whether the row then reports the model as installed.
+///
+/// The model comes from Hugging Face, because the app ships no list of its own;
+/// the test waits for the catalog page, then narrows it with the search field.
 ///
 /// Run on a connected device:
 ///
@@ -29,14 +32,11 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  // Liquid AI's smallest entry: a real catalog model, about 216 MB.
-  const modelId = 'lfm2-350m';
+  // Liquid AI's smallest current release: a real catalog model, about 230 MB.
+  const family = 'LFM2.5';
+  const parameterSize = '350M';
 
   testWidgets('the catalog downloads a model on this device', (tester) async {
-    final catalogModel = LlmModel.availableModels.firstWhere(
-      (model) => model.id == modelId,
-    );
-
     await tester.pumpWidget(
       const ProviderScope(child: MaterialApp(home: ModelSelectionPage())),
     );
@@ -47,6 +47,39 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ModelSelectionPage)),
     );
+    final controller = container.read(
+      modelSelectionControllerProvider.notifier,
+    );
+
+    LlmModel? findModel() {
+      for (final model
+          in container.read(modelSelectionControllerProvider).models) {
+        if (model.name.contains(family) &&
+            model.parameterSize == parameterSize) {
+          return model;
+        }
+      }
+      return null;
+    }
+
+    // The first page is read from Hugging Face, so wait for it.
+    for (var attempt = 0; attempt < 20 && findModel() == null; attempt++) {
+      await tester.pump(const Duration(seconds: 2));
+    }
+    if (findModel() == null) {
+      controller.searchCatalog(family);
+      for (var attempt = 0; attempt < 20 && findModel() == null; attempt++) {
+        await tester.pump(const Duration(seconds: 2));
+      }
+    }
+
+    final catalogModel = findModel();
+    expect(
+      catalogModel,
+      isNotNull,
+      reason: 'the Hugging Face catalog must offer LFM2.5 350M',
+    );
+    final modelId = catalogModel!.id;
 
     LlmModel current() => container
         .read(modelSelectionControllerProvider)
@@ -55,13 +88,11 @@ void main() {
 
     final alreadyInstalled = current().isDownloaded;
     if (!alreadyInstalled) {
-      // Narrow the list to this model's family, so its row is on screen
-      // whatever the catalog holds. The row's own action is the one pressed.
-      await tester.enterText(find.byType(TextField).first, 'LFM2');
+      // Narrow the list to this family, so its row is on screen whatever the
+      // catalog holds. The row's own action is the one pressed.
+      await tester.enterText(find.byType(TextField).first, family);
       await tester.pump(const Duration(seconds: 1));
 
-      // The catalog arrives from storage asynchronously, so wait for a row to
-      // offer its action instead of assuming the first frame already has one.
       for (var attempt = 0; attempt < 30; attempt++) {
         if (find.text('Download').evaluate().isNotEmpty) break;
         await tester.pump(const Duration(seconds: 1));
@@ -82,7 +113,7 @@ void main() {
         );
       }
 
-      final rowTitle = find.textContaining('LFM2-350M-GGUF');
+      final rowTitle = find.textContaining(catalogModel.name);
       expect(rowTitle, findsWidgets, reason: 'the 350M row must be on screen');
       final row = find.ancestor(
         of: rowTitle.first,
@@ -142,9 +173,7 @@ void main() {
 
     if (!alreadyInstalled &&
         Platform.environment['INSTALLM_TEST_KEEP_MODEL'] != '1') {
-      await container
-          .read(modelSelectionControllerProvider.notifier)
-          .deleteModel(installed);
+      await controller.deleteModel(installed);
       await tester.pump(const Duration(seconds: 1));
       expect(current().isDownloaded, isFalse);
       // ignore: avoid_print

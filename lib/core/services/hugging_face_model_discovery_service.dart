@@ -4,14 +4,49 @@ import 'package:dio/dio.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/storage/secure_storage.dart';
 
-/// Fetches popular GGUF models from HuggingFace's free API and converts them
-/// into [LlmModel] instances ready for download and inference.
+/// One page of the model list Hugging Face serves.
 ///
-/// Results are cached locally so the app works offline after the first fetch.
+/// [nextCursor] is null at the end of the list. The cursor is the service's own
+/// encoding of one cursor per pipeline, because Hugging Face paginates each
+/// pipeline separately and this service merges both into one list.
+class HuggingFaceModelCatalog {
+  const HuggingFaceModelCatalog({
+    required this.models,
+    required this.nextCursor,
+    required this.hasMore,
+  });
+
+  final List<LlmModel> models;
+  final String? nextCursor;
+  final bool hasMore;
+
+  static const empty = HuggingFaceModelCatalog(
+    models: [],
+    nextCursor: null,
+    hasMore: false,
+  );
+}
+
+/// Builds the model list from Hugging Face instead of a list compiled into the
+/// app.
+///
+/// The runtime it ships can load any architecture llama.cpp registers, so the
+/// catalog is not a list of approved models: it is every GGUF repository Hugging
+/// Face reports for text generation, readable a page at a time. A repository
+/// that asks for a file this app cannot pick is skipped; a repository whose
+/// architecture the runtime does not know fails at load with the runtime's own
+/// message, the same as a file imported from storage.
+///
+/// Results with no search query are cached on disk, so a launch without a
+/// network still shows the last catalog. Pages loaded past the first are cached
+/// too, together with the cursor that continues from them.
 class HuggingFaceModelDiscoveryService {
   static const _cacheKey = 'hf_discovered_models_cache_v1';
   static const _cacheTtl = Duration(days: 7);
-  static const _fetchLimit = 50;
+
+  /// Repositories read per pipeline per page. Two pipelines are read, so one
+  /// page is at most twice this many repositories.
+  static const _perPipelineLimit = 15;
 
   /// Pipeline tags we consider usable for on-device chat inference.
   static const _allowedPipelines = {'text-generation', 'image-text-to-text'};
@@ -23,56 +58,95 @@ class HuggingFaceModelDiscoveryService {
     'Q4_0.gguf',
     'Q5_K_M.gguf',
     'Q3_K_M.gguf',
+    'Q8_0.gguf',
   ];
 
-  HuggingFaceModelDiscoveryService()
-    : _dio = Dio(
-        BaseOptions(
-          baseUrl: 'https://huggingface.co',
-          connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 20),
-          headers: const {'Accept': 'application/json'},
-        ),
-      );
+  HuggingFaceModelDiscoveryService({Dio? dio})
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: 'https://huggingface.co',
+              connectTimeout: const Duration(seconds: 20),
+              receiveTimeout: const Duration(seconds: 20),
+              headers: const {'Accept': 'application/json'},
+            ),
+          );
 
   final Dio _dio;
 
-  /// Returns cached discovered models, or an empty list if no cache exists.
-  Future<List<LlmModel>> readCachedModels() async {
-    try {
-      final cache = await _readCache();
-      if (cache == null) return const [];
-      return cache.models;
-    } catch (_) {
-      return const [];
-    }
+  /// The catalog as it was last written to disk, or null when nothing is
+  /// cached. Reading it costs no network.
+  Future<HuggingFaceModelCatalog?> readCachedCatalog() async {
+    final cache = await _readCache();
+    if (cache == null) return null;
+    return HuggingFaceModelCatalog(
+      models: cache.models,
+      nextCursor: cache.nextCursor,
+      hasMore: cache.nextCursor != null,
+    );
   }
 
-  /// Fetches fresh models from HuggingFace and updates the cache.
-  /// Returns the discovered models, or an empty list on failure.
-  Future<List<LlmModel>> refreshModels() async {
-    try {
-      final rawModels = await _fetchModels();
-      if (rawModels.isEmpty) return const [];
+  /// Whether the cache is stale and should be refreshed.
+  Future<bool> isCacheStale() async {
+    final cache = await _readCache();
+    if (cache == null) return true;
+    return DateTime.now().difference(cache.fetchedAt) > _cacheTtl;
+  }
 
-      // Fetch detail for each model (in batches of 5 to stay friendly).
+  /// Reads one page of GGUF chat models, most downloaded first.
+  ///
+  /// [query] narrows the page with Hugging Face's own search, so a model the
+  /// app has never seen is one query away. [cursor] continues a page the caller
+  /// already read; null starts at the top.
+  ///
+  /// Search results are not cached: they are an answer to what the user typed,
+  /// and the default list is what a launch without a network should show.
+  Future<HuggingFaceModelCatalog> load({
+    String query = '',
+    String? cursor,
+  }) async {
+    final trimmedQuery = query.trim();
+    try {
+      final raw = <_RawHfModel>[];
+      final seen = <String>{};
+      final nextCursors = <String, String?>{};
+
+      for (final pipeline in _allowedPipelines) {
+        final page = await _fetchPage(
+          pipeline: pipeline,
+          query: trimmedQuery,
+          cursor: _cursorFor(cursor, pipeline),
+        );
+        nextCursors[pipeline] = page.nextCursor;
+        for (final model in page.models) {
+          if (seen.add(model.repoId)) raw.add(model);
+        }
+      }
+
+      if (raw.isEmpty) return HuggingFaceModelCatalog.empty;
+      raw.sort((a, b) => b.downloads.compareTo(a.downloads));
+
       final discovered = <LlmModel>[];
-      for (final batch in _chunk(rawModels, 5)) {
+      for (final batch in _chunk(raw, 5)) {
         final results = await Future.wait(
-          batch.map((raw) => _resolveModelDetail(raw)),
+          batch.map((model) => _resolveModelDetail(model)),
         );
         discovered.addAll(results.whereType<LlmModel>());
       }
 
-      if (discovered.isNotEmpty) {
-        await _writeCache(
-          _DiscoveryCache(models: discovered, fetchedAt: DateTime.now()),
-        );
-      }
+      final catalog = HuggingFaceModelCatalog(
+        models: discovered,
+        nextCursor: _encodeCursors(nextCursors),
+        hasMore: nextCursors.values.any((value) => value != null),
+      );
 
-      return discovered;
+      if (trimmedQuery.isEmpty) {
+        await _cachePage(catalog, replace: cursor == null);
+      }
+      return catalog;
     } catch (_) {
-      return const [];
+      return HuggingFaceModelCatalog.empty;
     }
   }
 
@@ -80,87 +154,82 @@ class HuggingFaceModelDiscoveryService {
   // API calls
   // ---------------------------------------------------------------------------
 
-  Future<List<_RawHfModel>> _fetchModels() async {
-    final seenRepoIds = <String>{};
-    final allModels = <_RawHfModel>[];
-
-    void addUnique(List<_RawHfModel> models) {
-      for (final model in models) {
-        if (model.repoId.isNotEmpty && seenRepoIds.add(model.repoId)) {
-          allModels.add(model);
-        }
-      }
-    }
-
-    // 1. Fetch top models by downloads (general popularity).
-    for (final pipeline in _allowedPipelines) {
-      addUnique(await _searchModels(pipeline: pipeline));
-    }
-
-    // 2. Targeted searches for small / mobile-friendly models.
-    const smallModelKeywords = [
-      '0.5B',
-      '1B instruct',
-      '1.5B',
-      '2B',
-      '3B',
-      'tiny',
-      'mini',
-      'small',
-      'smol',
-    ];
-    for (final keyword in smallModelKeywords) {
-      addUnique(await _searchModels(search: keyword));
-    }
-
-    return allModels;
-  }
-
-  Future<List<_RawHfModel>> _searchModels({
-    String? pipeline,
-    String? search,
+  Future<({List<_RawHfModel> models, String? nextCursor})> _fetchPage({
+    required String pipeline,
+    required String query,
+    required String? cursor,
   }) async {
     final models = <_RawHfModel>[];
+    String? nextCursor;
     try {
       final queryParams = <String, dynamic>{
         'filter': 'gguf',
         'sort': 'downloads',
         'direction': '-1',
-        'limit': _fetchLimit,
+        'limit': _perPipelineLimit,
+        'pipeline_tag': pipeline,
       };
-      if (pipeline != null) queryParams['pipeline_tag'] = pipeline;
-      if (search != null) queryParams['search'] = '$search gguf';
+      if (query.isNotEmpty) queryParams['search'] = query;
+      if (cursor != null && cursor.isNotEmpty) queryParams['cursor'] = cursor;
 
       final response = await _dio.get(
         '/api/models',
         queryParameters: queryParams,
       );
+      nextCursor = _nextCursorFromLink(response.headers.value('link'));
 
       final data = response.data;
       if (data is List) {
         for (final item in data) {
-          if (item is Map<String, dynamic>) {
-            final raw = _RawHfModel.fromListJson(item);
-            // Only include models with allowed pipeline tags.
-            if (raw.pipelineTag.isNotEmpty &&
-                _allowedPipelines.contains(raw.pipelineTag)) {
-              models.add(raw);
-            }
-          } else if (item is Map) {
-            final raw = _RawHfModel.fromListJson(
-              Map<String, dynamic>.from(item),
-            );
-            if (raw.pipelineTag.isNotEmpty &&
-                _allowedPipelines.contains(raw.pipelineTag)) {
-              models.add(raw);
-            }
+          final map = item is Map ? Map<String, dynamic>.from(item) : null;
+          if (map == null) continue;
+          final raw = _RawHfModel.fromListJson(map);
+          if (raw.repoId.isNotEmpty &&
+              _allowedPipelines.contains(raw.pipelineTag)) {
+            models.add(raw);
           }
         }
       }
     } catch (_) {
-      // Continue gracefully if a search fails.
+      // One pipeline failing still leaves the other one's page.
     }
-    return models;
+    return (models: models, nextCursor: nextCursor);
+  }
+
+  /// The `cursor` of the `rel="next"` link Hugging Face returns, if any.
+  ///
+  /// Read from the raw header rather than through [Uri.queryParameters],
+  /// which turns a `+` in the base64 cursor into a space and corrupts it.
+  static String? _nextCursorFromLink(String? link) {
+    if (link == null || link.isEmpty) return null;
+    final next = RegExp(r'<([^>]+)>;\s*rel="next"').firstMatch(link)?.group(1);
+    if (next == null) return null;
+    return RegExp(r'[?&]cursor=([^&]+)').firstMatch(next)?.group(1);
+  }
+
+  /// The cursor this pipeline had reached, from the combined cursor.
+  static String? _cursorFor(String? combined, String pipeline) {
+    if (combined == null || combined.isEmpty) return null;
+    for (final part in combined.split('||')) {
+      final separator = part.indexOf('|');
+      if (separator <= 0) continue;
+      if (part.substring(0, separator) == pipeline) {
+        final cursor = part.substring(separator + 1);
+        return cursor.isEmpty ? null : cursor;
+      }
+    }
+    return null;
+  }
+
+  /// One cursor per pipeline, joined. A pipeline with no further page is left
+  /// out; the whole string is null when none has one.
+  static String? _encodeCursors(Map<String, String?> cursors) {
+    final parts = [
+      for (final entry in cursors.entries)
+        if (entry.value != null && entry.value!.isNotEmpty)
+          '${entry.key}|${entry.value}',
+    ];
+    return parts.isEmpty ? null : parts.join('||');
   }
 
   Future<LlmModel?> _resolveModelDetail(_RawHfModel raw) async {
@@ -233,17 +302,20 @@ class HuggingFaceModelDiscoveryService {
     // Derive prompt format from architecture.
     final promptFormatId = promptFormatForArchitecture(architecture);
 
-    // Derive parameter size from total model bytes.
-    final parameterSize = _estimateParameterSize(totalBytes);
+    // The model name is what the list shows; its parameter count is written in
+    // it more reliably than it can be estimated from a quantized file's size.
+    final name = _deriveModelName(raw.repoId, architecture);
+    final parameterSize = _parameterSizeFor(
+      repoId: raw.repoId,
+      fileName: ggufFile,
+      totalBytes: totalBytes,
+    );
 
     // Derive capabilities from tags + pipeline.
     final capabilities = _deriveCapabilities(raw.tags, raw.pipelineTag);
 
-    // Build a clean model name.
-    final name = _deriveModelName(raw.repoId, architecture);
-
     // Build description.
-    final description = _buildDescription(raw, capabilities);
+    final description = _buildDescription(raw, capabilities, architecture);
 
     final localFileName = ggufFile.toLowerCase();
     final id = 'hf-${raw.repoId.replaceAll('/', '-').toLowerCase()}';
@@ -259,6 +331,7 @@ class HuggingFaceModelDiscoveryService {
       mmprojDownloadUrl: mmprojDownloadUrl,
       mmprojLocalFileName: mmprojFile?.toLowerCase(),
       promptFormatId: promptFormatId,
+      modelSource: ModelSource.discovered,
     );
   }
 
@@ -296,7 +369,37 @@ class HuggingFaceModelDiscoveryService {
     };
   }
 
-  String _estimateParameterSize(dynamic totalBytes) {
+  /// `350M`, `1.2B` and so on, read from the file name first and the repository
+  /// name second, falling back to the byte-count estimate.
+  ///
+  /// The names are what the model's own publisher wrote; the estimate exists
+  /// only for a repository that declares neither.
+  static String _parameterSizeFor({
+    required String repoId,
+    required String fileName,
+    required dynamic totalBytes,
+  }) {
+    return _sizeFromText(fileName) ??
+        _sizeFromText(repoId) ??
+        _estimateParameterSize(totalBytes);
+  }
+
+  /// The first `<number><M|B|T>` in [text], normalised.
+  ///
+  /// `Qwen2.5-1.5B-Instruct` answers `1.5B`; the `2.5` before a dash is skipped
+  /// because it is not followed by a unit.
+  static String? _sizeFromText(String text) {
+    for (final match in RegExp(
+      r'(\d+(?:\.\d+)?)\s*([MmBbTt])(?![A-Za-z0-9])',
+    ).allMatches(text)) {
+      final value = double.tryParse(match.group(1)!);
+      if (value == null || value <= 0) continue;
+      return '${match.group(1)}${match.group(2)!.toUpperCase()}';
+    }
+    return null;
+  }
+
+  static String _estimateParameterSize(dynamic totalBytes) {
     if (totalBytes is! int || totalBytes <= 0) return 'Unknown';
 
     // Q4_K_M is roughly 0.55 bytes per parameter.
@@ -383,16 +486,18 @@ class HuggingFaceModelDiscoveryService {
   String _buildDescription(
     _RawHfModel raw,
     List<ModelCapability> capabilities,
+    String architecture,
   ) {
     final parts = <String>[];
     if (raw.downloads > 0) {
       parts.add('${_formatDownloads(raw.downloads)} downloads');
     }
+    if (architecture.isNotEmpty) parts.add(architecture);
     if (capabilities.isNotEmpty) {
       final labels = capabilities.map((c) => c.label).join(', ');
       parts.add(labels);
     }
-    parts.add('from HuggingFace');
+    parts.add('from Hugging Face');
     return 'Popular GGUF model: ${parts.join(' · ')}.';
   }
 
@@ -420,19 +525,41 @@ class HuggingFaceModelDiscoveryService {
     }
   }
 
+  /// Keeps [catalog] on disk, replacing the cached list for a first page and
+  /// adding to it for a page that follows.
+  Future<void> _cachePage(
+    HuggingFaceModelCatalog catalog, {
+    required bool replace,
+  }) async {
+    try {
+      final models = <String, LlmModel>{};
+      if (!replace) {
+        final previous = await _readCache();
+        for (final model in previous?.models ?? const <LlmModel>[]) {
+          models[model.id] = model;
+        }
+      }
+      for (final model in catalog.models) {
+        models[model.id] = model;
+      }
+      await _writeCache(
+        _DiscoveryCache(
+          models: models.values.toList(growable: false),
+          nextCursor: catalog.nextCursor,
+          fetchedAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {
+      // Best-effort caching.
+    }
+  }
+
   Future<void> _writeCache(_DiscoveryCache cache) async {
     try {
       await SecureStorage.instance.write(key: _cacheKey, value: cache.toJson());
     } catch (_) {
       // Best-effort caching.
     }
-  }
-
-  /// Whether the cache is stale and should be refreshed.
-  Future<bool> isCacheStale() async {
-    final cache = await _readCache();
-    if (cache == null) return true;
-    return DateTime.now().difference(cache.fetchedAt) > _cacheTtl;
   }
 
   // ---------------------------------------------------------------------------
@@ -488,13 +615,19 @@ class _RawHfModel {
 
 class _DiscoveryCache {
   final List<LlmModel> models;
+  final String? nextCursor;
   final DateTime fetchedAt;
 
-  const _DiscoveryCache({required this.models, required this.fetchedAt});
+  const _DiscoveryCache({
+    required this.models,
+    required this.nextCursor,
+    required this.fetchedAt,
+  });
 
   Map<String, dynamic> toJson() {
     return {
       'models': models.map((m) => m.toJson()).toList(),
+      'nextCursor': nextCursor,
       'fetchedAt': fetchedAt.toIso8601String(),
     };
   }
@@ -518,6 +651,10 @@ class _DiscoveryCache {
       }
     }
 
-    return _DiscoveryCache(models: models, fetchedAt: fetchedAt);
+    return _DiscoveryCache(
+      models: models,
+      nextCursor: json['nextCursor'] as String?,
+      fetchedAt: fetchedAt,
+    );
   }
 }

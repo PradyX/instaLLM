@@ -74,15 +74,37 @@ class ModelSelectionController extends _$ModelSelectionController {
   );
   final Map<String, CancelToken> _cancelTokens = {};
 
+  /// The models the last Hugging Face page left in the list, in list order.
+  ///
+  /// The page's models are kept apart from [state] so a new page can be added
+  /// without losing what is installed, and so a search can replace the list
+  /// without touching the user's own records.
+  List<LlmModel> _discoveredModels = const [];
+
+  /// Where Hugging Face continues after the page on screen; null at the end.
+  String? _nextDiscoveredCursor;
+
+  /// The query the current [Hugging Face pages](_discoveredModels) answer.
+  String _discoveredQuery = '';
+
+  /// Collapses the keystrokes of a typed search into one request.
+  Timer? _searchDebounce;
+
+  /// Incremented for every catalog request so a slow answer that a newer one
+  /// has overtaken is dropped instead of overwriting the list.
+  int _catalogRequest = 0;
+
   DownloadProgressNotifier get _progress =>
       ref.read(downloadProgressProvider.notifier);
 
   @override
   ModelSelectionState build() {
     state = ModelSelectionState(
-      models: LlmModel.availableModels,
+      models: const [],
       selectedModelId: null,
+      isLoadingModels: true,
     );
+    ref.onDispose(() => _searchDebounce?.cancel());
     unawaited(_init());
     return state;
   }
@@ -103,12 +125,15 @@ class ModelSelectionController extends _$ModelSelectionController {
 
   Future<void> _loadInitialState() async {
     final customModels = await _loadCustomModels();
-    final cachedDiscovered = await _discoveryService.readCachedModels();
+    final cachedCatalog = await _discoveryService.readCachedCatalog();
     final storedSelectedId = await _readStoredSelectedModelId();
 
+    _discoveredModels = cachedCatalog?.models ?? const [];
+    _nextDiscoveredCursor = cachedCatalog?.nextCursor;
+    _discoveredQuery = '';
+
     final combinedModels = _mergeModelLists(
-      staticModels: LlmModel.availableModels,
-      discoveredModels: cachedDiscovered,
+      discoveredModels: _discoveredModels,
       customModels: customModels,
     );
 
@@ -147,6 +172,10 @@ class ModelSelectionController extends _$ModelSelectionController {
     state = state.copyWith(
       models: modelsWithCachedCapabilities,
       selectedModelId: newSelectedId,
+      hasMoreModels: cachedCatalog?.hasMore ?? false,
+      // With nothing cached the screen waits for the first page instead of
+      // telling the user there are no models.
+      isLoadingModels: cachedCatalog == null,
     );
     await _refreshStorageInfo();
     _refreshInBackground(
@@ -170,20 +199,56 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
   }
 
+  /// Refreshes the first page of the catalog when the cached one has aged out.
   Future<void> _refreshDiscoveredModels() async {
     final isStale = await _discoveryService.isCacheStale();
-    if (!isStale) return;
+    if (_discoveredModels.isNotEmpty && !isStale) {
+      if (state.isLoadingModels) {
+        state = state.copyWith(isLoadingModels: false);
+      }
+      return;
+    }
+    await _loadCatalogPage(query: '', cursor: null, replace: true);
+  }
 
-    final freshModels = await _discoveryService.refreshModels();
-    if (freshModels.isEmpty) return;
+  /// Reads one page of the catalog and puts it on screen.
+  ///
+  /// [replace] reads a first page, for a refresh or a new search; otherwise
+  /// [cursor] continues the page already on screen.
+  Future<void> _loadCatalogPage({
+    required String query,
+    String? cursor,
+    required bool replace,
+  }) async {
+    final request = ++_catalogRequest;
+    state = state.copyWith(isLoadingModels: replace, isLoadingMore: !replace);
 
-    final customModels = state.models.where((m) => m.isCustom).toList();
+    final page = await _discoveryService.load(query: query, cursor: cursor);
+    if (!ref.mounted || request != _catalogRequest) return;
+
+    // An empty answer to the default list is a failed read, not an empty
+    // Hugging Face: that list always has something. Keep what is on screen.
+    if (replace && query.isEmpty && page.models.isEmpty) {
+      state = state.copyWith(
+        isLoadingModels: false,
+        isLoadingMore: false,
+        error: _discoveredModels.isEmpty
+            ? 'Could not reach Hugging Face. Check the connection and retry.'
+            : null,
+      );
+      return;
+    }
+
+    _discoveredModels = replace
+        ? page.models
+        : [..._discoveredModels, ...page.models];
+    _nextDiscoveredCursor = page.nextCursor;
+    _discoveredQuery = query;
+
     final merged = _mergeModelLists(
-      staticModels: LlmModel.availableModels,
-      discoveredModels: freshModels,
-      customModels: customModels,
+      discoveredModels: _discoveredModels,
+      customModels: state.models.where((m) => m.isCustom).toList(),
     );
-
     final updatedModels = await Future.wait(
       merged.map((model) async {
         final filePresent = await _isModelBundleDownloaded(model);
@@ -192,12 +257,14 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
 
     final withCapabilities = await _applyCachedCapabilities(updatedModels);
+    if (!ref.mounted || request != _catalogRequest) return;
 
-    // Preserve current selection.
-    final currentSelected = state.selectedModelId;
     state = state.copyWith(
       models: withCapabilities,
-      selectedModelId: currentSelected,
+      selectedModelId: state.selectedModelId,
+      hasMoreModels: page.hasMore,
+      isLoadingModels: false,
+      isLoadingMore: false,
     );
     _refreshInBackground(
       () => _refreshModelCapabilities(withCapabilities),
@@ -205,15 +272,54 @@ class ModelSelectionController extends _$ModelSelectionController {
     );
   }
 
-  /// Merges static, discovered, and custom model lists, deduplicating by
-  /// [localFileName]. Static models take priority over discovered ones.
+  /// Reads the page after the one on screen, for the list's Load more action.
+  Future<void> loadMoreModels() async {
+    if (state.isLoadingModels || state.isLoadingMore || !state.hasMoreModels) {
+      return;
+    }
+    final cursor = _nextDiscoveredCursor;
+    if (cursor == null) {
+      state = state.copyWith(hasMoreModels: false);
+      return;
+    }
+    await _loadCatalogPage(
+      query: _discoveredQuery,
+      cursor: cursor,
+      replace: false,
+    );
+  }
+
+  /// Reads the first page again, for a retry or a manual refresh.
+  Future<void> refreshCatalog() async {
+    _searchDebounce?.cancel();
+    await _loadCatalogPage(
+      query: state.searchQuery.trim(),
+      cursor: null,
+      replace: true,
+    );
+  }
+
+  /// Asks Hugging Face for [query] once the typing settles.
+  ///
+  /// The list is not just what the app knows: a model it has never seen is a
+  /// search away, so this reads the matching repositories rather than only
+  /// filtering the page already on screen.
+  void searchCatalog(String query) {
+    final trimmed = query.trim();
+    _searchDebounce?.cancel();
+    if (trimmed == _discoveredQuery) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+      unawaited(_loadCatalogPage(query: trimmed, cursor: null, replace: true));
+    });
+  }
+
+  /// Merges the discovered pages with the user's own records.
   List<LlmModel> _mergeModelLists({
-    required List<LlmModel> staticModels,
     required List<LlmModel> discoveredModels,
     required List<LlmModel> customModels,
   }) {
     return mergeModelSources(
-      catalogModels: staticModels,
+      catalogModels: const [],
       discoveredModels: discoveredModels,
       customModels: customModels,
     );
@@ -284,14 +390,19 @@ class ModelSelectionController extends _$ModelSelectionController {
   void setSearchQuery(String query) {
     if (state.searchQuery == query) return;
     state = state.copyWith(searchQuery: query);
+    searchCatalog(query);
   }
 
   void clearSearch() {
     if (state.searchQuery.isEmpty) return;
     state = state.copyWith(searchQuery: '');
+    searchCatalog('');
   }
 
   Future<void> downloadModel(LlmModel model) async {
+    // A repository's published template is what makes an arbitrary GGUF
+    // answer as an instruction model when the file carries none of its own.
+    model = await _withRepositoryChatTemplate(model);
     final assets = _downloadAssetsForModel(model);
     if (assets.isEmpty) return;
 
@@ -835,7 +946,7 @@ class ModelSelectionController extends _$ModelSelectionController {
     // still publishes one. Reading it now is what lets the app chat with an
     // instruction model instead of mistaking it for a base completion model.
     if (model.repositoryChatTemplate == null) {
-      final template = await _repositoryChatTemplateFor(repository);
+      final template = await _repositoryChatTemplateFor(repository.repoId);
       if (template != null) {
         model = model.copyWith(repositoryChatTemplate: template);
       }
@@ -876,10 +987,7 @@ class ModelSelectionController extends _$ModelSelectionController {
   /// Chat template a repository publishes, read at most once per repository.
   final Map<String, String?> _repositoryTemplates = {};
 
-  Future<String?> _repositoryChatTemplateFor(
-    HuggingFaceRepository repository,
-  ) async {
-    final repoId = repository.repoId;
+  Future<String?> _repositoryChatTemplateFor(String repoId) async {
     if (_repositoryTemplates.containsKey(repoId)) {
       return _repositoryTemplates[repoId];
     }
@@ -892,6 +1000,36 @@ class ModelSelectionController extends _$ModelSelectionController {
     }
     _repositoryTemplates[repoId] = template;
     return template;
+  }
+
+  /// [model] with its repository's chat template attached, when it has none.
+  ///
+  /// Discovery builds records from Hugging Face metadata, which never carries
+  /// a template; without this an arbitrary instruction model would be treated
+  /// as a base completion model. The record on screen is updated too, so the
+  /// template is still there after the download finishes.
+  Future<LlmModel> _withRepositoryChatTemplate(LlmModel model) async {
+    if (model.repositoryChatTemplate != null) return model;
+    final downloadUrl = model.downloadUrl;
+    if (downloadUrl == null) return model;
+    final repoId = HuggingFaceRepositoryService.parseRepositoryInput(
+      downloadUrl,
+    );
+    if (repoId == null) return model;
+
+    final template = await _repositoryChatTemplateFor(repoId);
+    if (template == null) return model;
+
+    final updated = model.copyWith(repositoryChatTemplate: template);
+    if (ref.mounted) {
+      state = state.copyWith(
+        models: [
+          for (final existing in state.models)
+            existing.id == model.id ? updated : existing,
+        ],
+      );
+    }
+    return updated;
   }
 
   Future<List<LlmModel>> _applyCachedCapabilities(List<LlmModel> models) async {

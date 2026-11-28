@@ -1376,13 +1376,32 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     if (installed.isEmpty && catalog.isEmpty) {
       return ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [_buildEmptyFilterState(context, state)],
+        children: [
+          if (state.isLoadingModels)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            _buildEmptyFilterState(context, state),
+        ],
       );
     }
 
     return ListView(
       padding: EdgeInsets.only(bottom: wide ? 16 : 8),
       children: [
+        if (state.isLoadingModels)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: LinearProgressIndicator(minHeight: 2),
+          ),
         if (installed.isNotEmpty) ...[
           _buildSectionHeader(
             context,
@@ -1405,6 +1424,28 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
           for (final family in catalog)
             _buildFamilyRow(context, state, family, wide: wide),
         ],
+        if (state.hasMoreModels)
+          Padding(
+            padding: EdgeInsets.fromLTRB(wide ? 24 : 12, 10, wide ? 24 : 12, 4),
+            child: SizedBox(
+              width: double.infinity,
+              height: 42,
+              child: FilledButton.tonal(
+                onPressed: state.isLoadingMore
+                    ? null
+                    : () => ref
+                          .read(modelSelectionControllerProvider.notifier)
+                          .loadMoreModels(),
+                child: state.isLoadingMore
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Load more models'),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -2634,7 +2675,12 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final hasSearch = state.searchQuery.trim().isNotEmpty;
     final hasFilters =
         state.selectedCapabilityFilters.isNotEmpty || !state.sortByFit;
-    final message = hasSearch && hasFilters
+    // Nothing searched and nothing filtered means the catalog itself is empty:
+    // either it has not been read yet or the last read failed.
+    final isEmptyCatalog = !hasSearch && !hasFilters;
+    final message = isEmptyCatalog
+        ? 'No models yet.'
+        : hasSearch && hasFilters
         ? 'No models match the search query and selected filters.'
         : hasSearch
         ? 'No models match your search.'
@@ -2657,11 +2703,24 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Try adjusting your search or removing filters to see more models.',
+                isEmptyCatalog
+                    ? 'The list is read from Hugging Face, not compiled into '
+                          'the app. Connect to the internet and load it again.'
+                    : 'Try adjusting your search or removing filters to see '
+                          'more models.',
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurfaceVariant,
                 ),
               ),
+              if (isEmptyCatalog) ...[
+                const SizedBox(height: 12),
+                FilledButton.tonal(
+                  onPressed: () => ref
+                      .read(modelSelectionControllerProvider.notifier)
+                      .refreshCatalog(),
+                  child: const Text('Load models'),
+                ),
+              ],
               if (hasSearch || hasFilters) ...[
                 const SizedBox(height: 12),
                 Wrap(

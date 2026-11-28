@@ -1,12 +1,13 @@
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 
-/// Combines the records a model list is built from: the catalog this build
-/// ships, what Hugging Face discovery found, and what the user added.
+/// Combines the records a model list is built from: what Hugging Face discovery
+/// found and what the user added.
 ///
-/// The catalog leads, because its records carry the readable name and the
-/// description written for the app; a repository record names the same file
-/// after its repository (`Qwen2.5-1.5B-Instruct-GGUF`), which is what the page
-/// would show instead.
+/// [catalogModels] is kept for the one case that still has a shipped record, and
+/// takes precedence when it names the same file: its record carries the
+/// readable name written for the app, where a repository record names the same
+/// file after its repository (`Qwen2.5-1.5B-Instruct-GGUF`). The app ships no
+/// model list, so in practice this is empty and the discovered pages lead.
 ///
 /// Only a quantization is merged: two records are one choice when they name the
 /// same file of the same model *from the same publisher*. Comparing the file

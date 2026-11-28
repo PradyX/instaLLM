@@ -22,6 +22,15 @@ class ModelSelectionState {
   final int? freeStorageBytes;
   final int? totalStorageBytes;
 
+  /// Whether the first page of the Hugging Face catalog is being read.
+  final bool isLoadingModels;
+
+  /// Whether the page after the one on screen is being read.
+  final bool isLoadingMore;
+
+  /// Whether Hugging Face has another page after the one on screen.
+  final bool hasMoreModels;
+
   ModelSelectionState({
     required this.models,
     this.selectedModelId,
@@ -31,6 +40,9 @@ class ModelSelectionState {
     this.error,
     this.freeStorageBytes,
     this.totalStorageBytes,
+    this.isLoadingModels = false,
+    this.isLoadingMore = false,
+    this.hasMoreModels = false,
   });
 
   LlmModel? get selectedModel {
@@ -51,6 +63,9 @@ class ModelSelectionState {
     Object? error = _unset,
     Object? freeStorageBytes = _unset,
     Object? totalStorageBytes = _unset,
+    bool? isLoadingModels,
+    bool? isLoadingMore,
+    bool? hasMoreModels,
   }) {
     return ModelSelectionState(
       models: models ?? this.models,
@@ -68,6 +83,9 @@ class ModelSelectionState {
       totalStorageBytes: totalStorageBytes == _unset
           ? this.totalStorageBytes
           : totalStorageBytes as int?,
+      isLoadingModels: isLoadingModels ?? this.isLoadingModels,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasMoreModels: hasMoreModels ?? this.hasMoreModels,
     );
   }
 }

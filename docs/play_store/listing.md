@@ -26,7 +26,7 @@ CHAT
 
 MODELS
 • Import a GGUF model from storage, paste a direct link, or download from Hugging Face
-• Built-in catalog: Qwen, Qwen Coder, Llama 3.2, SmolLM2, Gemma, Phi, TinyLlama, LFM2, MiniCPM3
+• Model catalog read live from Hugging Face, a page at a time: any GGUF chat model, not a hand-picked list
 • Resumable downloads with pause, progress and a notification when one finishes
 • Each entry shows size, quantisation and vision support, plus a fit estimate for this device's memory
 • Search and filter by parameter size, with the model in use marked in the list

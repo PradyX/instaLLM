@@ -288,7 +288,19 @@ class LlmModel {
     );
   }
 
-  /// Hardcoded sample models for initial UI.
+  /// No model list is compiled into the app.
+  ///
+  /// The list is read from Hugging Face a page at a time, cached on disk, and
+  /// merged with what the user added; see
+  /// `HuggingFaceModelDiscoveryService` and `ModelSelectionController`. That is
+  /// what lets a model nobody wrote into this app still appear and install.
+  ///
+  /// The hand-picked list this build used to ship is kept below, commented
+  /// out, as the record of which files were probed and run on a device. It is
+  /// no longer a source of models.
+  static const List<LlmModel> availableModels = [];
+
+  /*
   static const List<LlmModel> availableModels = [
     // The smallest useful retriever for local documents: 384-dimensional,
     // Apache-2.0, about 34 MB at Q8. A decoder chat model can be mean-pooled
@@ -669,4 +681,5 @@ class LlmModel {
       localFileName: 'minicpm3-4b-q4_k_m.gguf',
     ),
   ];
+  */
 }

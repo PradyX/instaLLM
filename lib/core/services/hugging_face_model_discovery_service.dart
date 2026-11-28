@@ -46,7 +46,7 @@ class HuggingFaceModelDiscoveryService {
 
   /// Repositories read per pipeline per page. Two pipelines are read, so one
   /// page is at most twice this many repositories.
-  static const _perPipelineLimit = 15;
+  static const _perPipelineLimit = 25;
 
   /// Pipeline tags we consider usable for on-device chat inference.
   static const _allowedPipelines = {'text-generation', 'image-text-to-text'};

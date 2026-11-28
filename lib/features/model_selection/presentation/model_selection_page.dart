@@ -1410,59 +1410,83 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
       );
     }
 
-    return ListView(
-      padding: EdgeInsets.only(bottom: wide ? 16 : 8),
-      children: [
-        if (state.isLoadingModels)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
-            child: LinearProgressIndicator(minHeight: 2),
-          ),
-        if (installed.isNotEmpty) ...[
-          _buildSectionHeader(
-            context,
-            'INSTALLED',
-            wide: wide,
-            trailing: installed.length > 1
-                ? '${installed.length} installed'
-                : null,
-          ),
-          for (final family in installed)
-            _buildFamilyRow(context, state, family, wide: wide),
-        ],
-        if (catalog.isNotEmpty) ...[
-          _buildSectionHeader(
-            context,
-            'CATALOG',
-            wide: wide,
-            trailing: '${catalog.length} more',
-          ),
-          for (final family in catalog)
-            _buildFamilyRow(context, state, family, wide: wide),
-        ],
-        if (state.hasMoreModels)
-          Padding(
-            padding: EdgeInsets.fromLTRB(wide ? 24 : 12, 10, wide ? 24 : 12, 4),
-            child: SizedBox(
-              width: double.infinity,
-              height: 42,
-              child: FilledButton.tonal(
-                onPressed: state.isLoadingMore
-                    ? null
-                    : () => ref
-                          .read(modelSelectionControllerProvider.notifier)
-                          .loadMoreModels(),
-                child: state.isLoadingMore
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Load more models'),
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        // Reading the next page as its end comes into view keeps the catalog
+        // continuous; the footer still offers the same page by hand when a
+        // read fails or the user wants it before scrolling.
+        if (notification.metrics.axis == Axis.vertical &&
+            notification.metrics.extentAfter < 400 &&
+            state.hasMoreModels &&
+            !state.isLoadingMore &&
+            !state.isLoadingModels) {
+          unawaited(
+            ref
+                .read(modelSelectionControllerProvider.notifier)
+                .loadMoreModels(),
+          );
+        }
+        return false;
+      },
+      child: ListView(
+        padding: EdgeInsets.only(bottom: wide ? 16 : 8),
+        children: [
+          if (state.isLoadingModels)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(12, 6, 12, 0),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+          if (installed.isNotEmpty) ...[
+            _buildSectionHeader(
+              context,
+              'INSTALLED',
+              wide: wide,
+              trailing: installed.length > 1
+                  ? '${installed.length} installed'
+                  : null,
+            ),
+            for (final family in installed)
+              _buildFamilyRow(context, state, family, wide: wide),
+          ],
+          if (catalog.isNotEmpty) ...[
+            _buildSectionHeader(
+              context,
+              'CATALOG',
+              wide: wide,
+              trailing: '${catalog.length} more',
+            ),
+            for (final family in catalog)
+              _buildFamilyRow(context, state, family, wide: wide),
+          ],
+          if (state.hasMoreModels)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                wide ? 24 : 12,
+                10,
+                wide ? 24 : 12,
+                4,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: FilledButton.tonal(
+                  onPressed: state.isLoadingMore
+                      ? null
+                      : () => ref
+                            .read(modelSelectionControllerProvider.notifier)
+                            .loadMoreModels(),
+                  child: state.isLoadingMore
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Load more models'),
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -2637,14 +2661,24 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
               onPressed: () => controller.selectModel(model),
               child: const Text('Use this model'),
             ),
-          OutlinedButton.icon(
+          // A quiet action, not an outlined pill: the file's metadata is
+          // reference material, while Delete is the only action here that
+          // carries red emphasis.
+          TextButton.icon(
             onPressed: () => context.push(AppRoutes.modelDetailsFor(model.id)),
-            icon: const Icon(Icons.science_outlined, size: 18),
+            icon: const Icon(Icons.science_outlined, size: 16),
             label: const Text('GGUF metadata'),
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.onSurfaceVariant,
+              visualDensity: VisualDensity.compact,
+            ),
           ),
           TextButton(
             onPressed: () => _showDeleteConfirmation(context, model),
-            style: TextButton.styleFrom(foregroundColor: colorScheme.error),
+            style: TextButton.styleFrom(
+              foregroundColor: colorScheme.error,
+              visualDensity: VisualDensity.compact,
+            ),
             child: Text(model.isExternal ? 'Remove' : 'Delete'),
           ),
         ],

@@ -379,16 +379,19 @@ class HuggingFaceModelDiscoveryService {
     required String fileName,
     required dynamic totalBytes,
   }) {
-    return _sizeFromText(fileName) ??
-        _sizeFromText(repoId) ??
+    return parameterSizeIn(fileName) ??
+        parameterSizeIn(repoId) ??
         _estimateParameterSize(totalBytes);
   }
 
   /// The first `<number><M|B|T>` in [text], normalised.
   ///
   /// `Qwen2.5-1.5B-Instruct` answers `1.5B`; the `2.5` before a dash is skipped
-  /// because it is not followed by a unit.
-  static String? _sizeFromText(String text) {
+  /// because it is not followed by a unit. Public so a record cached or
+  /// persisted by a build that estimated the count from file bytes can read it
+  /// again from the name it already carries.
+  static String? parameterSizeIn(String? text) {
+    if (text == null) return null;
     for (final match in RegExp(
       r'(\d+(?:\.\d+)?)\s*([MmBbTt])(?![A-Za-z0-9])',
     ).allMatches(text)) {
@@ -519,10 +522,30 @@ class HuggingFaceModelDiscoveryService {
     try {
       final raw = await SecureStorage.instance.read(_cacheKey);
       if (raw == null) return null;
-      return _DiscoveryCache.fromJson(raw);
+      final cache = _DiscoveryCache.fromJson(raw);
+      if (cache == null) return null;
+      return _DiscoveryCache(
+        models: [for (final model in cache.models) _withSizeFromName(model)],
+        nextCursor: cache.nextCursor,
+        fetchedAt: cache.fetchedAt,
+      );
     } catch (_) {
       return null;
     }
+  }
+
+  /// Reads the parameter count from the names a cached record already carries.
+  ///
+  /// A record cached before the count was read from names holds a byte-based
+  /// estimate instead, which puts a 0.5B model in the 1–3B bucket. The file
+  /// name is still on the record, so the count is read again rather than
+  /// waiting for the cache to expire.
+  static LlmModel _withSizeFromName(LlmModel model) {
+    final parsed =
+        parameterSizeIn(model.localFileName) ??
+        parameterSizeIn(model.downloadUrl);
+    if (parsed == null || parsed == model.parameterSize) return model;
+    return model.copyWith(parameterSize: parsed);
   }
 
   /// Keeps [catalog] on disk, replacing the cached list for a first page and

@@ -203,6 +203,23 @@ void main() {
     },
   );
 
+  test('a size is readable from a name on its own', () {
+    expect(
+      HuggingFaceModelDiscoveryService.parameterSizeIn(
+        'qwen2.5-0.5b-instruct-q4_k_m.gguf',
+      ),
+      '0.5B',
+    );
+    expect(
+      HuggingFaceModelDiscoveryService.parameterSizeIn('LFM2.5-350M-GGUF'),
+      '350M',
+    );
+    expect(
+      HuggingFaceModelDiscoveryService.parameterSizeIn('README.md'),
+      isNull,
+    );
+  });
+
   test('the end of the list says so', () async {
     final fake = _service({
       'a/Only-GGUF': _repo(id: 'a/Only-GGUF', downloads: 1),

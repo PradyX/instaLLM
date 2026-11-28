@@ -88,6 +88,14 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
   /// The parameter-size bucket the list is narrowed to, if any.
   _SizeBucket? _sizeBucket;
 
+  /// Pages read while a size bucket matches nothing yet.
+  ///
+  /// A bucket only sees the pages already read, and the catalog starts with
+  /// the most downloaded models, which are rarely the smallest. Bound, so
+  /// choosing a bucket cannot walk the whole catalog on its own.
+  static const _sizeLookPageLimit = 4;
+  int _sizeLookPages = 0;
+
   /// Whether the list hides models whose file is not expected to run here.
   /// Off by default: a catalog that hides entries before the user asks is a
   /// worse first impression than one that shows what will not fit.
@@ -470,6 +478,29 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
         .where((family) => !family.hasInstalled)
         .toList(growable: false);
 
+    // A size bucket that matches nothing yet is usually a bucket whose models
+    // sit deeper in the catalog, not an empty bucket. Reading a few more pages
+    // keeps "Best fit · <1B" from looking broken; the limit above stops the
+    // walking, and the empty state offers the same step by hand after it.
+    if (_sizeBucket != null &&
+        installedFamilies.isEmpty &&
+        catalogFamilies.isEmpty &&
+        state.hasMoreModels &&
+        !state.isLoadingMore &&
+        !state.isLoadingModels &&
+        _sizeLookPages < _sizeLookPageLimit) {
+      _sizeLookPages++;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          unawaited(
+            ref
+                .read(modelSelectionControllerProvider.notifier)
+                .loadMoreModels(),
+          );
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: LayoutBuilder(
@@ -823,10 +854,10 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                       context,
                       label: bucket.label,
                       selected: _sizeBucket == bucket,
-                      onTap: () => setState(
-                        () =>
-                            _sizeBucket = _sizeBucket == bucket ? null : bucket,
-                      ),
+                      onTap: () => setState(() {
+                        _sizeBucket = _sizeBucket == bucket ? null : bucket;
+                        _sizeLookPages = 0;
+                      }),
                     ),
                   ),
               ],
@@ -2722,9 +2753,38 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final sizeBucket = _sizeBucket;
+    if (sizeBucket != null &&
+        state.hasMoreModels &&
+        (state.isLoadingMore || _sizeLookPages < _sizeLookPageLimit)) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 28, 16, 0),
+        child: Column(
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Looking further down the catalog for ${sizeBucket.label} models…',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     final hasSearch = state.searchQuery.trim().isNotEmpty;
     final hasFilters =
-        state.selectedCapabilityFilters.isNotEmpty || !state.sortByFit;
+        state.selectedCapabilityFilters.isNotEmpty ||
+        !state.sortByFit ||
+        _sizeBucket != null ||
+        _onlyWhatFits;
     // Nothing searched and nothing filtered means the catalog itself is empty:
     // either it has not been read yet or the last read failed.
     final isEmptyCatalog = !hasSearch && !hasFilters;
@@ -2787,9 +2847,30 @@ class _ModelSelectionPageState extends ConsumerState<ModelSelectionPage> {
                         },
                         child: const Text('Clear Search'),
                       ),
+                    if (sizeBucket != null && state.hasMoreModels)
+                      FilledButton.tonal(
+                        onPressed: () {
+                          // The automatic pages are spent; this buys the same
+                          // number again before the next stop.
+                          setState(() => _sizeLookPages = 0);
+                          unawaited(
+                            ref
+                                .read(modelSelectionControllerProvider.notifier)
+                                .loadMoreModels(),
+                          );
+                        },
+                        child: const Text('Load more models'),
+                      ),
                     if (hasFilters)
                       FilledButton.tonal(
                         onPressed: () {
+                          // The size bucket and the fit switch narrow the list
+                          // here, so clearing filters has to reset them too.
+                          setState(() {
+                            _sizeBucket = null;
+                            _sizeLookPages = 0;
+                            _onlyWhatFits = false;
+                          });
                           ref
                               .read(modelSelectionControllerProvider.notifier)
                               .clearFilters();

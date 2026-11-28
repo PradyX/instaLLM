@@ -127,7 +127,12 @@ class ModelSelectionController extends _$ModelSelectionController {
   }
 
   Future<void> _loadInitialState() async {
-    final storedRecords = await _loadCustomModels();
+    // A record persisted by an older build carries a size estimated from its
+    // file bytes, which hides a 0.5B model from the <1B filter. The file name
+    // is on the record, so read the count from it again.
+    final storedRecords = [
+      for (final model in await _loadCustomModels()) _withSizeFromName(model),
+    ];
     final cachedCatalog = await _discoveryService.readCachedCatalog();
     final storedSelectedId = await _readStoredSelectedModelId();
 
@@ -199,6 +204,15 @@ class ModelSelectionController extends _$ModelSelectionController {
       'capability',
     );
     _refreshInBackground(_refreshDiscoveredModels, 'discovery');
+  }
+
+  /// A record with the parameter count read from the name it already carries.
+  static LlmModel _withSizeFromName(LlmModel model) {
+    final parsed =
+        HuggingFaceModelDiscoveryService.parameterSizeIn(model.localFileName) ??
+        HuggingFaceModelDiscoveryService.parameterSizeIn(model.downloadUrl);
+    if (parsed == null || parsed == model.parameterSize) return model;
+    return model.copyWith(parameterSize: parsed);
   }
 
   /// Starts a refresh the user is not waiting for.

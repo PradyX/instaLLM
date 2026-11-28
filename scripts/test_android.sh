@@ -17,7 +17,9 @@
 # Remaining arguments go to `flutter test`.
 #
 # Afterwards the device runs the test entrypoint, so reopen the normal app with
-# scripts/run_android.sh.
+# scripts/run_android.sh. The test build is removed when the run ends, and the
+# app's data goes with it: expect the installed models to be gone and to need
+# downloading again.
 
 set -euo pipefail
 

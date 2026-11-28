@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:installm/core/storage/catalog_cache.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/storage/secure_storage.dart';
 
@@ -71,9 +72,13 @@ class HuggingFaceModelCatalog {
 /// network still shows the last catalog. Pages loaded past the first are cached
 /// too, together with the cursor that continues from them.
 class HuggingFaceModelDiscoveryService {
-  // v2: pages now carry their files and GGUF headers, so a cached page from
-  // v1 has neither and its cursor belongs to a different request.
-  static const _cacheKey = 'hf_discovered_models_cache_v2';
+  /// The key the unfiltered catalog is stored under. Searches and size buckets
+  /// answer a question rather than describe the catalog, so they are not kept.
+  static const _defaultQueryKey = 'default';
+
+  /// Where the catalog lived before it moved into SQLite. Read once, written
+  /// into the database, then removed.
+  static const _legacyCacheKey = 'hf_discovered_models_cache_v2';
   static const _cacheTtl = Duration(days: 7);
 
   /// Repositories read per pipeline per page. Two pipelines are read, so one
@@ -93,7 +98,7 @@ class HuggingFaceModelDiscoveryService {
     'Q8_0.gguf',
   ];
 
-  HuggingFaceModelDiscoveryService({Dio? dio})
+  HuggingFaceModelDiscoveryService({Dio? dio, CatalogCache? cache})
     : _dio =
           dio ??
           Dio(
@@ -103,27 +108,32 @@ class HuggingFaceModelDiscoveryService {
               receiveTimeout: const Duration(seconds: 20),
               headers: const {'Accept': 'application/json'},
             ),
-          );
+          ),
+      _cache = cache;
 
   final Dio _dio;
+
+  /// Where read pages are kept. Null keeps the service stateless, which is what
+  /// the tests that only exercise Hugging Face pass.
+  final CatalogCache? _cache;
 
   /// The catalog as it was last written to disk, or null when nothing is
   /// cached. Reading it costs no network.
   Future<HuggingFaceModelCatalog?> readCachedCatalog() async {
-    final cache = await _readCache();
-    if (cache == null) return null;
+    final cached = await _readCached(_defaultQueryKey);
+    if (cached == null) return null;
     return HuggingFaceModelCatalog(
-      models: cache.models,
-      nextCursor: cache.nextCursor,
-      hasMore: cache.nextCursor != null,
+      models: cached.models,
+      nextCursor: cached.nextCursor,
+      hasMore: cached.nextCursor != null,
     );
   }
 
   /// Whether the cache is stale and should be refreshed.
   Future<bool> isCacheStale() async {
-    final cache = await _readCache();
-    if (cache == null) return true;
-    return DateTime.now().difference(cache.fetchedAt) > _cacheTtl;
+    final cached = await _readCached(_defaultQueryKey);
+    if (cached == null) return true;
+    return DateTime.now().difference(cached.fetchedAt) > _cacheTtl;
   }
 
   /// Reads one page of GGUF chat models, most downloaded first.
@@ -619,18 +629,54 @@ class HuggingFaceModelDiscoveryService {
   // Caching
   // ---------------------------------------------------------------------------
 
-  Future<_DiscoveryCache?> _readCache() async {
+  /// The stored page for [queryKey], or null when nothing is stored yet.
+  Future<CachedCatalog?> _readCached(String queryKey) async {
+    final cache = _cache;
+    if (cache == null) return null;
     try {
-      final raw = await SecureStorage.instance.read(_cacheKey);
+      final hit = await cache.read(queryKey);
+      if (hit != null) {
+        return CachedCatalog(
+          models: [for (final model in hit.models) _withSizeFromName(model)],
+          nextCursor: hit.nextCursor,
+          fetchedAt: hit.fetchedAt,
+        );
+      }
+      return await _importLegacyCache(cache, queryKey);
+    } catch (error) {
+      debugPrint('Catalog cache read failed: $error');
+      return null;
+    }
+  }
+
+  /// Moves the catalog the app kept in encrypted key-value storage into the
+  /// database, once, so an upgrade keeps working offline.
+  Future<CachedCatalog?> _importLegacyCache(
+    CatalogCache cache,
+    String queryKey,
+  ) async {
+    try {
+      final raw = await SecureStorage.instance.read(_legacyCacheKey);
       if (raw == null) return null;
-      final cache = _DiscoveryCache.fromJson(raw);
-      if (cache == null) return null;
-      return _DiscoveryCache(
-        models: [for (final model in cache.models) _withSizeFromName(model)],
-        nextCursor: cache.nextCursor,
-        fetchedAt: cache.fetchedAt,
+      final legacy = _DiscoveryCache.fromJson(raw);
+      if (legacy == null || legacy.models.isEmpty) return null;
+      final models = [
+        for (final model in legacy.models) _withSizeFromName(model),
+      ];
+      await cache.replace(
+        queryKey,
+        models: models,
+        nextCursor: legacy.nextCursor,
+        fetchedAt: legacy.fetchedAt,
       );
-    } catch (_) {
+      await SecureStorage.instance.delete(_legacyCacheKey);
+      return CachedCatalog(
+        models: models,
+        nextCursor: legacy.nextCursor,
+        fetchedAt: legacy.fetchedAt,
+      );
+    } catch (error) {
+      debugPrint('Catalog cache import failed: $error');
       return null;
     }
   }
@@ -655,34 +701,25 @@ class HuggingFaceModelDiscoveryService {
     HuggingFaceModelCatalog catalog, {
     required bool replace,
   }) async {
+    final cache = _cache;
+    if (cache == null) return;
     try {
-      final models = <String, LlmModel>{};
-      if (!replace) {
-        final previous = await _readCache();
-        for (final model in previous?.models ?? const <LlmModel>[]) {
-          models[model.id] = model;
-        }
-      }
-      for (final model in catalog.models) {
-        models[model.id] = model;
-      }
-      await _writeCache(
-        _DiscoveryCache(
-          models: models.values.toList(growable: false),
+      if (replace) {
+        await cache.replace(
+          _defaultQueryKey,
+          models: catalog.models,
           nextCursor: catalog.nextCursor,
-          fetchedAt: DateTime.now(),
-        ),
-      );
-    } catch (_) {
-      // Best-effort caching.
-    }
-  }
-
-  Future<void> _writeCache(_DiscoveryCache cache) async {
-    try {
-      await SecureStorage.instance.write(key: _cacheKey, value: cache.toJson());
-    } catch (_) {
-      // Best-effort caching.
+        );
+      } else {
+        await cache.append(
+          _defaultQueryKey,
+          models: catalog.models,
+          nextCursor: catalog.nextCursor,
+        );
+      }
+    } catch (error) {
+      // Best-effort caching: a list that came from the network is still a list.
+      debugPrint('Catalog cache write failed: $error');
     }
   }
 

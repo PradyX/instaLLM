@@ -9,6 +9,8 @@ import 'package:installm/core/services/hugging_face_repository_service.dart';
 import 'package:installm/core/services/local_notification_service.dart';
 import 'package:installm/core/services/model_storage_service.dart';
 import 'package:installm/core/services/storage_info_service.dart';
+import 'package:installm/core/storage/catalog_cache.dart';
+import 'package:installm/core/storage/catalog_database.dart';
 import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
 import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
@@ -69,7 +71,9 @@ class ModelSelectionController extends _$ModelSelectionController {
   late final HuggingFaceModelCapabilityService _capabilityService =
       HuggingFaceModelCapabilityService();
   late final HuggingFaceModelDiscoveryService _discoveryService =
-      HuggingFaceModelDiscoveryService();
+      HuggingFaceModelDiscoveryService(
+        cache: CatalogCache(CatalogDatabase.app()),
+      );
   late final HuggingFaceRepositoryService _repositoryService =
       HuggingFaceRepositoryService();
   late final ModelImportService _importService = ModelImportService(

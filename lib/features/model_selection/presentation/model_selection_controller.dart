@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import 'package:installm/core/services/model_storage_service.dart';
 import 'package:installm/core/services/storage_info_service.dart';
 import 'package:installm/features/model_selection/data/gguf_reader.dart';
 import 'package:installm/features/model_selection/data/model_import_service.dart';
+import 'package:installm/features/model_selection/domain/gguf_metadata.dart';
 import 'package:installm/features/model_selection/domain/llm_model.dart';
 import 'package:installm/features/model_selection/domain/model_catalog_merge.dart';
 import 'package:installm/features/model_selection/domain/model_import.dart';
@@ -17,6 +19,7 @@ import 'package:installm/features/model_selection/domain/model_install_state.dar
 import 'package:installm/features/model_selection/presentation/download_progress_provider.dart';
 import 'package:installm/features/model_selection/presentation/model_selection_state.dart';
 import 'package:installm/storage/secure_storage.dart';
+import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'model_selection_controller.g.dart';
@@ -124,13 +127,26 @@ class ModelSelectionController extends _$ModelSelectionController {
   }
 
   Future<void> _loadInitialState() async {
-    final customModels = await _loadCustomModels();
+    final storedRecords = await _loadCustomModels();
     final cachedCatalog = await _discoveryService.readCachedCatalog();
     final storedSelectedId = await _readStoredSelectedModelId();
 
     _discoveredModels = cachedCatalog?.models ?? const [];
     _nextDiscoveredCursor = cachedCatalog?.nextCursor;
     _discoveredQuery = '';
+
+    // A model file can outlive the entry that named it. The catalog is read
+    // from the network now, so a file installed from a page that is no longer
+    // shown would otherwise be invisible while still occupying disk. Adopting
+    // it keeps it listed and keeps the user's model usable.
+    final adoptedModels = await _adoptOrphanedModelFiles([
+      ...storedRecords,
+      ..._discoveredModels,
+    ]);
+    final customModels = [...storedRecords, ...adoptedModels];
+    if (adoptedModels.isNotEmpty) {
+      await _persistCustomModels(customModels);
+    }
 
     final combinedModels = _mergeModelLists(
       discoveredModels: _discoveredModels,
@@ -1057,6 +1073,83 @@ class ModelSelectionController extends _$ModelSelectionController {
     await _persistCustomModels(updatedModels);
   }
 
+  /// Records for model files already in the app's model directory that no
+  /// record names.
+  ///
+  /// Only headers are read, so this costs a few kilobytes per file and never
+  /// loads weights. Projectors, embedding files and speech models are not chat
+  /// models and are left where they are.
+  Future<List<LlmModel>> _adoptOrphanedModelFiles(
+    Iterable<LlmModel> known,
+  ) async {
+    try {
+      final directory = Directory(await _storageService.getModelDir());
+      if (!await directory.exists()) return const [];
+
+      final knownFiles = <String>{
+        for (final model in known)
+          if (model.localFileName?.trim().toLowerCase() case final name?
+              when name.isNotEmpty)
+            name,
+      };
+
+      final adopted = <LlmModel>[];
+      await for (final entity in directory.list(followLinks: false)) {
+        if (entity is! File) continue;
+        final fileName = p.basename(entity.path);
+        final lower = fileName.toLowerCase();
+        if (!lower.endsWith('.gguf') || lower.contains('mmproj')) continue;
+        if (!knownFiles.add(lower)) continue;
+
+        final GgufMetadata metadata;
+        try {
+          metadata = await const GgufReader().info(entity.path);
+        } catch (_) {
+          continue;
+        }
+        final architecture = metadata.architecture.trim().toLowerCase();
+        if (LlmModel.embeddingArchitectures.contains(architecture)) continue;
+        if (architecture == 'whisper') continue;
+
+        final described = <String>[
+          if (architecture.isNotEmpty) architecture,
+          if (metadata.quantization.trim().isNotEmpty)
+            metadata.quantization.trim(),
+        ];
+        final declaredName = metadata.name.trim();
+        adopted.add(
+          LlmModel(
+            id: 'local-${_slugify(fileName)}',
+            name: declaredName.isEmpty
+                ? p.basenameWithoutExtension(fileName)
+                : declaredName,
+            parameterSize: metadata.parameterCount > 0
+                ? metadata.parameterSizeLabel
+                : 'Unknown',
+            description:
+                'Already on this device'
+                '${described.isEmpty ? '' : ' • ${described.join(' • ')}'}',
+            capabilities: [
+              if (metadata.hasVisionEncoder) ModelCapability.vision,
+            ],
+            localFileName: fileName,
+            promptFormatId:
+                HuggingFaceModelDiscoveryService.promptFormatForArchitecture(
+                  architecture,
+                ),
+            isDownloaded: true,
+            isCustom: true,
+            modelSource: ModelSource.imported,
+            ggufMetadata: metadata,
+          ),
+        );
+      }
+      return adopted;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<List<LlmModel>> _loadCustomModels() async {
     try {
       final data = await SecureStorage.instance.read(_customModelsStorageKey);
@@ -1089,9 +1182,15 @@ class ModelSelectionController extends _$ModelSelectionController {
     }
   }
 
+  /// Keeps the user's own records and the models installed on this device.
+  ///
+  /// An installed model is stored even when discovery found it. Discovery's
+  /// pages are network state: the page a model came from is replaced on the
+  /// next search or refresh, and an installed file with no record would drop
+  /// out of the library while still being on disk.
   Future<void> _persistCustomModels(List<LlmModel> models) async {
     final encoded = models
-        .where((m) => m.isCustom)
+        .where((m) => m.isCustom || (m.isDownloaded && !m.isExternal))
         .map((m) => m.toJson())
         .toList();
     await SecureStorage.instance.write(
